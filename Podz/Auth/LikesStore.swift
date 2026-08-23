@@ -92,13 +92,20 @@ final class LikesStore: ObservableObject {
         let previousLikes = likes
         
         folders.removeAll { $0.id == folder.id }
-        // Liked pods that were sorted into this folder become unsorted
-        // rather than un-liked — matches the DB's ON DELETE SET NULL.
+        // Deleting a folder removes the likes inside it too — there's no
+        // "unsorted" view to manage orphaned likes from, so leaving them
+        // liked-but-invisible was effectively a stuck like.
         for (podId, folderId) in likes where folderId == folder.id {
-            likes[podId] = nil
+            likes.removeValue(forKey: podId)
         }
-        
+
         do {
+            try await supabase
+                .from("pod_likes")
+                .delete()
+                .eq("user_id", value: userId)
+                .eq("folder_id", value: folder.id)
+                .execute()
             try await supabase
                 .from("like_folders")
                 .delete()

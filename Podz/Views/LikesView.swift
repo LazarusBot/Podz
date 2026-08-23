@@ -108,7 +108,7 @@ struct LikesView: View {
             }
         } message: {
             if let folder = folderPendingDeletion {
-                Text("\"\(folder.name)\" will be deleted. Liked pods inside will stay liked but become unsorted.")
+                Text("\"\(folder.name)\" will be deleted, along with the likes inside it.")
             }
         }
     }
