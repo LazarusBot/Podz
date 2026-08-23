@@ -1,0 +1,19 @@
+# Xcode
+build/
+DerivedData/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+
+# Swift Package Manager local checkout caches (packages are resolved
+# remotely via Package.resolved, not vendored)
+.build/
+.swiftpm/
+
+# Stray local clone of the Supabase SDK — the app depends on it via a
+# remote Swift Package reference (see project.pbxproj), not this path.
+supabase-swift/
+
+# macOS
+.DS_Store
