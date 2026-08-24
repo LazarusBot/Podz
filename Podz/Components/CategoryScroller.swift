@@ -83,29 +83,58 @@ private struct ChipIcon: View {
 /// chrome drops away — that text isn't editable, so looking like a
 /// text field would be misleading. Tapping "Filters" folds a filter
 /// panel open right below that row, in the same pill, instead of
-/// presenting a separate sheet — real filtering logic (applying the
-/// values to the feed) is still coming later, this just holds the UI.
+/// presenting a separate sheet — values live in `HomeFiltersState.shared`
+/// so `HomeView` can read them. Only Hikers actually filters the feed so
+/// far (`pods.bedsTotal`); Wifi/Pets/Check-in/Checkout are fully
+/// interactive but have no backing data yet (no columns on `pods`, no
+/// bookings table), so they're along for the ride until that lands.
 /// Replaces the old scrollable Lenny/All-types/category-type filter
 /// row entirely.
+
+/// Reports a measured width up through the view tree — used to capture
+/// the Save button's two label states' real rendered widths so its
+/// resize can be driven as a plain animated CGFloat. SwiftUI reliably
+/// interpolates that; it does not reliably interpolate the width change
+/// an HStack undergoes from its content simply changing (tried both
+/// content-transition and genuine insert/remove — both snapped the
+/// container to its final size instead of growing smoothly).
+private struct WidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct HomeSearchRow: View {
+    private enum SaveButtonPhase {
+        case idle, loading, saved
+    }
+
     @Binding var searchText: String
 
     @FocusState private var isFocused: Bool
-    @State private var filtersExpanded = false
+    /// Drives the Save button's Default → loading → "Saved ✓" sequence
+    /// (Figma node 3639:865) before the panel collapses — confirms the
+    /// tap landed instead of the panel just vanishing.
+    @State private var savePhase: SaveButtonPhase = .idle
+    /// 0→1 fill fraction for the loading progress bar, animated linearly
+    /// over the loading phase's duration — not the same thing as
+    /// `savePhase`, which just gates text/checkmark/disabled state.
+    @State private var saveProgress: CGFloat = 0
+    // Real rendered widths of the button's two label states, captured
+    // once via hidden measurement views (see `saveWidthMeasurers`) — and
+    // the width actually being displayed, which `saveFilters()` animates
+    // between the two as a plain CGFloat.
+    @State private var saveIdleWidth: CGFloat = 60
+    @State private var saveSavedWidth: CGFloat = 92
+    @State private var saveDisplayedWidth: CGFloat = 60
     /// Lags behind `isFocused` on purpose — the box grows to its full
     /// height first, then these fade in, instead of both happening at
     /// once.
     @State private var showControls = false
     @ObservedObject private var searchState = HomeSearchState.shared
     @ObservedObject private var lenny = LennySearchViewModel.shared
-
-    // Filters panel state — placeholder values until real filtering logic
-    // lands; matches FiltersView's old defaults.
-    @State private var filterHikers: Int = 0
-    @State private var filterCheckIn: String = "22 october 2027"
-    @State private var filterCheckOut: String = "28 october 2027"
-    @State private var filterWifi: Bool = true
-    @State private var filterPets: Bool = true
+    @ObservedObject private var filters = HomeFiltersState.shared
 
     private var isLennyMode: Bool { lenny.phase == .editing }
     /// A Lenny query has been submitted — nothing left to edit, so the
@@ -150,43 +179,213 @@ struct HomeSearchRow: View {
         }
     }
 
+    private func saveFilters() {
+        let loadingDuration = 0.6
+        savePhase = .loading
+        withAnimation(.linear(duration: loadingDuration)) {
+            saveProgress = 1
+        }
+        // Let the bar actually finish filling before flipping to
+        // "Saved ✓" — otherwise the two blur into one instant jump.
+        DispatchQueue.main.asyncAfter(deadline: .now() + loadingDuration) {
+            withAnimation(.easeInOut(duration: 0.4)) {
+                savePhase = .saved
+                saveDisplayedWidth = saveSavedWidth
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                // Back to the two-row expanded pill with the text field
+                // active, not all the way down to idle — filters was
+                // just one stop along the way, not the end of the
+                // search; re-focusing lets them pick up typing right
+                // where they'd have been if they'd never opened it.
+                filters.isExpanded = false
+                savePhase = .idle
+                saveProgress = 0
+                saveDisplayedWidth = saveIdleWidth
+                isFocused = true
+            }
+        }
+    }
+
+    /// Invisible, hit-testing-disabled clones of the Save button's two
+    /// label states, laid out purely to report their real rendered width
+    /// via `WidthPreferenceKey` into `saveIdleWidth`/`saveSavedWidth` —
+    /// what `saveFilters()` animates `saveDisplayedWidth` between.
+    private var saveWidthMeasurers: some View {
+        Group {
+            HStack(spacing: 8) {
+                Text("Save").font(AppFont.pillLabel(18))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            // Without this, the measurer gets squeezed into whatever
+            // size its parent (the button's own already width-
+            // constrained .background) proposes, instead of reporting
+            // its own true natural size — which is exactly why the
+            // checkmark's box (`saveSavedWidth`) kept coming back
+            // roughly equal to the idle width and never actually grew.
+            .fixedSize()
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(key: WidthPreferenceKey.self, value: geo.size.width)
+                }
+            )
+            .onPreferenceChange(WidthPreferenceKey.self) { width in
+                saveIdleWidth = width
+                if savePhase == .idle { saveDisplayedWidth = width }
+            }
+
+            HStack(spacing: 8) {
+                Text("Saved").font(AppFont.pillLabel(18))
+                Image(systemName: "checkmark").font(.system(size: 12, weight: .bold))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .fixedSize()
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(key: WidthPreferenceKey.self, value: geo.size.width)
+                }
+            )
+            .onPreferenceChange(WidthPreferenceKey.self) { saveSavedWidth = $0 }
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
     /// Filter rows, inline right below the mode-toggle/Filters/submit row
     /// instead of a separate sheet — folds open in place the same way the
     /// pill itself does.
     private var filtersPanel: some View {
-        VStack(spacing: 14) {
+        // .leading, not the default .center — the Save button is the
+        // only child here that doesn't already stretch full width
+        // (every FilterRow does, via its own internal Spacer), so this
+        // only affects it. Centered, its resize grew both edges outward
+        // from the middle at once — width animating smoothly plus the
+        // whole button re-centering every frame reads as a jump, not a
+        // clean grow. Leading-anchored, only the trailing edge moves.
+        VStack(alignment: .leading, spacing: 14) {
+            DashedDivider()
+
             FilterRow(title: "Hikers", helper: "Number of hikers with you.") {
-                StepperControl(value: $filterHikers)
+                StepperControl(value: $filters.hikers)
             }
 
             FilterRow(title: "Check-in", helper: "Date of arrival in your pod.") {
-                Text(filterCheckIn)
-                    .font(AppFont.pillLabel())
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .pillStyle()
+                HStack(spacing: 8) {
+                    DatePicker("", selection: $filters.checkIn, displayedComponents: .date)
+                        .labelsHidden()
+                        .tint(.appAccentBlack)
+                        // .simultaneousGesture never fired here — compact
+                        // DatePicker is UIKit-backed internally, and its
+                        // own touch handling swallows the tap before
+                        // SwiftUI's gesture recognizer sees it. The date
+                        // actually changing is a reliable SwiftUI-level
+                        // signal instead.
+                        .onChange(of: filters.checkIn) { _, _ in
+                            filters.datePickerActive = true
+                        }
+                    DateConfirmButton(hasChanged: filters.checkIn != filters.initialCheckIn) {
+                        filters.initialCheckIn = filters.checkIn
+                        filters.datePickerActive = false
+                    }
+                }
             }
 
             FilterRow(title: "Checkout", helper: "Date of leaving from your pod.") {
-                Text(filterCheckOut)
-                    .font(AppFont.pillLabel())
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .pillStyle()
+                HStack(spacing: 8) {
+                    DatePicker("", selection: $filters.checkOut, in: filters.checkIn..., displayedComponents: .date)
+                        .labelsHidden()
+                        .tint(.appAccentBlack)
+                        .onChange(of: filters.checkOut) { _, _ in
+                            filters.datePickerActive = true
+                        }
+                    DateConfirmButton(hasChanged: filters.checkOut != filters.initialCheckOut) {
+                        filters.initialCheckOut = filters.checkOut
+                        filters.datePickerActive = false
+                    }
+                }
             }
 
             FilterRow(title: "Wifi", helper: "Location is wired or not.") {
-                ToggleCheckButton(isOn: $filterWifi)
+                ToggleCheckButton(isOn: $filters.wifi)
             }
 
             FilterRow(title: "Pets", helper: "Pets are allowed in the pod or not.") {
-                ToggleCheckButton(isOn: $filterPets)
+                ToggleCheckButton(isOn: $filters.pets)
             }
 
-            PillButton(title: "Save") {
-                // TODO: wire up save action — apply filters to the feed.
-                filtersExpanded = false
+            // Custom rather than PillButton — needs the Default → loading
+            // → Saved(✓) sequence from Figma node 3639:865, and sized to
+            // match the Search/Filters chips (PillButton's own sizing is
+            // smaller) since it's another pill in the same search bar.
+            //
+            // The resize itself is driven as a plain animated CGFloat
+            // (`saveDisplayedWidth`), not left to implicit layout — every
+            // other approach tried here (a single Text's content
+            // changing, .contentTransition, genuine .id()-driven
+            // insert/remove) had the container's width snap to its final
+            // size instead of interpolating, with only the label's
+            // opacity actually animating smoothly around that jump.
+            // Explicit frame(width:) changes are what SwiftUI reliably
+            // tweens, so `saveWidthMeasurers` below captures the two
+            // states' real widths once, and saveFilters() animates
+            // between them directly.
+            Button(action: saveFilters) {
+                ZStack(alignment: .leading) {
+                    HStack(spacing: 8) {
+                        Text("Save")
+                            .font(AppFont.pillLabel(18))
+                            .foregroundColor(.black)
+                    }
+                    .fixedSize()
+                    .opacity(savePhase == .saved ? 0 : 1)
+
+                    HStack(spacing: 8) {
+                        Text("Saved")
+                            .font(AppFont.pillLabel(18))
+                            .foregroundColor(.black)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.black)
+                    }
+                    .fixedSize()
+                    .opacity(savePhase == .saved ? 1 : 0)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(width: saveDisplayedWidth, alignment: .leading)
+                .clipped()
+                .background {
+                    // GeometryReader only while actually loading — it's
+                    // what the progress-bar sweep needs to track the
+                    // label's width, but leaving a GeometryReader sitting
+                    // in the tree recomputes from the *current* real
+                    // layout size every frame instead of interpolating,
+                    // which is exactly the kind of thing that was
+                    // fighting smooth resizing elsewhere here. Once
+                    // loading's done there's nothing left to track (it's
+                    // already a full, static fill), so a plain Capsule
+                    // for that part doesn't have the issue.
+                    switch savePhase {
+                    case .loading:
+                        GeometryReader { geo in
+                            Rectangle()
+                                .fill(Color.appBorder.opacity(0.5))
+                                .frame(width: geo.size.width * saveProgress)
+                        }
+                        .clipShape(Capsule())
+                    case .saved:
+                        Capsule().fill(Color.appBorder.opacity(0.5))
+                    case .idle:
+                        EmptyView()
+                    }
+                }
             }
+            .disabled(savePhase != .idle)
+            .pillStyle()
+            .background(saveWidthMeasurers)
         }
         .padding(.top, 4)
         // Plain fade only — `.move(edge: .top)` translated the panel
@@ -228,7 +427,7 @@ struct HomeSearchRow: View {
                     }
                 } else {
                     TextField("", text: textBinding, prompt: Text(placeholder).foregroundColor(.black.opacity(0.35)))
-                        .font(AppFont.pillLabelMedium(15))
+                        .font(AppFont.pillLabelMedium(17))
                         .foregroundColor(.black)
                         .autocorrectionDisabled()
                         .submitLabel(.search)
@@ -242,7 +441,14 @@ struct HomeSearchRow: View {
             // (status text + Spacer + cancel button) and doesn't need it.
             .padding(.leading, isLennyBusy ? 0 : 5)
 
-            if isFocused {
+            // searchState.isExpanded, not isFocused directly — dismissing
+            // the keyboard while filters are open (see the onChange
+            // below) blurs the field, and gating on isFocused itself
+            // would've collapsed this row right along with it. isExpanded
+            // is the one thing that's actually true for "the pill should
+            // look expanded" regardless of whether the text field
+            // currently has keyboard focus.
+            if searchState.isExpanded {
                 HStack(spacing: 8) {
                     CategoryChip(
                         title: isLennyMode ? "Search" : "Lenny",
@@ -255,8 +461,8 @@ struct HomeSearchRow: View {
                         }
                     }
 
-                    CategoryChip(title: "Filters", isSelected: filtersExpanded, icon: "slider.horizontal.3") {
-                        filtersExpanded.toggle()
+                    CategoryChip(title: "Filters", isSelected: filters.isExpanded, icon: "slider.horizontal.3") {
+                        filters.isExpanded.toggle()
                     }
 
                     Spacer()
@@ -264,13 +470,13 @@ struct HomeSearchRow: View {
                     Button(action: submit) {
                         Image(systemName: "arrow.right.circle.fill")
                             .font(.system(size: 34))
-                            .foregroundColor(submitDisabled ? .black.opacity(0.15) : .appAccentBlack)
+                            .foregroundColor(submitDisabled ? .appBorder.opacity(0.5) : .appAccentBlack)
                     }
                     .disabled(submitDisabled)
                 }
                 .opacity(showControls ? 1 : 0)
 
-                if filtersExpanded {
+                if filters.isExpanded {
                     filtersPanel
                 }
             }
@@ -300,10 +506,18 @@ struct HomeSearchRow: View {
         // the shadow's blur off too.
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: isLennyBusy ? .clear : .black.opacity(0.08), radius: 3, y: 1)
+        // Dead space inside the pill (a FilterRow's label, the gap
+        // between it and its control, a DashedDivider...) has no
+        // gesture of its own, so without this the tap fell through to
+        // HomeView's tap-outside-to-dismiss catcher on the ScrollView
+        // and closed the whole panel — tapping *inside* the pill
+        // shouldn't dismiss anything, only genuinely outside it.
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onTapGesture {}
         .animation(.easeInOut(duration: 0.25), value: isFocused)
         .animation(.easeInOut(duration: 0.15), value: isLennyMode)
         .animation(.easeInOut(duration: 0.2), value: isLennyBusy)
-        .animation(.easeInOut(duration: 0.25), value: filtersExpanded)
+        .animation(.easeInOut(duration: 0.25), value: filters.isExpanded)
         .padding(.horizontal, 24)
         .padding(.bottom, 20)
         .background(
@@ -314,8 +528,8 @@ struct HomeSearchRow: View {
             )
         )
         .onChange(of: isFocused) { _, focused in
-            searchState.isExpanded = focused
             if focused {
+                searchState.isExpanded = true
                 // Let the box finish growing before the controls fade in.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
                     guard isFocused else { return }
@@ -323,12 +537,20 @@ struct HomeSearchRow: View {
                         showControls = true
                     }
                 }
-            } else {
+            } else if !filters.isExpanded {
+                // Losing focus while filters are open is deliberate — we
+                // dismiss the keyboard ourselves (see the filters.isExpanded
+                // onChange below) so it doesn't float over the filter
+                // controls, but the pill should stay expanded rather than
+                // collapse just because the text field isn't focused
+                // anymore. Everything below only applies to a "real"
+                // blur (submitting, tapping outside, scrolling away).
+                searchState.isExpanded = false
                 showControls = false
-                // Losing focus without submitting (scrolling away, tapping
-                // outside...) shouldn't strand the pill in Lenny mode —
-                // only if there's nothing typed, though; an in-progress
-                // draft is worth keeping around for when they come back.
+                // Losing focus without submitting shouldn't strand the
+                // pill in Lenny mode — only if there's nothing typed,
+                // though; an in-progress draft is worth keeping around
+                // for when they come back.
                 if isLennyMode && lenny.itineraryText.isEmpty {
                     lenny.revertToLocationSearch()
                 }
@@ -336,11 +558,23 @@ struct HomeSearchRow: View {
         }
         .onChange(of: searchState.isExpanded) { _, expanded in
             // Someone outside this view (HomeView's tap-outside-to-dismiss)
-            // closed it — mirror that down into the real FocusState that
-            // controls the keyboard. We're the one driving `isExpanded`
-            // the rest of the time, via the onChange above, so only react
-            // when it's telling us to close and we haven't already.
-            if !expanded && isFocused {
+            // closed it — mirror that down into our own state. We're the
+            // one driving `isExpanded` the rest of the time (via the
+            // isFocused onChange above), so only react when it's telling
+            // us to close. Filters needs closing here too, not just
+            // isFocused — once the panel's open, isFocused is already
+            // false (we blur it deliberately), so the guard this used to
+            // have (`&& isFocused`) would've skipped this entirely and
+            // left tap-outside unable to close an open filters panel.
+            guard !expanded else { return }
+            isFocused = false
+            filters.isExpanded = false
+        }
+        .onChange(of: filters.isExpanded) { _, expanded in
+            // Filter rows are steppers/date pickers/toggles, not text
+            // entry — nothing left to type once they're open, so drop
+            // the keyboard if the search field was still focused.
+            if expanded {
                 isFocused = false
             }
         }
@@ -348,7 +582,7 @@ struct HomeSearchRow: View {
 }
 
 /// A single "label + helper text ... control" row, separated by a
-/// hairline divider below it. Lives inline in the search pill's Filters
+/// dashed divider below it. Lives inline in the search pill's Filters
 /// panel — no horizontal padding of its own, since the pill already
 /// insets everything else uniformly.
 struct FilterRow<Control: View>: View {
@@ -360,21 +594,71 @@ struct FilterRow<Control: View>: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
+                    // Explicit sizes — itemTitle()/itemHelper() default to
+                    // 10pt/8pt, which reads as an afterthought next to
+                    // everything else in this pill (18pt chip labels,
+                    // 15pt text field, 18pt Save button).
                     Text(title)
-                        .font(AppFont.itemTitle())
+                        .font(AppFont.itemTitle(16))
                         .foregroundColor(.appTextPrimary)
                     Text(helper)
-                        .font(AppFont.itemHelper())
+                        .font(AppFont.itemHelper(13))
                         .foregroundColor(.appTextSecondary)
                 }
+                // Matches the Save button's own text inset (its
+                // horizontal padding is 14pt, same as the pill's other
+                // buttons/chips) so this row's text actually lines up
+                // with it, instead of sitting flush with the pill's edge.
+                .padding(.leading, 14)
                 Spacer()
                 control()
             }
 
-            Divider()
-                .background(Color.appBorder)
+            DashedDivider()
                 .padding(.top, 12)
         }
+    }
+}
+
+/// Sits next to a Check-in/Checkout DatePicker as an explicit "confirm
+/// and close" target. It doesn't control the DatePicker directly —
+/// there's no public API for that on its native compact-style overlay —
+/// but that overlay already dismisses on any tap outside itself, so
+/// this button's only job is to be an obvious place to make that tap
+/// instead of leaving people to guess they can tap elsewhere. Grayed
+/// out and disabled until the date's actually been changed from where
+/// it started — nothing to confirm otherwise. Tapping it (besides the
+/// dismiss-by-tapping-outside-the-picker side effect) moves the "start"
+/// baseline up to the now-confirmed value, so it grays back out again
+/// rather than staying enabled forever after the first change.
+private struct DateConfirmButton: View {
+    let hasChanged: Bool
+    var onConfirm: () -> Void = {}
+
+    var body: some View {
+        Button(action: onConfirm) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(hasChanged ? Color.appAccentBlack : Color.appBorder))
+        }
+        .disabled(!hasChanged)
+    }
+}
+
+/// A dashed, full-width horizontal rule in `.appBorder` — used between
+/// filter rows instead of a plain `Divider()`, which can't be dashed.
+struct DashedDivider: View {
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: 0))
+                path.addLine(to: CGPoint(x: geo.size.width, y: 0))
+            }
+            .stroke(Color.appBorder, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        }
+        .frame(height: 1)
     }
 }
 
