@@ -79,6 +79,17 @@ final class LennySearchViewModel: ObservableObject {
         }
     }
     
+    /// Switches the still-focused search bar back to plain location
+    /// search. Unlike `cancel()`, the bar itself never goes away here —
+    /// HomeSearchRow just swaps its icon/placeholder/chip back — so
+    /// there's no keyboard-dismiss animation to wait out.
+    func revertToLocationSearch() {
+        dismissTask?.cancel()
+        phase = .idle
+        itineraryText = ""
+        errorMessage = nil
+    }
+
     /// Immediate reset, no animation delay — used as a safety net (e.g.
     /// recovering from an app-background/foreground edge case), unlike
     /// `cancel()` which deliberately waits for the keyboard to finish

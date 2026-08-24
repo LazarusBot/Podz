@@ -22,32 +22,23 @@ struct HomeView: View {
                             username: auth.profile?.username ?? "guest",
                             avatarImageName: auth.profile?.avatarURL
                         )
-                        
-                        if lenny.phase == .idle {
-                            HomeSearchRow(
-                                searchText: $locationSearch,
-                                onTapLenny: { lenny.activate() }
-                            )
-                        } else {
-                            LennySearchBar(viewModel: lenny)
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 20)
-                        }
-                        
+
+                        HomeSearchRow(searchText: $locationSearch)
+
                         if lenny.phase == .searching {
                             LennySearchSteps(steps: lenny.steps)
                         }
-                        
+
                         if let error = lenny.errorMessage {
                             Text(error)
                                 .font(.system(size: 12))
                                 .foregroundColor(.red)
                                 .padding(.horizontal, 24)
                         }
-                        
+
                         if lenny.phase == .results {
                             LennyJourneyProgress(stops: lenny.journeyStops)
-                            
+
                             VStack(spacing: 30) {
                                 ForEach(lenny.matchingPods) { pod in
                                     LennyResultCard(
@@ -95,7 +86,7 @@ struct HomeView: View {
                                 }
                             }
                         }
-                        
+
                         if lenny.phase == .idle {
                             // Leaves room so content doesn't hide behind the
                             // floating tab bar.

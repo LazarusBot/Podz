@@ -65,16 +65,22 @@ private struct ChipIcon: View {
     }
 }
 
-/// Home's top search field — takes the full row width. Tapping it
-/// (focusing the text field) expands the pill to roughly double height,
-/// revealing a bottom row: the "Lenny" chip + a "Filters" button on the
-/// left, a submit button on the right. Submitting collapses it back
-/// down. Replaces the old scrollable Lenny/All-types/category-type
-/// filter row entirely — real filtering logic for the Filters sheet is
-/// coming later, this just opens it.
+/// Home's top search field — a single pill that carries all four of
+/// Lenny's phases, rather than handing off to a separate component per
+/// phase. Idle/editing show an editable text field: plain location
+/// search, or — once the "Lenny" chip is tapped — Lenny's itinerary
+/// text (`LennySearchViewModel.itineraryText`), with the leading icon,
+/// placeholder, and chip label swapping to match. Tapping the field
+/// expands the pill to roughly double height, revealing a bottom row:
+/// the mode-toggle chip + a "Filters" button on the left, a submit
+/// button on the right. Once a Lenny query is actually submitted, the
+/// field is replaced by status text (searching/results) and the pill
+/// chrome drops away — that text isn't editable, so looking like a
+/// text field would be misleading. Replaces the old scrollable
+/// Lenny/All-types/category-type filter row entirely — real filtering
+/// logic for the Filters sheet is coming later, this just opens it.
 struct HomeSearchRow: View {
     @Binding var searchText: String
-    var onTapLenny: () -> Void = {}
 
     @FocusState private var isFocused: Bool
     @State private var showFilters = false
@@ -83,27 +89,102 @@ struct HomeSearchRow: View {
     /// once.
     @State private var showControls = false
     @ObservedObject private var searchState = HomeSearchState.shared
+    @ObservedObject private var lenny = LennySearchViewModel.shared
+
+    private var isLennyMode: Bool { lenny.phase == .editing }
+    /// A Lenny query has been submitted — nothing left to edit, so the
+    /// field and pill chrome give way to plain status text.
+    private var isLennyBusy: Bool { lenny.phase == .searching || lenny.phase == .results }
+
+    private var textBinding: Binding<String> {
+        isLennyMode ? $lenny.itineraryText : $searchText
+    }
+
+    private var placeholder: String {
+        isLennyMode ? "Describe your hike itinerary and Lenny will carry on..." : "Search by location"
+    }
+
+    private var submitDisabled: Bool {
+        (isLennyMode ? lenny.itineraryText : searchText).isEmpty
+    }
+
+    /// "Lenny speaking : " (bold) + "Your plan is ready !" (medium) —
+    /// built with AttributedString since Text's `+` operator is
+    /// deprecated (same pattern as ProfilePromoCard.promoTitle).
+    private var readyMessage: AttributedString {
+        var bold = AttributeContainer()
+        bold.font = AppFont.mediumLabel()
+        let prefix = AttributedString("Lenny speaking : ", attributes: bold)
+
+        var medium = AttributeContainer()
+        medium.font = AppFont.mediumLabel()
+        let suffix = AttributedString("Your plan is ready !", attributes: medium)
+
+        return prefix + suffix
+    }
+
+    private func submit() {
+        // Unfocus right away in both modes — for Lenny this also lets the
+        // keyboard's dismiss animation play out during the phase's own
+        // transition delay instead of the field just vanishing under it
+        // once the pill switches to its busy status text.
+        isFocused = false
+        if isLennyMode {
+            Task { await lenny.submit() }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.black.opacity(0.4))
-                TextField("", text: $searchText, prompt: Text("Search by location").foregroundColor(.black.opacity(0.35)))
-                    .font(AppFont.pillLabelMedium(15))
-                    .foregroundColor(.black)
-                    .autocorrectionDisabled()
-                    .submitLabel(.search)
-                    .focused($isFocused)
-                    .onSubmit { isFocused = false }
+                if isLennyMode || isLennyBusy {
+                    LennyIcon(size: 14)
+                } else {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.black.opacity(0.4))
+                }
+
+                if isLennyBusy {
+                    if lenny.phase == .searching {
+                        Text("Lenny is searching...")
+                            .font(AppFont.mediumLabel())
+                    } else {
+                        Text(readyMessage)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        lenny.cancel()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.appTextMuted)
+                    }
+                } else {
+                    TextField("", text: textBinding, prompt: Text(placeholder).foregroundColor(.black.opacity(0.35)))
+                        .font(AppFont.pillLabelMedium(15))
+                        .foregroundColor(.black)
+                        .autocorrectionDisabled()
+                        .submitLabel(.search)
+                        .focused($isFocused)
+                        .onSubmit { submit() }
+                }
             }
 
             if isFocused {
                 HStack(spacing: 8) {
-                    CategoryChip(title: "Lenny", icon: "lenny") {
-                        isFocused = false
-                        onTapLenny()
+                    CategoryChip(
+                        title: isLennyMode ? "Search" : "Lenny",
+                        icon: isLennyMode ? "magnifyingglass" : "lenny"
+                    ) {
+                        if isLennyMode {
+                            lenny.revertToLocationSearch()
+                        } else {
+                            lenny.activate()
+                        }
                     }
 
                     CategoryChip(title: "Filters", icon: "slider.horizontal.3") {
@@ -112,14 +193,12 @@ struct HomeSearchRow: View {
 
                     Spacer()
 
-                    Button {
-                        isFocused = false
-                    } label: {
+                    Button(action: submit) {
                         Image(systemName: "arrow.right.circle.fill")
                             .font(.system(size: 28))
-                            .foregroundColor(searchText.isEmpty ? .black.opacity(0.15) : .appAccentBlack)
+                            .foregroundColor(submitDisabled ? .black.opacity(0.15) : .appAccentBlack)
                     }
-                    .disabled(searchText.isEmpty)
+                    .disabled(submitDisabled)
                 }
                 .opacity(showControls ? 1 : 0)
             }
@@ -127,20 +206,24 @@ struct HomeSearchRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
+        .background {
             // Same fixed radius in both states (a plain Capsule() would
             // chase height/2 and balloon into an exaggerated stadium
             // shape once expanded) — keeping it constant means only the
             // height animates during the transition, not the radius too.
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(Color.appBorder, lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
-        )
+            if !isLennyBusy {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .strokeBorder(Color.appBorder, lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+            }
+        }
         .animation(.easeInOut(duration: 0.25), value: isFocused)
+        .animation(.easeInOut(duration: 0.15), value: isLennyMode)
+        .animation(.easeInOut(duration: 0.2), value: isLennyBusy)
         .padding(.horizontal, 24)
         .padding(.bottom, 20)
         .background(
@@ -167,5 +250,24 @@ struct HomeSearchRow: View {
                 showControls = false
             }
         }
+    }
+}
+
+/// The small "Lenny" mark (12x12), reused in the chip and the search
+/// bar's leading icon. Custom SVG asset if present, else a simple
+/// fallback so nothing breaks before it's exported.
+struct LennyIcon: View {
+    var size: CGFloat = 12
+
+    var body: some View {
+        Group {
+            if UIImage(named: "lenny") != nil {
+                Image("lenny").resizable()
+            } else {
+                Image(systemName: "sparkles").resizable()
+            }
+        }
+        .aspectRatio(contentMode: .fit)
+        .frame(width: size, height: size)
     }
 }
