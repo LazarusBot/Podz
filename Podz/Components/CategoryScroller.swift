@@ -253,6 +253,13 @@ struct HomeSearchRow: View {
                 }
             } else {
                 showControls = false
+                // Losing focus without submitting (scrolling away, tapping
+                // outside...) shouldn't strand the pill in Lenny mode —
+                // only if there's nothing typed, though; an in-progress
+                // draft is worth keeping around for when they come back.
+                if isLennyMode && lenny.itineraryText.isEmpty {
+                    lenny.revertToLocationSearch()
+                }
             }
         }
     }
