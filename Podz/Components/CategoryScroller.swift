@@ -178,6 +178,11 @@ struct HomeSearchRow: View {
                         .onSubmit { submit() }
                 }
             }
+            // The icon+placeholder pair reads as sitting slightly
+            // left-heavy against the pill's edge — a small nudge balances
+            // it. Skipped once Lenny's busy: that row has its own layout
+            // (status text + Spacer + cancel button) and doesn't need it.
+            .padding(.leading, isLennyBusy ? 0 : 5)
 
             if isFocused {
                 HStack(spacing: 8) {
@@ -208,7 +213,7 @@ struct HomeSearchRow: View {
                 .opacity(showControls ? 1 : 0)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
