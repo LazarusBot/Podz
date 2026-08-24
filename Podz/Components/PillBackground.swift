@@ -6,6 +6,7 @@ import SwiftUI
 struct PillBackground: ViewModifier {
     var fill: Color = .white
     var borderColor: Color = .appBorder
+    var shadowColor: Color = .black.opacity(0.08)
 
     func body(content: Content) -> some View {
         content
@@ -25,12 +26,17 @@ struct PillBackground: ViewModifier {
                             .offset(y: -1)
                             .mask(Capsule())
                     )
+                    // The hairline border alone all but disappears against
+                    // the near-white app background (#E1 border on #FB
+                    // background) — this shadow is what actually keeps a
+                    // pill's edge legible.
+                    .shadow(color: shadowColor, radius: 3, y: 1)
             )
     }
 }
 
 extension View {
-    func pillStyle(fill: Color = .white, border: Color = .appBorder) -> some View {
-        modifier(PillBackground(fill: fill, borderColor: border))
+    func pillStyle(fill: Color = .white, border: Color = .appBorder, shadow: Color = .black.opacity(0.08)) -> some View {
+        modifier(PillBackground(fill: fill, borderColor: border, shadowColor: shadow))
     }
 }
