@@ -25,17 +25,6 @@ final class PodsStore: ObservableObject {
         Array(Set(pods.map { $0.country })).sorted()
     }
     
-    /// Distinct pod types present in the loaded data (e.g. "Refuge",
-    /// "Bivouac") — drives the real category filter chips, replacing the
-    /// old hardcoded "Hikes"/"Trails"/... placeholders.
-    var podTypes: [String] {
-        Array(Set(pods.map { $0.podType })).sorted()
-    }
-    
-    func count(forType type: String) -> Int {
-        pods.filter { $0.podType == type }.count
-    }
-    
     private init() {}
     
     func fetchPods() async {
@@ -77,11 +66,11 @@ final class PodsStore: ObservableObject {
         pods.filter { $0.country == country }
     }
     
-    /// Same as above, with an optional pod_type filter. Pass nil or "All"
-    /// to skip filtering by type.
+    /// Same as above, with an optional pod_type filter. Pass nil or
+    /// "All types" to skip filtering by type.
     func pods(inCountry country: String, type: String?) -> [Pod] {
         pods.filter { pod in
-            pod.country == country && (type == nil || type == "All" || pod.podType == type)
+            pod.country == country && (type == nil || type == "All types" || pod.podType == type)
         }
     }
     

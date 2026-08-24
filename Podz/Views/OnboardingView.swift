@@ -8,14 +8,21 @@ import UIKit
 /// wired to Supabase Auth via `AuthManager` (see Auth/AuthManager.swift).
 /// Navigation to HomeView is driven by `AuthManager.isAuthenticated`,
 /// which stays in sync automatically with the real Supabase session.
+/// A one-time 4-step onboarding (see PostRegisterOnboardingView.swift)
+/// is inserted between a successful register and MainTabView, gated by
+/// `AuthManager.justRegistered` — logging in skips straight to the app.
 struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
-    
+
     var body: some View {
         if auth.isInitializing {
             LaunchLoadingView()
         } else if auth.isAuthenticated {
-            MainTabView()
+            if auth.justRegistered {
+                PostRegisterOnboardingView(onFinished: auth.finishPostRegisterOnboarding)
+            } else {
+                MainTabView()
+            }
         } else {
             AuthFlow(onAuthenticated: {})
         }
@@ -95,13 +102,13 @@ struct WelcomeView: View {
                             .foregroundColor(.white)
                     }
                 }
-                .padding(.top, 200)
-                
+                .padding(.top, 140)
+
                 Spacer(minLength: 250)
                 
                 VStack(spacing: 32) {
                     Button(action: onLogin) {
-                        HStack {
+                        HStack(spacing: 10) {
                             Text("Login")
                                 .font(.system(size: 15, weight: .semibold))
                             Image(systemName: "chevron.right")
@@ -112,9 +119,9 @@ struct WelcomeView: View {
                         .padding(.vertical, 12)
                     }
                     .pillStyle(fill: .appAccentBlack, border: .appAccentBlack)
-                    
+
                     Button(action: onRegister) {
-                        HStack {
+                        HStack(spacing: 10) {
                             Text("Register")
                                 .font(.system(size: 15, weight: .semibold))
                             Image(systemName: "chevron.right")
@@ -134,8 +141,6 @@ struct WelcomeView: View {
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 20)
-                
-                Spacer()
             }
         }
     }
@@ -151,69 +156,81 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var nonce = ""
+    @State private var showResetConfirmation = false
     @StateObject private var appleCoordinator = AppleSignInWrapper()
-    
+
+    private var canSubmit: Bool { !email.isEmpty && !password.isEmpty }
+
     var body: some View {
         AuthBackground(onBack: onBack) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(userFirstName.isEmpty ? "Welcome back!" : "Welcome back,\n\(userFirstName)!")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .font(AppFont.pillLabelBold(40))
+                    .tracking(-1)
                     .foregroundColor(.white)
                     .lineSpacing(4)
                     .padding(.top, 51)
-                
-                Spacer(minLength: 24)
-                
-                VStack(spacing: 16) {
+
+                Color.clear.frame(height: 24)
+
+                VStack(spacing: 12) {
                     AuthTextField(placeholder: "Enter your email", text: $email, keyboardType: .emailAddress)
                     AuthTextField(placeholder: "Enter your password", text: $password, isSecure: true)
-                    
+
                     HStack {
                         Spacer()
                         Text("Forgot password ?")
                             .font(.system(size: 12))
                             .foregroundColor(.appWhite88)
+                            .underline()
+                            .onTapGesture(perform: handleForgotPassword)
                     }
                 }
-                
+
                 if let error = auth.lastError {
-                    Text(error)
-                        .font(.system(size: 12))
-                        .foregroundColor(.red)
-                        .padding(.top, 12)
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 12))
+                        Text(error)
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.red)
+                    .padding(.top, 12)
                 }
-                
-                Spacer(minLength: 32)
-                
-                VStack(spacing: 12) {
-                    Button {
-                        Task { await auth.signIn(email: email, password: password) }
-                    } label: {
-                        HStack {
-                            if auth.isLoading {
-                                ProgressView().tint(.white)
-                            } else {
-                                Text("Login")
-                                    .font(.system(size: 15, weight: .semibold))
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
+
+                Spacer(minLength: 24)
+
+                Button {
+                    Task { await auth.signIn(email: email, password: password) }
+                } label: {
+                    HStack(spacing: 10) {
+                        if auth.isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Login")
+                                .font(.system(size: 15, weight: .semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                     }
-                    .disabled(auth.isLoading)
-                    .pillStyle(fill: .appAccentBlack, border: .appAccentBlack)
-                    
-                    SignInWithAppleButtonView(style: .login) {
-                        nonce = AppleNonce.random()
-                        appleCoordinator.start(hashedNonce: AppleNonce.sha256(nonce))
-                    }
-                    .frame(height: 44)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
                 }
-                
-                Spacer(minLength: 32)
+                .disabled(auth.isLoading || !canSubmit)
+                .opacity(canSubmit ? 1 : 0.5)
+                .pillStyle(fill: .appAccentBlack, border: .appAccentBlack)
+
+                DividerOr()
+                    .padding(.vertical, 24)
+
+                SignInWithAppleButtonView(style: .login) {
+                    nonce = AppleNonce.random()
+                    appleCoordinator.start(hashedNonce: AppleNonce.sha256(nonce))
+                }
+                .frame(height: 44)
+
+                Color.clear.frame(height: 32)
                 
                 AuthFooterLink(
                     question: "Don't have an account ?",
@@ -229,6 +246,23 @@ struct LoginView: View {
                 guard let tokenData = credential.identityToken,
                       let idToken = String(data: tokenData, encoding: .utf8) else { return }
                 Task { await auth.signInWithApple(idToken: idToken, rawNonce: nonce) }
+            }
+        }
+        .alert("Check your email", isPresented: $showResetConfirmation) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("We sent a password reset link to \(email).")
+        }
+    }
+
+    private func handleForgotPassword() {
+        guard !email.isEmpty else {
+            auth.lastError = "Enter your email first."
+            return
+        }
+        Task {
+            if await auth.resetPassword(email: email) {
+                showResetConfirmation = true
             }
         }
     }
@@ -251,14 +285,15 @@ struct RegisterView: View {
         AuthBackground(onBack: onBack) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Register to discover\nthe best podz.")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .font(AppFont.pillLabelBold(40))
+                    .tracking(-1)
                     .foregroundColor(.white)
                     .lineSpacing(4)
                     .padding(.top, 51)
                 
                 Spacer(minLength: 24)
                 
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     AuthTextField(placeholder: "Enter your name", text: $name)
                     AuthTextField(placeholder: "Enter your username", text: $username)
                     AuthTextField(placeholder: "Enter your email", text: $email, keyboardType: .emailAddress)
@@ -279,7 +314,7 @@ struct RegisterView: View {
                         await auth.signUp(name: name, username: username, email: email, password: password)
                     }
                 } label: {
-                    HStack {
+                    HStack(spacing: 10) {
                         if auth.isLoading {
                             ProgressView().tint(.white)
                         } else {
@@ -330,6 +365,11 @@ struct RegisterView: View {
 struct AuthBackground<Content: View>: View {
     var showBackButton: Bool = true
     var showLogo: Bool = true
+    /// The dark bottom gradient used by Welcome/Login/Register — some
+    /// onboarding steps have no gradient at all per their Figma frame.
+    var showGradient: Bool = true
+    /// Asset name for the full-bleed background photo.
+    var imageName: String = "bg"
     var onBack: () -> Void = {}
     @ViewBuilder var content: () -> Content
     
@@ -360,8 +400,8 @@ struct AuthBackground<Content: View>: View {
         .background(
             GeometryReader { proxy in
                 ZStack {
-                    if UIImage(named: "bg") != nil {
-                        Image("bg")
+                    if UIImage(named: imageName) != nil {
+                        Image(imageName)
                             .resizable()
                             .scaledToFill()
                             .frame(width: proxy.size.width, height: proxy.size.height)
@@ -373,14 +413,16 @@ struct AuthBackground<Content: View>: View {
                         )
                     }
                     
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0.30),
-                            .init(color: .black.opacity(0.75), location: 0.60),
-                            .init(color: .black, location: 0.90)
-                        ],
-                        startPoint: .top, endPoint: .bottom
-                    )
+                    if showGradient {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0.30),
+                                .init(color: .black.opacity(0.75), location: 0.60),
+                                .init(color: .black, location: 0.90)
+                            ],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    }
                 }
             }
                 .ignoresSafeArea()
@@ -393,20 +435,34 @@ struct AuthTextField: View {
     @Binding var text: String
     var isSecure: Bool = false
     var keyboardType: UIKeyboardType = .default
-    
+    @State private var isRevealed = false
+
     var body: some View {
-        Group {
+        HStack(spacing: 8) {
+            Group {
+                if isSecure && !isRevealed {
+                    SecureField("", text: $text, prompt: placeholderText)
+                } else {
+                    TextField("", text: $text, prompt: placeholderText)
+                        .keyboardType(keyboardType)
+                }
+            }
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+            .font(AppFont.pillLabelSemiBold(16))
+            .foregroundColor(.black)
+
             if isSecure {
-                SecureField("", text: $text, prompt: placeholderText)
-            } else {
-                TextField("", text: $text, prompt: placeholderText)
-                    .keyboardType(keyboardType)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
+                Button {
+                    isRevealed.toggle()
+                } label: {
+                    Image(systemName: isRevealed ? "eye.slash" : "eye")
+                        .font(.system(size: 14))
+                        .foregroundColor(.appPlaceholder)
+                }
+                .buttonStyle(.plain)
             }
         }
-        .font(AppFont.pillLabel(16))
-        .foregroundColor(.black)
         .padding(.horizontal, 18)
         .padding(.vertical, 20)
         .background(
@@ -419,7 +475,7 @@ struct AuthTextField: View {
                 .shadow(color: Color.black.opacity(0.12), radius: 4, x: 1, y: 3)
         )
     }
-    
+
     private var placeholderText: Text {
         Text(placeholder).foregroundColor(.appPlaceholder)
     }
@@ -430,7 +486,7 @@ struct DividerOr: View {
         HStack(spacing: 10) {
             Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
             Text("or")
-                .font(AppFont.pillLabel(16))
+                .font(AppFont.pillLabelSemiBold(16))
                 .foregroundColor(.white)
             Rectangle().fill(Color.white.opacity(0.3)).frame(height: 1)
         }

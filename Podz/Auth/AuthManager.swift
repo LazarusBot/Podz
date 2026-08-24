@@ -18,7 +18,12 @@ final class AuthManager: ObservableObject {
     @Published var lastError: String?
     @Published private(set) var profile: Profile?
     @Published private(set) var isInitializing = true
-    
+    /// Set on a successful `signUp`, cleared once the post-register
+    /// onboarding has been shown. In-memory only (not @AppStorage) — this
+    /// is intentional, see the PodzApp.swift routing note about the old
+    /// hasSeenOnboarding bug.
+    @Published private(set) var justRegistered = false
+
     var isAuthenticated: Bool { session != nil }
     
     private var authStateTask: Task<Void, Never>?
@@ -128,16 +133,22 @@ final class AuthManager: ObservableObject {
                     "username": .string(username)
                 ]
             )
+            justRegistered = true
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    /// Call once the post-register onboarding has been shown/dismissed.
+    func finishPostRegisterOnboarding() {
+        justRegistered = false
     }
     
     func signIn(email: String, password: String) async {
         isLoading = true
         lastError = nil
         defer { isLoading = false }
-        
+
         do {
             try await supabase.auth.signIn(email: email, password: password)
         } catch {
