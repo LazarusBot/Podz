@@ -262,6 +262,16 @@ struct HomeSearchRow: View {
                 }
             }
         }
+        .onChange(of: searchState.isExpanded) { _, expanded in
+            // Someone outside this view (HomeView's tap-outside-to-dismiss)
+            // closed it — mirror that down into the real FocusState that
+            // controls the keyboard. We're the one driving `isExpanded`
+            // the rest of the time, via the onChange above, so only react
+            // when it's telling us to close and we haven't already.
+            if !expanded && isFocused {
+                isFocused = false
+            }
+        }
     }
 }
 

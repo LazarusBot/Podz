@@ -93,6 +93,21 @@ struct HomeView: View {
                             Color.clear.frame(height: 100)
                         }
                     }
+                    .frame(maxWidth: .infinity)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    // Tapping anywhere that isn't a more specific control
+                    // (the field itself, a chip, a pod card — those
+                    // consume the tap first) collapses the search pill the
+                    // same way submitting does. Attached to the ScrollView
+                    // itself rather than its content — while Lenny's
+                    // editing there's nothing below the pill yet, so the
+                    // content is short and a catcher on just the VStack
+                    // would leave most of the screen dead to this gesture.
+                    if homeSearch.isExpanded {
+                        homeSearch.isExpanded = false
+                    }
                 }
                 .background(Color.appHomeBackground)
                 .task { await podsStore.fetchPods() }
