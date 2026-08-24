@@ -285,9 +285,16 @@ struct HomeSearchRow: View {
                         RoundedRectangle(cornerRadius: 24, style: .continuous)
                             .strokeBorder(Color.appBorder, lineWidth: 0.5)
                     )
-                    .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
             }
         }
+        // `.background` doesn't clip — without this, the filters panel's
+        // move-from-top transition briefly renders above the pill's
+        // rounded edge (and below it on the way back out) instead of
+        // sliding cleanly inside it. The shadow has to be applied after
+        // this (not inside the background above) or the clip would cut
+        // the shadow's blur off too.
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: isLennyBusy ? .clear : .black.opacity(0.08), radius: 3, y: 1)
         .animation(.easeInOut(duration: 0.25), value: isFocused)
         .animation(.easeInOut(duration: 0.15), value: isLennyMode)
         .animation(.easeInOut(duration: 0.2), value: isLennyBusy)
