@@ -17,16 +17,39 @@ struct CategoryChip: View {
         (isSelected || title == "Lenny") ? AppFont.pillLabel(18) : AppFont.pillLabelMedium(18)
     }
 
+    /// Lenny gets its own accent instead of the plain black/white chip
+    /// styling — it's the one chip that launches the AI flow rather than
+    /// toggling a filter, so it's worth calling out on sight. Filled
+    /// amber (not just an amber outline) so it reads as strongly as the
+    /// filled black "selected" state does elsewhere.
+    private var isLenny: Bool { title == "Lenny" }
+
+    /// A darkened shade of `appLennyAccent`, used only for the shadow —
+    /// the plain accent color at low opacity read as a light amber halo
+    /// instead of a grounding drop shadow, same reason the rest of the
+    /// app's pills use a dark shadow rather than a tinted-down fill color.
+    private var lennyShadowColor: Color {
+        Color(red: 0.39, green: 0.22, blue: 0.11).opacity(0.35)
+    }
+
+    /// #B36732 — fill only. Border/icon/text stay on `appLennyAccent` so
+    /// the pill still reads as one family of brown rather than two
+    /// unrelated colors, but the background itself gets its own slightly
+    /// lighter shade rather than just the accent at reduced opacity.
+    private var lennyBackgroundColor: Color {
+        Color(red: 0.702, green: 0.404, blue: 0.196)
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if let icon {
-                    ChipIcon(name: icon, isSelected: isSelected)
+                    ChipIcon(name: icon, isSelected: isSelected || isLenny)
                 }
 
                 Text(title)
                     .font(labelFont)
-                    .foregroundColor(isSelected ? .white : .black)
+                    .foregroundColor((isSelected || isLenny) ? .white : .black)
 
                 if let count {
                     Text("\(count)")
@@ -39,7 +62,11 @@ struct CategoryChip: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
         }
-        .pillStyle(fill: isSelected ? .appAccentBlack : .white, border: .appBorder)
+        .pillStyle(
+            fill: isLenny ? lennyBackgroundColor.opacity(0.9) : (isSelected ? .appAccentBlack : .white),
+            border: isLenny ? .appLennyAccent : .appBorder,
+            shadow: isLenny ? lennyShadowColor : .black.opacity(0.08)
+        )
     }
 }
 
@@ -135,11 +162,57 @@ struct HomeSearchRow: View {
     @ObservedObject private var searchState = HomeSearchState.shared
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var filters = HomeFiltersState.shared
+    @ObservedObject private var podsStore = PodsStore.shared
 
     private var isLennyMode: Bool { lenny.phase == .editing }
     /// A Lenny query has been submitted — nothing left to edit, so the
     /// field and pill chrome give way to plain status text.
     private var isLennyBusy: Bool { lenny.phase == .searching || lenny.phase == .results }
+
+    private struct LocationSuggestion: Identifiable {
+        let value: String   // filled into searchText — matches what HomeView actually filters on
+        let label: String   // what's shown in the row
+        var id: String { value }
+    }
+
+    /// Region/country matches for the typed query, classic-search only —
+    /// sourced from already-loaded `PodsStore` data instead of a new
+    /// endpoint, and restricted to the same fields (`country`/`region`)
+    /// HomeView's own filtering checks, so picking a suggestion is
+    /// guaranteed to actually surface results rather than a pod name
+    /// that HomeView wouldn't match on.
+    private var suggestions: [LocationSuggestion] {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !isLennyMode, !isLennyBusy, !query.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        var results: [LocationSuggestion] = []
+
+        for pod in podsStore.pods {
+            guard results.count < 5 else { break }
+            guard let region = pod.region, region.localizedCaseInsensitiveContains(query) else { continue }
+            guard seen.insert(region).inserted else { continue }
+            results.append(LocationSuggestion(value: region, label: "\(region), \(pod.country)"))
+        }
+
+        for country in podsStore.countries {
+            guard results.count < 5 else { break }
+            guard country.localizedCaseInsensitiveContains(query) else { continue }
+            guard seen.insert(country).inserted else { continue }
+            results.append(LocationSuggestion(value: country, label: country))
+        }
+
+        return results
+    }
+
+    private var showSuggestions: Bool {
+        isFocused && !filters.isExpanded && !suggestions.isEmpty
+    }
+
+    private func selectSuggestion(_ suggestion: LocationSuggestion) {
+        searchText = suggestion.value
+        isFocused = false
+    }
 
     private var textBinding: Binding<String> {
         isLennyMode ? $lenny.itineraryText : $searchText
@@ -266,8 +339,6 @@ struct HomeSearchRow: View {
         // whole button re-centering every frame reads as a jump, not a
         // clean grow. Leading-anchored, only the trailing edge moves.
         VStack(alignment: .leading, spacing: 14) {
-            DashedDivider()
-
             FilterRow(title: "Hikers", helper: "Number of hikers with you.") {
                 StepperControl(value: $filters.hikers)
             }
@@ -387,12 +458,54 @@ struct HomeSearchRow: View {
             .pillStyle()
             .background(saveWidthMeasurers)
         }
-        .padding(.top, 4)
+        // 18, not 4 — keeps Hikers the same distance from the chip row
+        // above that the removed leading DashedDivider used to give it
+        // (its own 1pt height plus the VStack's 14pt inter-row spacing),
+        // so the panel still reads as breathable instead of Hikers
+        // crowding straight up against the pills.
+        .padding(.top, 18)
         // Plain fade only — `.move(edge: .top)` translated the panel
         // through the controls row above it on the way in/out, which
         // showed as a flash of its content sliding across that row
         // instead of cleanly appearing/disappearing in place. The pill's
         // own height animation already provides the "grow" motion.
+        .transition(.opacity)
+    }
+
+    /// Location suggestions for the classic search tab, folded open the
+    /// same way `filtersPanel` is — right below the mode-toggle row,
+    /// once typing has actually started (`suggestions` is empty for a
+    /// blank query, so this never shows on a bare focus). Lenny mode has
+    /// no equivalent: itinerary text isn't a single place name, so
+    /// autocompleting it against country/region strings wouldn't mean
+    /// anything.
+    private var suggestionsPanel: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            DashedDivider()
+                .padding(.bottom, 10)
+
+            ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, suggestion in
+                Button {
+                    selectSuggestion(suggestion)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.appTextMuted)
+                        Text(suggestion.label)
+                            .font(AppFont.pillLabelMedium(15))
+                            .foregroundColor(.appTextPrimary)
+                        Spacer()
+                    }
+                }
+
+                if index < suggestions.count - 1 {
+                    DashedDivider()
+                        .padding(.vertical, 10)
+                }
+            }
+        }
+        .padding(.top, 4)
         .transition(.opacity)
     }
 
@@ -478,6 +591,8 @@ struct HomeSearchRow: View {
 
                 if filters.isExpanded {
                     filtersPanel
+                } else if showSuggestions {
+                    suggestionsPanel
                 }
             }
         }
@@ -530,6 +645,11 @@ struct HomeSearchRow: View {
         .onChange(of: isFocused) { _, focused in
             if focused {
                 searchState.isExpanded = true
+                // Tapping back into the field while filters are open
+                // means picking search back up, not filters — drop back
+                // to the plain two-row layout (field + chip row) instead
+                // of leaving the filters panel sitting open underneath.
+                filters.isExpanded = false
                 // Let the box finish growing before the controls fade in.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
                     guard isFocused else { return }
@@ -671,12 +791,13 @@ struct LennyIcon: View {
     var body: some View {
         Group {
             if UIImage(named: "lenny") != nil {
-                Image("lenny").resizable()
+                Image("lenny").resizable().renderingMode(.template)
             } else {
                 Image(systemName: "sparkles").resizable()
             }
         }
         .aspectRatio(contentMode: .fit)
         .frame(width: size, height: size)
+        .foregroundStyle(Color.appLennyAccent)
     }
 }
