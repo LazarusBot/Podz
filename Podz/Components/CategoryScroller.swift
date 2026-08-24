@@ -106,7 +106,7 @@ struct HomeSearchRow: View {
     }
 
     private var placeholder: String {
-        isLennyMode ? "Describe your hike itinerary and Lenny will carry on..." : "Search by location"
+        isLennyMode ? "e.g. Chamonix to Zermatt in 5 days" : "Search by location"
     }
 
     private var submitDisabled: Bool {

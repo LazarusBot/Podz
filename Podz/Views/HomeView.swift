@@ -52,6 +52,8 @@ struct HomeView: View {
                             }
                             .padding(.horizontal, 24)
                             .padding(.vertical, 20)
+                        } else if lenny.phase == .editing && lenny.itineraryText.isEmpty {
+                            awaitingLennyQueryState
                         } else if lenny.phase == .idle {
                             let query = locationSearch.trimmingCharacters(in: .whitespaces)
                             // Opening the search field clears the feed until
@@ -136,6 +138,21 @@ struct HomeView: View {
                 .font(.system(size: 32))
                 .foregroundColor(.appTextMuted)
             Text("Type a location to search.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.appTextMuted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+        .padding(.horizontal, 40)
+    }
+
+    private var awaitingLennyQueryState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "figure.hiking")
+                .font(.system(size: 32))
+                .foregroundColor(.appTextMuted)
+            Text("Describe your hike and Lenny will find pods along the way.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
