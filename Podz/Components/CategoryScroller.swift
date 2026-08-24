@@ -57,7 +57,12 @@ private struct ChipIcon: View {
                     .renderingMode(.template)
                     .aspectRatio(contentMode: .fit)
             } else {
+                // SF Symbols aren't resizable — without an explicit size
+                // they render at the ambient ~17pt text size and overflow
+                // the 14x14 box below instead of being scaled into it,
+                // which crowds the label next to them.
                 Image(systemName: name)
+                    .font(.system(size: 14, weight: .medium))
             }
         }
         .frame(width: 14, height: 14)
