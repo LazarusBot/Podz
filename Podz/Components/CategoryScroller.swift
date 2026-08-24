@@ -189,7 +189,12 @@ struct HomeSearchRow: View {
             }
         }
         .padding(.top, 4)
-        .transition(.opacity.combined(with: .move(edge: .top)))
+        // Plain fade only — `.move(edge: .top)` translated the panel
+        // through the controls row above it on the way in/out, which
+        // showed as a flash of its content sliding across that row
+        // instead of cleanly appearing/disappearing in place. The pill's
+        // own height animation already provides the "grow" motion.
+        .transition(.opacity)
     }
 
     var body: some View {
