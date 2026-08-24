@@ -144,7 +144,22 @@ final class AuthManager: ObservableObject {
             lastError = error.localizedDescription
         }
     }
-    
+
+    /// Sends a password reset email. Returns whether it succeeded so the
+    /// caller can show a confirmation — failure is already surfaced via
+    /// `lastError`.
+    @discardableResult
+    func resetPassword(email: String) async -> Bool {
+        lastError = nil
+        do {
+            try await supabase.auth.resetPasswordForEmail(email)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
     // MARK: - Sign in with Apple
     
     /// Called from `AppleSignInCoordinator.onSuccess` with the identity
