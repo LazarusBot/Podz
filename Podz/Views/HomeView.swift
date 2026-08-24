@@ -8,6 +8,7 @@ struct HomeView: View {
     @StateObject private var lenny = LennySearchViewModel.shared
     @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var filters = HomeFiltersState.shared
+    @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedPod: Pod?
     @State private var locationSearch = ""
 
@@ -101,6 +102,11 @@ struct HomeView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
+                }
+                .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.contentOffset.y
+                } action: { _, newValue in
+                    scrollState.updateOffset(newValue)
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
