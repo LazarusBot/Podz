@@ -170,7 +170,7 @@ final class AuthManager: ObservableObject {
             return false
         }
     }
-    
+
     // MARK: - Sign in with Apple
     
     /// Called from `AppleSignInCoordinator.onSuccess` with the identity

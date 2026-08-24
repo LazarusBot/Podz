@@ -12,12 +12,18 @@ struct ProfileView: View {
     var onBack: (() -> Void)? = nil
     @StateObject private var auth = AuthManager.shared
     @State private var showEditProfile = false
+    @State private var showLoginSecurity = false
+    @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
-    
+
     var body: some View {
         ZStack(alignment: .bottom) {
             if showEditProfile {
                 ProfileEditView(onBack: { showEditProfile = false })
+            } else if showLoginSecurity {
+                LoginSecurityView(onBack: { showLoginSecurity = false })
+            } else if showAccessibility {
+                AccessibilityView(onBack: { showAccessibility = false })
             } else {
                 VStack(spacing: 0) {
                     ProfileTopBar(title: "Profile", onBack: onBack)
@@ -33,9 +39,12 @@ struct ProfileView: View {
                     ProfilePromoCard()
                     
                     VStack(spacing: 0) {
-                        ProfileMenuRow(icon: "creditcard", title: "Payments and payouts")
-                        ProfileMenuRow(icon: "lock.shield", title: "Login and security")
-                        ProfileMenuRow(icon: "figure.roll", title: "Accessibility")
+                        ProfileMenuRow(icon: "lock.shield", title: "Login and security") {
+                            showLoginSecurity = true
+                        }
+                        ProfileMenuRow(icon: "figure.roll", title: "Accessibility") {
+                            showAccessibility = true
+                        }
                     }
                     
                     Spacer()
