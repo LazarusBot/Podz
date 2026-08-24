@@ -200,7 +200,7 @@ struct HomeSearchRow: View {
 
                     Button(action: submit) {
                         Image(systemName: "arrow.right.circle.fill")
-                            .font(.system(size: 28))
+                            .font(.system(size: 34))
                             .foregroundColor(submitDisabled ? .black.opacity(0.15) : .appAccentBlack)
                     }
                     .disabled(submitDisabled)
