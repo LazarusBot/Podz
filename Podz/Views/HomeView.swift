@@ -6,20 +6,10 @@ struct HomeView: View {
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var lenny = LennySearchViewModel.shared
+    @StateObject private var homeSearch = HomeSearchState.shared
     @State private var selectedPod: Pod?
-    @State private var selectedCategory = "All"
-    
-    /// Lenny and All always come first, in that order — everything after
-    /// is derived from the real pod_type values loaded from Supabase.
-    private var categories: [CategoryScroller.Category] {
-        [
-            .init(title: "Lenny", icon: "lenny", gradientText: false),
-            .init(title: "All")
-        ] + podsStore.podTypes.map { type in
-                .init(title: type, count: podsStore.count(forType: type))
-        }
-    }
-    
+    @State private var locationSearch = ""
+
     var body: some View {
         ZStack(alignment: .bottom) {
             if let pod = selectedPod {
@@ -34,9 +24,8 @@ struct HomeView: View {
                         )
                         
                         if lenny.phase == .idle {
-                            CategoryScroller(
-                                categories: categories,
-                                selected: $selectedCategory,
+                            HomeSearchRow(
+                                searchText: $locationSearch,
                                 onTapLenny: { lenny.activate() }
                             )
                         } else {
@@ -73,18 +62,37 @@ struct HomeView: View {
                             .padding(.horizontal, 24)
                             .padding(.vertical, 20)
                         } else if lenny.phase == .idle {
-                            let nonEmptySections = podsStore.countries.compactMap { country -> (String, [Pod])? in
-                                let pods = podsStore.pods(inCountry: country, type: selectedCategory)
+                            let query = locationSearch.trimmingCharacters(in: .whitespaces)
+                            // Opening the search field clears the feed until
+                            // a query is actually typed — showing every pod
+                            // while the field sits empty and focused reads
+                            // as "search does nothing".
+                            let isAwaitingQuery = homeSearch.isExpanded && query.isEmpty
+                            let nonEmptySections = isAwaitingQuery ? [] : podsStore.countries.compactMap { country -> (String, [Pod])? in
+                                let pods = podsStore.pods(inCountry: country).filter { pod in
+                                    query.isEmpty
+                                        || country.localizedCaseInsensitiveContains(query)
+                                        || (pod.region?.localizedCaseInsensitiveContains(query) ?? false)
+                                }
                                 return pods.isEmpty ? nil : (country, pods)
                             }
-                            ForEach(nonEmptySections, id: \.0) { country, pods in
-                                PodSection(
-                                    title: "Preferred pods - \(country)",
-                                    pods: pods,
-                                    photoURLs: podsStore.primaryPhotoByPodId,
-                                    showLikeButtons: true,
-                                    onTapPod: { selectedPod = $0 }
-                                )
+
+                            if isAwaitingQuery {
+                                awaitingQueryState
+                            } else if podsStore.isLoading && podsStore.pods.isEmpty {
+                                loadingState
+                            } else if nonEmptySections.isEmpty {
+                                emptyState
+                            } else {
+                                ForEach(nonEmptySections, id: \.0) { country, pods in
+                                    PodSection(
+                                        title: "Preferred pods - \(country)",
+                                        pods: pods,
+                                        photoURLs: podsStore.primaryPhotoByPodId,
+                                        showLikeButtons: true,
+                                        onTapPod: { selectedPod = $0 }
+                                    )
+                                }
                             }
                         }
                         
@@ -101,6 +109,49 @@ struct HomeView: View {
             }
         }
         .background(Color.appHomeBackground.ignoresSafeArea())
+    }
+
+    // MARK: - Feed states
+
+    private var loadingState: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("Loading pods…")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.appTextMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+    }
+
+    private var awaitingQueryState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 32))
+                .foregroundColor(.appTextMuted)
+            Text("Type a location to search.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.appTextMuted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+        .padding(.horizontal, 40)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "mappin.slash")
+                .font(.system(size: 32))
+                .foregroundColor(.appTextMuted)
+            Text(locationSearch.isEmpty ? "No pods available yet." : "No pods match \"\(locationSearch)\".")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.appTextMuted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+        .padding(.horizontal, 40)
     }
 }
 

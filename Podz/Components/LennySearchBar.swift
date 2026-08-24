@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-/// Replaces the CategoryScroller row entirely while active (screen
-/// 3796:276 idle/editing, 3796:690 searching). Idle = the small "Lenny"
-/// chip lives back in CategoryScroller as before; this view only
-/// exists once tapped.
+/// Replaces the HomeSearchRow entirely while active (screen 3796:276
+/// idle/editing, 3796:690 searching). Idle = the small "Lenny" chip
+/// lives back in HomeSearchRow as before; this view only exists once
+/// tapped.
 struct LennySearchBar: View {
     @ObservedObject var viewModel: LennySearchViewModel
     @FocusState private var isFocused: Bool
