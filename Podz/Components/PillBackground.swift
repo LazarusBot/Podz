@@ -25,6 +25,11 @@ struct PillBackground: ViewModifier {
                             .offset(y: -1)
                             .mask(Capsule())
                     )
+                    // The hairline border alone all but disappears against
+                    // the near-white app background (#E1 border on #FB
+                    // background) — this shadow is what actually keeps a
+                    // pill's edge legible.
+                    .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
             )
     }
 }

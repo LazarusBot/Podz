@@ -8,7 +8,12 @@ struct PodCard: View {
     var onTap: () -> Void = {}
     @ObservedObject private var likesStore = LikesStore.shared
     @State private var showFolderPicker = false
-    
+
+    /// Text scales with the card so bigger cards (e.g. the 2-up "peek a
+    /// third" sizing in PodSection) don't end up with captions that
+    /// still look tuned for the old fixed 160pt card.
+    private var scale: CGFloat { size / 160 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             ZStack(alignment: .topTrailing) {
@@ -41,19 +46,19 @@ struct PodCard: View {
             }
             
             Text(pod.name)
-                .font(AppFont.pillLabel(12))
+                .font(AppFont.pillLabelBold(16 * scale))
                 .foregroundColor(.black)
                 .lineLimit(1)
-            
+
             Text(pod.region ?? pod.country)
-                .font(AppFont.itemHelper(10))
+                .font(AppFont.itemHelper(10 * scale))
                 .foregroundColor(.black)
                 .lineLimit(1)
-            
-            HStack(spacing: 5) {
-                Circle().fill(Color.appAvailableGreen).frame(width: 6, height: 6)
+
+            HStack(spacing: 5 * scale) {
+                Circle().fill(Color.appAvailableGreen).frame(width: 6 * scale, height: 6 * scale)
                 Text("\(pod.bedsTotal ?? 0) beds available")
-                    .font(AppFont.itemHelper(10))
+                    .font(AppFont.itemHelper(10 * scale))
                     .foregroundColor(.appAvailableGreen)
             }
         }
@@ -72,23 +77,37 @@ struct PodSection: View {
     var photoURLs: [UUID: String] = [:]
     var showLikeButtons: Bool = false
     var onTapPod: (Pod) -> Void = { _ in }
-    
+
+    private let horizontalPadding: CGFloat = 24
+    private let cardSpacing: CGFloat = 12
+    private let peekWidth: CGFloat = 24
+
+    /// Sized so exactly two cards fit on screen and a sliver of the
+    /// third peeks in at the trailing edge, signaling the row scrolls.
+    /// Derived from screen width (not GeometryReader) so it's correct
+    /// on the very first frame inside this ScrollView.
+    private var cardSize: CGFloat {
+        (UIScreen.main.bounds.width - horizontalPadding - 2 * cardSpacing - peekWidth) / 2
+    }
+
+    /// Matches the scale PodCard applies to its own text, so the section
+    /// title grows in step with the cards below it.
+    private var scale: CGFloat { cardSize / 160 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(AppFont.pillLabel(14))
-                .fontWeight(.black)
+                .font(AppFont.pillLabelBold(20 * scale))
                 .foregroundColor(.black)
-                .padding(.leading, 24)
-            
+                .padding(.leading, horizontalPadding)
+
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: cardSpacing) {
                     ForEach(pods) { pod in
-                        PodCard(pod: pod, photoURL: photoURLs[pod.id], showLikeButton: showLikeButtons, onTap: { onTapPod(pod) })
+                        PodCard(pod: pod, photoURL: photoURLs[pod.id], size: cardSize, showLikeButton: showLikeButtons, onTap: { onTapPod(pod) })
                     }
                 }
-                .padding(.leading, 24)
-                .padding(.trailing, 24)
+                .padding(.leading, horizontalPadding)
             }
         }
         .padding(.vertical, 24)
