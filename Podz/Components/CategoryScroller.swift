@@ -261,6 +261,8 @@ struct HomeSearchRow: View {
         // whole button re-centering every frame reads as a jump, not a
         // clean grow. Leading-anchored, only the trailing edge moves.
         VStack(alignment: .leading, spacing: 14) {
+            DashedDivider()
+
             FilterRow(title: "Hikers", helper: "Number of hikers with you.") {
                 StepperControl(value: $filters.hikers)
             }
@@ -341,12 +343,12 @@ struct HomeSearchRow: View {
                     case .loading:
                         GeometryReader { geo in
                             Rectangle()
-                                .fill(Color(white: 0.7).opacity(0.5))
+                                .fill(Color.appBorder.opacity(0.5))
                                 .frame(width: geo.size.width * saveProgress)
                         }
                         .clipShape(Capsule())
                     case .saved:
-                        Capsule().fill(Color(white: 0.7).opacity(0.5))
+                        Capsule().fill(Color.appBorder.opacity(0.5))
                     case .idle:
                         EmptyView()
                     }
@@ -432,7 +434,7 @@ struct HomeSearchRow: View {
                     Button(action: submit) {
                         Image(systemName: "arrow.right.circle.fill")
                             .font(.system(size: 34))
-                            .foregroundColor(submitDisabled ? .black.opacity(0.15) : .appAccentBlack)
+                            .foregroundColor(submitDisabled ? .appBorder.opacity(0.5) : .appAccentBlack)
                     }
                     .disabled(submitDisabled)
                 }
@@ -516,7 +518,7 @@ struct HomeSearchRow: View {
 }
 
 /// A single "label + helper text ... control" row, separated by a
-/// hairline divider below it. Lives inline in the search pill's Filters
+/// dashed divider below it. Lives inline in the search pill's Filters
 /// panel — no horizontal padding of its own, since the pill already
 /// insets everything else uniformly.
 struct FilterRow<Control: View>: View {
@@ -539,10 +541,24 @@ struct FilterRow<Control: View>: View {
                 control()
             }
 
-            Divider()
-                .background(Color.appBorder)
+            DashedDivider()
                 .padding(.top, 12)
         }
+    }
+}
+
+/// A dashed, full-width horizontal rule in `.appBorder` — used between
+/// filter rows instead of a plain `Divider()`, which can't be dashed.
+struct DashedDivider: View {
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: 0))
+                path.addLine(to: CGPoint(x: geo.size.width, y: 0))
+            }
+            .stroke(Color.appBorder, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        }
+        .frame(height: 1)
     }
 }
 
