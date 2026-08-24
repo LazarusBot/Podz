@@ -14,7 +14,7 @@ struct CategoryChip: View {
     /// never actually becomes `isSelected` (tapping it fires an action
     /// rather than setting the selection).
     private var labelFont: Font {
-        (isSelected || title == "Lenny") ? AppFont.pillLabel(17) : AppFont.pillLabelMedium(17)
+        (isSelected || title == "Lenny") ? AppFont.pillLabel(18) : AppFont.pillLabelMedium(18)
     }
 
     var body: some View {
@@ -59,13 +59,13 @@ private struct ChipIcon: View {
             } else {
                 // SF Symbols aren't resizable — without an explicit size
                 // they render at the ambient ~17pt text size and overflow
-                // the 14x14 box below instead of being scaled into it,
+                // the 15x15 box below instead of being scaled into it,
                 // which crowds the label next to them.
                 Image(systemName: name)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
             }
         }
-        .frame(width: 14, height: 14)
+        .frame(width: 15, height: 15)
         .foregroundStyle(isSelected ? Color.white : Color.black)
     }
 }
