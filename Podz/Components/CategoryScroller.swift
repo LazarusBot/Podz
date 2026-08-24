@@ -113,7 +113,6 @@ struct HomeSearchRow: View {
     @Binding var searchText: String
 
     @FocusState private var isFocused: Bool
-    @State private var filtersExpanded = false
     /// Drives the Save button's Default → loading → "Saved ✓" sequence
     /// (Figma node 3639:865) before the panel collapses — confirms the
     /// tap landed instead of the panel just vanishing.
@@ -194,10 +193,16 @@ struct HomeSearchRow: View {
                 saveDisplayedWidth = saveSavedWidth
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                filtersExpanded = false
+                // Back to the two-row expanded pill with the text field
+                // active, not all the way down to idle — filters was
+                // just one stop along the way, not the end of the
+                // search; re-focusing lets them pick up typing right
+                // where they'd have been if they'd never opened it.
+                filters.isExpanded = false
                 savePhase = .idle
                 saveProgress = 0
                 saveDisplayedWidth = saveIdleWidth
+                isFocused = true
             }
         }
     }
@@ -268,15 +273,39 @@ struct HomeSearchRow: View {
             }
 
             FilterRow(title: "Check-in", helper: "Date of arrival in your pod.") {
-                DatePicker("", selection: $filters.checkIn, displayedComponents: .date)
-                    .labelsHidden()
-                    .tint(.appAccentBlack)
+                HStack(spacing: 8) {
+                    DatePicker("", selection: $filters.checkIn, displayedComponents: .date)
+                        .labelsHidden()
+                        .tint(.appAccentBlack)
+                        // .simultaneousGesture never fired here — compact
+                        // DatePicker is UIKit-backed internally, and its
+                        // own touch handling swallows the tap before
+                        // SwiftUI's gesture recognizer sees it. The date
+                        // actually changing is a reliable SwiftUI-level
+                        // signal instead.
+                        .onChange(of: filters.checkIn) { _, _ in
+                            filters.datePickerActive = true
+                        }
+                    DateConfirmButton(hasChanged: filters.checkIn != filters.initialCheckIn) {
+                        filters.initialCheckIn = filters.checkIn
+                        filters.datePickerActive = false
+                    }
+                }
             }
 
             FilterRow(title: "Checkout", helper: "Date of leaving from your pod.") {
-                DatePicker("", selection: $filters.checkOut, in: filters.checkIn..., displayedComponents: .date)
-                    .labelsHidden()
-                    .tint(.appAccentBlack)
+                HStack(spacing: 8) {
+                    DatePicker("", selection: $filters.checkOut, in: filters.checkIn..., displayedComponents: .date)
+                        .labelsHidden()
+                        .tint(.appAccentBlack)
+                        .onChange(of: filters.checkOut) { _, _ in
+                            filters.datePickerActive = true
+                        }
+                    DateConfirmButton(hasChanged: filters.checkOut != filters.initialCheckOut) {
+                        filters.initialCheckOut = filters.checkOut
+                        filters.datePickerActive = false
+                    }
+                }
             }
 
             FilterRow(title: "Wifi", helper: "Location is wired or not.") {
@@ -398,7 +427,7 @@ struct HomeSearchRow: View {
                     }
                 } else {
                     TextField("", text: textBinding, prompt: Text(placeholder).foregroundColor(.black.opacity(0.35)))
-                        .font(AppFont.pillLabelMedium(15))
+                        .font(AppFont.pillLabelMedium(17))
                         .foregroundColor(.black)
                         .autocorrectionDisabled()
                         .submitLabel(.search)
@@ -412,7 +441,14 @@ struct HomeSearchRow: View {
             // (status text + Spacer + cancel button) and doesn't need it.
             .padding(.leading, isLennyBusy ? 0 : 5)
 
-            if isFocused {
+            // searchState.isExpanded, not isFocused directly — dismissing
+            // the keyboard while filters are open (see the onChange
+            // below) blurs the field, and gating on isFocused itself
+            // would've collapsed this row right along with it. isExpanded
+            // is the one thing that's actually true for "the pill should
+            // look expanded" regardless of whether the text field
+            // currently has keyboard focus.
+            if searchState.isExpanded {
                 HStack(spacing: 8) {
                     CategoryChip(
                         title: isLennyMode ? "Search" : "Lenny",
@@ -425,8 +461,8 @@ struct HomeSearchRow: View {
                         }
                     }
 
-                    CategoryChip(title: "Filters", isSelected: filtersExpanded, icon: "slider.horizontal.3") {
-                        filtersExpanded.toggle()
+                    CategoryChip(title: "Filters", isSelected: filters.isExpanded, icon: "slider.horizontal.3") {
+                        filters.isExpanded.toggle()
                     }
 
                     Spacer()
@@ -440,7 +476,7 @@ struct HomeSearchRow: View {
                 }
                 .opacity(showControls ? 1 : 0)
 
-                if filtersExpanded {
+                if filters.isExpanded {
                     filtersPanel
                 }
             }
@@ -470,10 +506,18 @@ struct HomeSearchRow: View {
         // the shadow's blur off too.
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: isLennyBusy ? .clear : .black.opacity(0.08), radius: 3, y: 1)
+        // Dead space inside the pill (a FilterRow's label, the gap
+        // between it and its control, a DashedDivider...) has no
+        // gesture of its own, so without this the tap fell through to
+        // HomeView's tap-outside-to-dismiss catcher on the ScrollView
+        // and closed the whole panel — tapping *inside* the pill
+        // shouldn't dismiss anything, only genuinely outside it.
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onTapGesture {}
         .animation(.easeInOut(duration: 0.25), value: isFocused)
         .animation(.easeInOut(duration: 0.15), value: isLennyMode)
         .animation(.easeInOut(duration: 0.2), value: isLennyBusy)
-        .animation(.easeInOut(duration: 0.25), value: filtersExpanded)
+        .animation(.easeInOut(duration: 0.25), value: filters.isExpanded)
         .padding(.horizontal, 24)
         .padding(.bottom, 20)
         .background(
@@ -484,8 +528,8 @@ struct HomeSearchRow: View {
             )
         )
         .onChange(of: isFocused) { _, focused in
-            searchState.isExpanded = focused
             if focused {
+                searchState.isExpanded = true
                 // Let the box finish growing before the controls fade in.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
                     guard isFocused else { return }
@@ -493,12 +537,20 @@ struct HomeSearchRow: View {
                         showControls = true
                     }
                 }
-            } else {
+            } else if !filters.isExpanded {
+                // Losing focus while filters are open is deliberate — we
+                // dismiss the keyboard ourselves (see the filters.isExpanded
+                // onChange below) so it doesn't float over the filter
+                // controls, but the pill should stay expanded rather than
+                // collapse just because the text field isn't focused
+                // anymore. Everything below only applies to a "real"
+                // blur (submitting, tapping outside, scrolling away).
+                searchState.isExpanded = false
                 showControls = false
-                // Losing focus without submitting (scrolling away, tapping
-                // outside...) shouldn't strand the pill in Lenny mode —
-                // only if there's nothing typed, though; an in-progress
-                // draft is worth keeping around for when they come back.
+                // Losing focus without submitting shouldn't strand the
+                // pill in Lenny mode — only if there's nothing typed,
+                // though; an in-progress draft is worth keeping around
+                // for when they come back.
                 if isLennyMode && lenny.itineraryText.isEmpty {
                     lenny.revertToLocationSearch()
                 }
@@ -506,11 +558,23 @@ struct HomeSearchRow: View {
         }
         .onChange(of: searchState.isExpanded) { _, expanded in
             // Someone outside this view (HomeView's tap-outside-to-dismiss)
-            // closed it — mirror that down into the real FocusState that
-            // controls the keyboard. We're the one driving `isExpanded`
-            // the rest of the time, via the onChange above, so only react
-            // when it's telling us to close and we haven't already.
-            if !expanded && isFocused {
+            // closed it — mirror that down into our own state. We're the
+            // one driving `isExpanded` the rest of the time (via the
+            // isFocused onChange above), so only react when it's telling
+            // us to close. Filters needs closing here too, not just
+            // isFocused — once the panel's open, isFocused is already
+            // false (we blur it deliberately), so the guard this used to
+            // have (`&& isFocused`) would've skipped this entirely and
+            // left tap-outside unable to close an open filters panel.
+            guard !expanded else { return }
+            isFocused = false
+            filters.isExpanded = false
+        }
+        .onChange(of: filters.isExpanded) { _, expanded in
+            // Filter rows are steppers/date pickers/toggles, not text
+            // entry — nothing left to type once they're open, so drop
+            // the keyboard if the search field was still focused.
+            if expanded {
                 isFocused = false
             }
         }
@@ -530,13 +594,22 @@ struct FilterRow<Control: View>: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
+                    // Explicit sizes — itemTitle()/itemHelper() default to
+                    // 10pt/8pt, which reads as an afterthought next to
+                    // everything else in this pill (18pt chip labels,
+                    // 15pt text field, 18pt Save button).
                     Text(title)
-                        .font(AppFont.itemTitle())
+                        .font(AppFont.itemTitle(16))
                         .foregroundColor(.appTextPrimary)
                     Text(helper)
-                        .font(AppFont.itemHelper())
+                        .font(AppFont.itemHelper(13))
                         .foregroundColor(.appTextSecondary)
                 }
+                // Matches the Save button's own text inset (its
+                // horizontal padding is 14pt, same as the pill's other
+                // buttons/chips) so this row's text actually lines up
+                // with it, instead of sitting flush with the pill's edge.
+                .padding(.leading, 14)
                 Spacer()
                 control()
             }
@@ -544,6 +617,33 @@ struct FilterRow<Control: View>: View {
             DashedDivider()
                 .padding(.top, 12)
         }
+    }
+}
+
+/// Sits next to a Check-in/Checkout DatePicker as an explicit "confirm
+/// and close" target. It doesn't control the DatePicker directly —
+/// there's no public API for that on its native compact-style overlay —
+/// but that overlay already dismisses on any tap outside itself, so
+/// this button's only job is to be an obvious place to make that tap
+/// instead of leaving people to guess they can tap elsewhere. Grayed
+/// out and disabled until the date's actually been changed from where
+/// it started — nothing to confirm otherwise. Tapping it (besides the
+/// dismiss-by-tapping-outside-the-picker side effect) moves the "start"
+/// baseline up to the now-confirmed value, so it grays back out again
+/// rather than staying enabled forever after the first change.
+private struct DateConfirmButton: View {
+    let hasChanged: Bool
+    var onConfirm: () -> Void = {}
+
+    var body: some View {
+        Button(action: onConfirm) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(hasChanged ? Color.appAccentBlack : Color.appBorder))
+        }
+        .disabled(!hasChanged)
     }
 }
 

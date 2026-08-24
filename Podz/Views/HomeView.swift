@@ -118,7 +118,19 @@ struct HomeView: View {
                     // editing there's nothing below the pill yet, so the
                     // content is short and a catcher on just the VStack
                     // would leave most of the screen dead to this gesture.
-                    if homeSearch.isExpanded {
+                    //
+                    // A Check-in/Checkout DatePicker's native calendar
+                    // overlay renders outside the pill's own tap-
+                    // absorbing bounds, so the tap that closes it (tapping
+                    // outside the calendar) was escaping here and
+                    // collapsing the whole pill instead of just the
+                    // calendar. Consume exactly that one tap when a
+                    // picker was just opened, then let tap-outside behave
+                    // normally again — not suppressed for as long as
+                    // filters happen to be open.
+                    if filters.datePickerActive {
+                        filters.datePickerActive = false
+                    } else if homeSearch.isExpanded {
                         homeSearch.isExpanded = false
                     }
                 }
