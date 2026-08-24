@@ -83,8 +83,11 @@ private struct ChipIcon: View {
 /// chrome drops away — that text isn't editable, so looking like a
 /// text field would be misleading. Tapping "Filters" folds a filter
 /// panel open right below that row, in the same pill, instead of
-/// presenting a separate sheet — real filtering logic (applying the
-/// values to the feed) is still coming later, this just holds the UI.
+/// presenting a separate sheet — values live in `HomeFiltersState.shared`
+/// so `HomeView` can read them. Only Hikers actually filters the feed so
+/// far (`pods.bedsTotal`); Wifi/Pets/Check-in/Checkout are fully
+/// interactive but have no backing data yet (no columns on `pods`, no
+/// bookings table), so they're along for the ride until that lands.
 /// Replaces the old scrollable Lenny/All-types/category-type filter
 /// row entirely.
 struct HomeSearchRow: View {
@@ -98,14 +101,7 @@ struct HomeSearchRow: View {
     @State private var showControls = false
     @ObservedObject private var searchState = HomeSearchState.shared
     @ObservedObject private var lenny = LennySearchViewModel.shared
-
-    // Filters panel state — placeholder values until real filtering logic
-    // lands; matches FiltersView's old defaults.
-    @State private var filterHikers: Int = 0
-    @State private var filterCheckIn: String = "22 october 2027"
-    @State private var filterCheckOut: String = "28 october 2027"
-    @State private var filterWifi: Bool = true
-    @State private var filterPets: Bool = true
+    @ObservedObject private var filters = HomeFiltersState.shared
 
     private var isLennyMode: Bool { lenny.phase == .editing }
     /// A Lenny query has been submitted — nothing left to edit, so the
@@ -156,35 +152,30 @@ struct HomeSearchRow: View {
     private var filtersPanel: some View {
         VStack(spacing: 14) {
             FilterRow(title: "Hikers", helper: "Number of hikers with you.") {
-                StepperControl(value: $filterHikers)
+                StepperControl(value: $filters.hikers)
             }
 
             FilterRow(title: "Check-in", helper: "Date of arrival in your pod.") {
-                Text(filterCheckIn)
-                    .font(AppFont.pillLabel())
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .pillStyle()
+                DatePicker("", selection: $filters.checkIn, displayedComponents: .date)
+                    .labelsHidden()
+                    .tint(.appAccentBlack)
             }
 
             FilterRow(title: "Checkout", helper: "Date of leaving from your pod.") {
-                Text(filterCheckOut)
-                    .font(AppFont.pillLabel())
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .pillStyle()
+                DatePicker("", selection: $filters.checkOut, in: filters.checkIn..., displayedComponents: .date)
+                    .labelsHidden()
+                    .tint(.appAccentBlack)
             }
 
             FilterRow(title: "Wifi", helper: "Location is wired or not.") {
-                ToggleCheckButton(isOn: $filterWifi)
+                ToggleCheckButton(isOn: $filters.wifi)
             }
 
             FilterRow(title: "Pets", helper: "Pets are allowed in the pod or not.") {
-                ToggleCheckButton(isOn: $filterPets)
+                ToggleCheckButton(isOn: $filters.pets)
             }
 
             PillButton(title: "Save") {
-                // TODO: wire up save action — apply filters to the feed.
                 filtersExpanded = false
             }
         }

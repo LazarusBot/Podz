@@ -7,6 +7,7 @@ struct HomeView: View {
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var lenny = LennySearchViewModel.shared
     @StateObject private var homeSearch = HomeSearchState.shared
+    @StateObject private var filters = HomeFiltersState.shared
     @State private var selectedPod: Pod?
     @State private var locationSearch = ""
 
@@ -63,9 +64,13 @@ struct HomeView: View {
                             let isAwaitingQuery = homeSearch.isExpanded && query.isEmpty
                             let nonEmptySections = isAwaitingQuery ? [] : podsStore.countries.compactMap { country -> (String, [Pod])? in
                                 let pods = podsStore.pods(inCountry: country).filter { pod in
-                                    query.isEmpty
+                                    let matchesQuery = query.isEmpty
                                         || country.localizedCaseInsensitiveContains(query)
                                         || (pod.region?.localizedCaseInsensitiveContains(query) ?? false)
+                                    // Wifi/Pets/Check-in/Checkout stay display-only until `pods`
+                                    // has data to filter them on — see HomeFiltersState.
+                                    let matchesHikers = filters.hikers == 0 || (pod.bedsTotal ?? 0) >= filters.hikers
+                                    return matchesQuery && matchesHikers
                                 }
                                 return pods.isEmpty ? nil : (country, pods)
                             }
@@ -167,7 +172,7 @@ struct HomeView: View {
             Image(systemName: "mappin.slash")
                 .font(.system(size: 32))
                 .foregroundColor(.appTextMuted)
-            Text(locationSearch.isEmpty ? "No pods available yet." : "No pods match \"\(locationSearch)\".")
+            Text(emptyStateMessage)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
@@ -175,6 +180,16 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
         .padding(.horizontal, 40)
+    }
+
+    private var emptyStateMessage: String {
+        if !locationSearch.isEmpty {
+            return "No pods match \"\(locationSearch)\"."
+        } else if filters.hikers > 0 {
+            return "No pods sleep \(filters.hikers) or more."
+        } else {
+            return "No pods available yet."
+        }
     }
 }
 
