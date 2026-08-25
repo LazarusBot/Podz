@@ -16,6 +16,10 @@ struct LikesFolderCard: View {
     let pods: [Pod]
     var photoURLs: [UUID: String] = [:]
     var scale: CGFloat = 1
+    /// Base point size for the folder name label/field, before `scale`.
+    /// Overridable per call site — LikeFolderPickerSheet wants it larger
+    /// than the default LikesView grid does.
+    var nameFontSize: CGFloat = 16
     var onTap: () -> Void = {}
     /// When set, the caption becomes an editable, auto-focused TextField
     /// instead of static text — used for the "creating a new folder"
@@ -178,7 +182,7 @@ struct LikesFolderCard: View {
             
             if let editableName {
                 TextField("Folder name", text: editableName)
-                    .font(AppFont.pillLabel(14 * scale))
+                    .font(AppFont.pillLabel(nameFontSize * scale))
                     .fontWeight(.semibold)
                     .foregroundColor(.black)
                     .multilineTextAlignment(.center)
@@ -188,7 +192,7 @@ struct LikesFolderCard: View {
                     .onAppear { isNameFocused = true }
             } else {
                 Text(country ?? "")
-                    .font(AppFont.pillLabel(14 * scale))
+                    .font(AppFont.pillLabel(nameFontSize * scale))
                     .fontWeight(.semibold)
                     .foregroundColor(.black)
                     .lineLimit(1)
