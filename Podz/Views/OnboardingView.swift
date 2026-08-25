@@ -24,7 +24,7 @@ struct OnboardingView: View {
                 MainTabView()
             }
         } else {
-            AuthFlow(onAuthenticated: {})
+            AuthFlow()
         }
     }
 }
@@ -48,20 +48,14 @@ struct AuthFlow: View {
     enum Route { case welcome, login, register }
     
     @State private var route: Route = .welcome
-    
-    /// Called only for "Continue as a guest" — real login/register success
-    /// is picked up automatically by OnboardingView via auth.isAuthenticated,
-    /// no need to call this from LoginView/RegisterView anymore.
-    var onAuthenticated: () -> Void = {}
-    
+
     var body: some View {
         ZStack {
             switch route {
             case .welcome:
                 WelcomeView(
                     onLogin: { route = .login },
-                    onRegister: { route = .register },
-                    onGuest: onAuthenticated
+                    onRegister: { route = .register }
                 )
                 .transition(.opacity)
                 
@@ -88,8 +82,7 @@ struct AuthFlow: View {
 struct WelcomeView: View {
     var onLogin: () -> Void
     var onRegister: () -> Void
-    var onGuest: () -> Void
-    
+
     var body: some View {
         AuthBackground(showBackButton: false, showLogo: false) {
             VStack {
@@ -132,12 +125,6 @@ struct WelcomeView: View {
                         .padding(.vertical, 12)
                     }
                     .pillStyle(fill: .white, border: .appBorder)
-                    
-                    Text("Continue as a guest")
-                        .font(.system(size: 14))
-                        .foregroundColor(.appLinkGreen)
-                        .underline()
-                        .onTapGesture(perform: onGuest)
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 20)
@@ -159,6 +146,7 @@ struct LoginView: View {
     @State private var showResetConfirmation = false
     @StateObject private var appleCoordinator = AppleSignInWrapper()
     @FocusState private var focusedField: AuthField?
+    @State private var emailError: String?
 
     private var canSubmit: Bool { !email.isEmpty && !password.isEmpty }
 
@@ -184,7 +172,9 @@ struct LoginView: View {
                         placeholder: "Enter your email", text: $email,
                         keyboardType: .emailAddress, textContentType: .emailAddress,
                         field: .email, focusedField: $focusedField,
-                        onSubmit: { focusedField = .password }
+                        onSubmit: { focusedField = .password },
+                        validate: { isValidEmail($0) ? nil : "Enter a valid email address." },
+                        onValidationChange: { emailError = $0 }
                     )
                     AuthTextField(
                         placeholder: "Enter your password", text: $password, isSecure: true,
@@ -201,6 +191,11 @@ struct LoginView: View {
                             .underline()
                             .onTapGesture(perform: handleForgotPassword)
                     }
+                }
+
+                if let emailError {
+                    AuthErrorBanner(message: emailError)
+                        .padding(.top, 12)
                 }
 
                 if let error = auth.lastError {
@@ -227,7 +222,7 @@ struct LoginView: View {
                 }
                 .disabled(auth.isLoading || !canSubmit)
                 .opacity(canSubmit ? 1 : 0.5)
-                .pillStyle(fill: .appAccentBlack, border: .appAccentBlack)
+                .pillStyle(fill: .appAccentBlack, border: .appBorder)
 
                 DividerOr()
                     .padding(.vertical, 24)
@@ -251,6 +246,7 @@ struct LoginView: View {
             .contentShape(Rectangle())
             .onTapGesture { focusedField = nil }
             .animation(.easeOut(duration: 0.25), value: auth.lastError)
+            .animation(.easeOut(duration: 0.25), value: emailError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -292,6 +288,12 @@ struct RegisterView: View {
     @State private var nonce = ""
     @StateObject private var appleCoordinator = AppleSignInWrapper()
     @FocusState private var focusedField: AuthField?
+    @State private var emailError: String?
+    @State private var passwordError: String?
+
+    private var canSubmit: Bool {
+        !name.isEmpty && !username.isEmpty && !email.isEmpty && !password.isEmpty
+    }
 
     private func submit() {
         focusedField = nil
@@ -307,7 +309,7 @@ struct RegisterView: View {
                     .font(AppFont.pillLabelBold(40))
                     .tracking(-1)
                     .foregroundColor(.white)
-                    .lineSpacing(4)
+                    .lineSpacing(0)
                     .padding(.top, 51)
                 
                 Spacer(minLength: 24)
@@ -329,16 +331,30 @@ struct RegisterView: View {
                         placeholder: "Enter your email", text: $email,
                         keyboardType: .emailAddress, textContentType: .emailAddress,
                         field: .email, focusedField: $focusedField,
-                        onSubmit: { focusedField = .password }
+                        onSubmit: { focusedField = .password },
+                        validate: { isValidEmail($0) ? nil : "Enter a valid email address." },
+                        onValidationChange: { emailError = $0 }
                     )
                     AuthTextField(
                         placeholder: "Enter your password", text: $password, isSecure: true,
                         textContentType: .newPassword, submitLabel: .done,
                         field: .password, focusedField: $focusedField,
-                        onSubmit: submit
+                        onSubmit: submit,
+                        validate: { $0.count >= minPasswordLength ? nil : "At least \(minPasswordLength) characters." },
+                        onValidationChange: { passwordError = $0 }
                     )
                 }
-                
+
+                if let emailError {
+                    AuthErrorBanner(message: emailError)
+                        .padding(.top, 12)
+                }
+
+                if let passwordError {
+                    AuthErrorBanner(message: passwordError)
+                        .padding(.top, 12)
+                }
+
                 if let error = auth.lastError {
                     AuthErrorBanner(message: error)
                         .padding(.top, 12)
@@ -361,8 +377,9 @@ struct RegisterView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                 }
-                .disabled(auth.isLoading)
-                .pillStyle(fill: .appAccentBlack, border: .appAccentBlack)
+                .disabled(auth.isLoading || !canSubmit)
+                .opacity(canSubmit ? 1 : 0.5)
+                .pillStyle(fill: .appAccentBlack, border: .appBorder)
                 
                 DividerOr()
                     .padding(.vertical, 24)
@@ -386,6 +403,8 @@ struct RegisterView: View {
             .contentShape(Rectangle())
             .onTapGesture { focusedField = nil }
             .animation(.easeOut(duration: 0.25), value: auth.lastError)
+            .animation(.easeOut(duration: 0.25), value: emailError)
+            .animation(.easeOut(duration: 0.25), value: passwordError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -430,6 +449,12 @@ struct AuthBackground<Content: View>: View {
             content()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Keeps Login/Register fixed in place instead of SwiftUI's
+        // default behavior of sliding the whole screen up to keep the
+        // focused field clear of the keyboard — the fields already sit
+        // well above where the keyboard covers, so that shift was just
+        // unwanted movement, not something protecting visibility here.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         // Full-bleed background: image sized via GeometryReader to the
         // true full-screen bounds *before* scaledToFill runs (avoids the
         // safe-area seam), single ignoresSafeArea() applied once here.
@@ -474,6 +499,19 @@ enum AuthField: Hashable {
     case name, username, email, password
 }
 
+/// Lightweight, deliberately permissive check — just enough to catch an
+/// obviously-incomplete address (no "@", nothing after the last ".")
+/// before it round-trips to the server, not a full RFC 5322 validator.
+private func isValidEmail(_ text: String) -> Bool {
+    text.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#, options: .regularExpression) != nil
+}
+
+/// Supabase's own default minimum — client-side check can't be stricter
+/// than whatever this project's Auth settings actually enforce, but it
+/// can't be looser than Supabase's own floor either, so this is always
+/// a safe minimum to warn on before submitting.
+private let minPasswordLength = 6
+
 struct AuthTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -489,9 +527,26 @@ struct AuthTextField: View {
     /// Return key handler — the parent decides whether that means
     /// advancing to the next field or firing the actual submit action.
     var onSubmit: () -> Void = {}
+    /// Returns a short hint to show below the field when `text` looks
+    /// invalid, or nil when it's fine — checked live but only *displayed*
+    /// once the user has actually left the field (see `validationMessage`),
+    /// so it doesn't nag mid-keystroke for something like an email that's
+    /// only half-typed.
+    var validate: ((String) -> String?)? = nil
+    /// Reports `validationMessage` up whenever it changes, instead of
+    /// this view rendering the hint itself — the parent collects every
+    /// field's current message and shows them together below the whole
+    /// field stack, rather than one popping up between two fields and
+    /// shoving the rest of the form down.
+    var onValidationChange: (String?) -> Void = { _ in }
     @State private var isRevealed = false
 
     private var isFocused: Bool { focusedField.wrappedValue == field }
+
+    private var validationMessage: String? {
+        guard !isFocused, !text.isEmpty else { return nil }
+        return validate?(text)
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -506,7 +561,7 @@ struct AuthTextField: View {
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
             .textContentType(textContentType)
-            .font(AppFont.pillLabelSemiBold(16))
+            .font(AppFont.pillLabelSemiBold(20))
             .foregroundColor(.black)
             .focused(focusedField, equals: field)
             .submitLabel(submitLabel)
@@ -532,15 +587,18 @@ struct AuthTextField: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 20)
         .background(
-            RoundedRectangle(cornerRadius: 15)
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
                 .fill(Color.appFieldBg)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 15)
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
                         .strokeBorder(isFocused ? Color.appAccentBlack : Color.appBorder, lineWidth: isFocused ? 1.5 : 0.5)
                 )
                 .shadow(color: Color.black.opacity(isFocused ? 0.18 : 0.12), radius: isFocused ? 6 : 4, x: 1, y: 3)
         )
         .animation(.easeOut(duration: 0.15), value: isFocused)
+        .onChange(of: validationMessage) { _, new in
+            onValidationChange(new)
+        }
     }
 
     private var placeholderText: Text {
@@ -556,11 +614,32 @@ struct AuthTextField: View {
 struct AuthErrorBanner: View {
     let message: String
 
+    /// Supabase Auth's own error strings are stable, documented text
+    /// (not something invented here) but read as backend jargon —
+    /// swapped for plain language on the ones worth the trouble.
+    /// Anything unrecognized falls through unchanged rather than being
+    /// hidden, so a genuinely new error is never suppressed.
+    private var friendlyMessage: String {
+        let lower = message.lowercased()
+        if lower.contains("user already registered") {
+            return "An account with this email already exists."
+        } else if lower.contains("invalid login credentials") {
+            return "Incorrect email or password."
+        } else if lower.contains("password should be at least") {
+            return "Password must be at least \(minPasswordLength) characters."
+        } else if lower.contains("unable to validate email address") {
+            return "That doesn't look like a valid email address."
+        } else if lower.contains("email not confirmed") {
+            return "Please confirm your email before signing in."
+        }
+        return message
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.circle.fill")
                 .font(.system(size: 13))
-            Text(message)
+            Text(friendlyMessage)
                 .font(.system(size: 13, weight: .medium))
                 .fixedSize(horizontal: false, vertical: true)
         }
