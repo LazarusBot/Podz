@@ -146,6 +146,17 @@ private struct WidthPreferenceKey: PreferenceKey {
     }
 }
 
+/// Reports the mode-toggle chip's frame up to HomeView, but only while
+/// it's actually reads "Lenny" (classic-search mode) — HomeView uses this
+/// to position the first-time coachmark that points at it, and there's
+/// nothing to point at once the chip has flipped to "Search".
+struct LennyChipAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
 struct HomeSearchRow: View {
     private enum SaveButtonPhase {
         case idle, loading, saved
@@ -173,6 +184,19 @@ struct HomeSearchRow: View {
     /// height first, then these fade in, instead of both happening at
     /// once.
     @State private var showControls = false
+    /// Set right before `selectSuggestion` blurs the field — picking a
+    /// suggestion has nothing left to type, but unlike a normal blur
+    /// (tap outside, submit) the pill shouldn't collapse all the way
+    /// back to idle over it: the Lenny/Filters/submit row should stay
+    /// reachable. Consumed by the isFocused onChange below, same
+    /// one-shot-flag pattern as `filters.datePickerActive`.
+    @State private var isSelectingSuggestion = false
+    /// The value last picked from the suggestions dropdown, if any —
+    /// `showSuggestions` stays suppressed as long as `searchText` still
+    /// exactly matches it, and un-suppresses itself the moment it
+    /// doesn't (typing or deleting even one character), with no explicit
+    /// reset needed anywhere.
+    @State private var lastSelectedSuggestionValue: String?
     @ObservedObject private var searchState = HomeSearchState.shared
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var filters = HomeFiltersState.shared
@@ -220,11 +244,33 @@ struct HomeSearchRow: View {
     }
 
     private var showSuggestions: Bool {
-        isFocused && !filters.isExpanded && !suggestions.isEmpty
+        isFocused && !filters.isExpanded && !suggestions.isEmpty && searchText != lastSelectedSuggestionValue
+    }
+
+    /// Mirrors HomeView's own feed-filtering check — used only to decide
+    /// whether refocusing after Filters' Save is safe. With a query
+    /// typed and matching pods already showing, refocusing pops the
+    /// keyboard back up right as the panel collapses, and that's exactly
+    /// the "bump" saveFilters() is avoiding; with nothing showing yet,
+    /// there's nothing to reflow and refocusing is back to being the
+    /// right call — see saveFilters() below.
+    private var hasVisibleFeedResults: Bool {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return false }
+        return podsStore.countries.contains { country in
+            podsStore.pods(inCountry: country).contains { pod in
+                let matchesQuery = country.localizedCaseInsensitiveContains(query)
+                    || (pod.region?.localizedCaseInsensitiveContains(query) ?? false)
+                let matchesHikers = filters.hikers == 0 || (pod.bedsTotal ?? 0) >= filters.hikers
+                return matchesQuery && matchesHikers
+            }
+        }
     }
 
     private func selectSuggestion(_ suggestion: LocationSuggestion) {
         searchText = suggestion.value
+        lastSelectedSuggestionValue = suggestion.value
+        isSelectingSuggestion = true
         isFocused = false
     }
 
@@ -280,16 +326,28 @@ struct HomeSearchRow: View {
                 saveDisplayedWidth = saveSavedWidth
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                // Back to the two-row expanded pill with the text field
-                // active, not all the way down to idle — filters was
-                // just one stop along the way, not the end of the
-                // search; re-focusing lets them pick up typing right
-                // where they'd have been if they'd never opened it.
-                filters.isExpanded = false
+                // Back to the expanded pill with the chip row visible,
+                // not all the way down to idle — filters was just one
+                // stop along the way, not the end of the search.
+                // Explicit withAnimation so the collapse itself is one
+                // clean motion rather than leaning on the ambient
+                // .animation(value: filters.isExpanded) modifier alone.
+                withAnimation(.easeInOut(duration: AppMotion.standard)) {
+                    filters.isExpanded = false
+                }
                 savePhase = .idle
                 saveProgress = 0
                 saveDisplayedWidth = saveIdleWidth
-                isFocused = true
+                // Refocusing pops the keyboard back up — fine, even nice
+                // (picks typing back up right where they left off), when
+                // there's nothing on screen for that to disturb. But
+                // with a filtered feed already showing, the keyboard
+                // rising at the exact moment the panel collapses is
+                // exactly the "bump" of two competing animations landing
+                // together, so it's skipped there.
+                if !hasVisibleFeedResults {
+                    isFocused = true
+                }
             }
         }
     }
@@ -587,6 +645,9 @@ struct HomeSearchRow: View {
                             lenny.activate()
                         }
                     }
+                    .anchorPreference(key: LennyChipAnchorKey.self, value: .bounds) {
+                        isLennyMode ? nil : $0
+                    }
 
                     CategoryChip(title: "Filters", isSelected: filters.isExpanded, icon: "slider.horizontal.3") {
                         filters.isExpanded.toggle()
@@ -643,10 +704,10 @@ struct HomeSearchRow: View {
         // shouldn't dismiss anything, only genuinely outside it.
         .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .onTapGesture {}
-        .animation(.easeInOut(duration: 0.25), value: isFocused)
-        .animation(.easeInOut(duration: 0.15), value: isLennyMode)
-        .animation(.easeInOut(duration: 0.2), value: isLennyBusy)
-        .animation(.easeInOut(duration: 0.25), value: filters.isExpanded)
+        .animation(.easeInOut(duration: AppMotion.standard), value: isFocused)
+        .animation(.easeInOut(duration: AppMotion.quick), value: isLennyMode)
+        .animation(.easeInOut(duration: AppMotion.quick), value: isLennyBusy)
+        .animation(.easeInOut(duration: AppMotion.standard), value: filters.isExpanded)
         .padding(.horizontal, 24)
         .padding(.bottom, 20)
         .background(
@@ -671,6 +732,15 @@ struct HomeSearchRow: View {
                         showControls = true
                     }
                 }
+            } else if isSelectingSuggestion {
+                // Picking a suggestion blurs the field (nothing left to
+                // type) but shouldn't collapse the pill like a real blur
+                // does — the suggestions list closes on its own
+                // (showSuggestions already requires isFocused), while
+                // searchState.isExpanded/showControls are left as they
+                // were so the Lenny/Filters/submit row stays visible and
+                // tappable instead of the whole pill dropping back to idle.
+                isSelectingSuggestion = false
             } else if !filters.isExpanded {
                 // Losing focus while filters are open is deliberate — we
                 // dismiss the keyboard ourselves (see the filters.isExpanded
@@ -777,6 +847,12 @@ private struct DateConfirmButton: View {
                 .frame(width: 28, height: 28)
                 .background(Circle().fill(hasChanged ? Color.appAccentBlack : Color.appBorder))
         }
+        // The visible circle stays 28pt (matches the DatePicker beside
+        // it), but the tap target grows to Apple's 44pt HIG minimum —
+        // this sits right next to a native DatePicker people are
+        // actively fat-fingering, so a target this size was an easy miss.
+        .frame(width: 44, height: 44)
+        .contentShape(Rectangle())
         .disabled(!hasChanged)
     }
 }

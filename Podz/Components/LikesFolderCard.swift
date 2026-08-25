@@ -30,6 +30,15 @@ struct LikesFolderCard: View {
     var isWiggling: Bool = false
     var onDelete: () -> Void = {}
     var onLongPress: () -> Void = {}
+    /// Extra content layered between the fanned photos and the opaque
+    /// front panel — i.e. genuinely *behind* the front panel, not just
+    /// drawn on top of this whole card from outside. Takes this view's
+    /// own measured `side` (the icon's square size) so a caller can
+    /// position/size things correctly without re-measuring or guessing
+    /// it externally. Used by LikeFolderPickerSheet's "drop a pod into
+    /// this folder" animation, which needs to visually duck behind the
+    /// front panel as it lands — nil for every other call site.
+    var incomingDropContent: ((CGFloat) -> AnyView)? = nil
     @State private var isPressed = false
     @State private var wiggleAngle: Double = 0
     @FocusState private var isNameFocused: Bool
@@ -126,15 +135,37 @@ struct LikesFolderCard: View {
                                     .strokeBorder(Color.white, lineWidth: 2)
                             )
                             .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-                            .rotationEffect(.degrees(isPressed ? 0 : rotation(for: index)))
-                            .offset(
-                                x: isPressed ? 0 : xOffset(for: index, side: side),
-                                y: isPressed ? -side * 0.10 : -side * 0.22
-                            )
-                            .scaleEffect(isPressed ? 0.85 : 1)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+                            // Temporarily disabled (commented, not
+                            // removed) to see the new like-drop animation
+                            // without the press animation competing —
+                            // .rotationEffect(.degrees(isPressed ? 0 : rotation(for: index)))
+                            // .offset(
+                            //     x: isPressed ? 0 : xOffset(for: index, side: side),
+                            //     y: isPressed ? -side * 0.10 : -side * 0.22
+                            // )
+                            // .scaleEffect(isPressed ? 0.85 : 1)
+                            // .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+                            .rotationEffect(.degrees(rotation(for: index)))
+                            .offset(x: xOffset(for: index, side: side), y: -side * 0.22)
+                            // Without this, a newly-added photo (the
+                            // `pods` this card was given just grew by
+                            // one) just silently appears in the fan —
+                            // the count badge already animates in
+                            // (LikesStore.like()'s withAnimation), this
+                            // gives the actual photo the same "that
+                            // landed" pop instead of a mute swap.
+                            .transition(.scale(scale: 0.4).combined(with: .opacity))
                     }
-                    
+
+                    // Drawn after the photos but before the front panel
+                    // below — genuinely behind it in z-order, not just
+                    // visually overlapping, so the incoming card's final
+                    // approach actually disappears under the flap
+                    // instead of always rendering on top of everything.
+                    if let incomingDropContent {
+                        incomingDropContent(side)
+                    }
+
                     ZStack(alignment: .bottomTrailing) {
                         RoundedRectangle(cornerRadius: side * 0.12)
                             .fill(.ultraThinMaterial)
@@ -214,9 +245,17 @@ private struct PodCountBadge: View {
     let count: Int
     
     var body: some View {
+        // .contentTransition(.numericText()) — without it, the count
+        // just snaps instantly on the underlying `likes` dict changing,
+        // easy to miss during the drop animation. This makes it visibly
+        // roll to the new value, but only actually animates if the value
+        // change itself happens inside a withAnimation (see
+        // LikesStore.like()) — content transitions don't animate on
+        // their own otherwise.
         Text("\(count)")
             .font(.system(size: 11, weight: .bold))
             .foregroundColor(.white)
+            .contentTransition(.numericText(value: Double(count)))
             .frame(minWidth: 22, minHeight: 22)
             .background(Circle().fill(Color.appAccentBlack))
             .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
