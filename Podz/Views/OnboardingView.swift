@@ -158,8 +158,14 @@ struct LoginView: View {
     @State private var nonce = ""
     @State private var showResetConfirmation = false
     @StateObject private var appleCoordinator = AppleSignInWrapper()
+    @FocusState private var focusedField: AuthField?
 
     private var canSubmit: Bool { !email.isEmpty && !password.isEmpty }
+
+    private func submit() {
+        focusedField = nil
+        Task { await auth.signIn(email: email, password: password) }
+    }
 
     var body: some View {
         AuthBackground(onBack: onBack) {
@@ -174,8 +180,18 @@ struct LoginView: View {
                 Color.clear.frame(height: 24)
 
                 VStack(spacing: 12) {
-                    AuthTextField(placeholder: "Enter your email", text: $email, keyboardType: .emailAddress)
-                    AuthTextField(placeholder: "Enter your password", text: $password, isSecure: true)
+                    AuthTextField(
+                        placeholder: "Enter your email", text: $email,
+                        keyboardType: .emailAddress, textContentType: .emailAddress,
+                        field: .email, focusedField: $focusedField,
+                        onSubmit: { focusedField = .password }
+                    )
+                    AuthTextField(
+                        placeholder: "Enter your password", text: $password, isSecure: true,
+                        textContentType: .password, submitLabel: .go,
+                        field: .password, focusedField: $focusedField,
+                        onSubmit: submit
+                    )
 
                     HStack {
                         Spacer()
@@ -188,21 +204,13 @@ struct LoginView: View {
                 }
 
                 if let error = auth.lastError {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .font(.system(size: 12))
-                        Text(error)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundColor(.red)
-                    .padding(.top, 12)
+                    AuthErrorBanner(message: error)
+                        .padding(.top, 12)
                 }
 
                 Spacer(minLength: 24)
 
-                Button {
-                    Task { await auth.signIn(email: email, password: password) }
-                } label: {
+                Button(action: submit) {
                     HStack(spacing: 10) {
                         if auth.isLoading {
                             ProgressView().tint(.white)
@@ -240,6 +248,9 @@ struct LoginView: View {
                 .padding(.bottom, 20)
             }
             .padding(.horizontal, 32)
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = nil }
+            .animation(.easeOut(duration: 0.25), value: auth.lastError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -280,7 +291,15 @@ struct RegisterView: View {
     @State private var password = ""
     @State private var nonce = ""
     @StateObject private var appleCoordinator = AppleSignInWrapper()
-    
+    @FocusState private var focusedField: AuthField?
+
+    private func submit() {
+        focusedField = nil
+        Task {
+            await auth.signUp(name: name, username: username, email: email, password: password)
+        }
+    }
+
     var body: some View {
         AuthBackground(onBack: onBack) {
             VStack(alignment: .leading, spacing: 0) {
@@ -294,26 +313,40 @@ struct RegisterView: View {
                 Spacer(minLength: 24)
                 
                 VStack(spacing: 12) {
-                    AuthTextField(placeholder: "Enter your name", text: $name)
-                    AuthTextField(placeholder: "Enter your username", text: $username)
-                    AuthTextField(placeholder: "Enter your email", text: $email, keyboardType: .emailAddress)
-                    AuthTextField(placeholder: "Enter your password", text: $password, isSecure: true)
+                    AuthTextField(
+                        placeholder: "Enter your name", text: $name,
+                        textContentType: .name,
+                        field: .name, focusedField: $focusedField,
+                        onSubmit: { focusedField = .username }
+                    )
+                    AuthTextField(
+                        placeholder: "Enter your username", text: $username,
+                        textContentType: .username,
+                        field: .username, focusedField: $focusedField,
+                        onSubmit: { focusedField = .email }
+                    )
+                    AuthTextField(
+                        placeholder: "Enter your email", text: $email,
+                        keyboardType: .emailAddress, textContentType: .emailAddress,
+                        field: .email, focusedField: $focusedField,
+                        onSubmit: { focusedField = .password }
+                    )
+                    AuthTextField(
+                        placeholder: "Enter your password", text: $password, isSecure: true,
+                        textContentType: .newPassword, submitLabel: .done,
+                        field: .password, focusedField: $focusedField,
+                        onSubmit: submit
+                    )
                 }
                 
                 if let error = auth.lastError {
-                    Text(error)
-                        .font(.system(size: 12))
-                        .foregroundColor(.red)
+                    AuthErrorBanner(message: error)
                         .padding(.top, 12)
                 }
-                
+
                 Spacer(minLength: 24)
                 
-                Button {
-                    Task {
-                        await auth.signUp(name: name, username: username, email: email, password: password)
-                    }
-                } label: {
+                Button(action: submit) {
                     HStack(spacing: 10) {
                         if auth.isLoading {
                             ProgressView().tint(.white)
@@ -350,6 +383,9 @@ struct RegisterView: View {
                 .padding(.bottom, 20)
             }
             .padding(.horizontal, 32)
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = nil }
+            .animation(.easeOut(duration: 0.25), value: auth.lastError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -430,12 +466,32 @@ struct AuthBackground<Content: View>: View {
     }
 }
 
+/// Identifies which field currently has keyboard focus — shared across
+/// LoginView/RegisterView (each just uses the subset of cases it needs)
+/// so `AuthTextField` instances can both show a focus ring and chain
+/// "next" to the following field via the keyboard's return key.
+enum AuthField: Hashable {
+    case name, username, email, password
+}
+
 struct AuthTextField: View {
     let placeholder: String
     @Binding var text: String
     var isSecure: Bool = false
     var keyboardType: UIKeyboardType = .default
+    /// Feeds iOS autofill/Password AutoFill — `.password` on Login (so
+    /// it offers an *existing* saved credential) vs `.newPassword` on
+    /// Register (so it offers the strong-password suggestion instead).
+    var textContentType: UITextContentType? = nil
+    var submitLabel: SubmitLabel = .next
+    let field: AuthField
+    var focusedField: FocusState<AuthField?>.Binding
+    /// Return key handler — the parent decides whether that means
+    /// advancing to the next field or firing the actual submit action.
+    var onSubmit: () -> Void = {}
     @State private var isRevealed = false
+
+    private var isFocused: Bool { focusedField.wrappedValue == field }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -449,8 +505,18 @@ struct AuthTextField: View {
             }
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
+            .textContentType(textContentType)
             .font(AppFont.pillLabelSemiBold(16))
             .foregroundColor(.black)
+            .focused(focusedField, equals: field)
+            .submitLabel(submitLabel)
+            .onSubmit {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onSubmit()
+            }
+            .onChange(of: text) { _, _ in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
 
             if isSecure {
                 Button {
@@ -470,14 +536,47 @@ struct AuthTextField: View {
                 .fill(Color.appFieldBg)
                 .overlay(
                     RoundedRectangle(cornerRadius: 15)
-                        .strokeBorder(Color.appBorder, lineWidth: 0.5)
+                        .strokeBorder(isFocused ? Color.appAccentBlack : Color.appBorder, lineWidth: isFocused ? 1.5 : 0.5)
                 )
-                .shadow(color: Color.black.opacity(0.12), radius: 4, x: 1, y: 3)
+                .shadow(color: Color.black.opacity(isFocused ? 0.18 : 0.12), radius: isFocused ? 6 : 4, x: 1, y: 3)
         )
+        .animation(.easeOut(duration: 0.15), value: isFocused)
     }
 
     private var placeholderText: Text {
         Text(placeholder).foregroundColor(.appPlaceholder)
+    }
+}
+
+/// Auth error display — a red-tinted card instead of plain floating red
+/// text, so it reads as a distinct, designed piece of UI against the
+/// dark photo background rather than blending into it. Shared between
+/// Login and Register (Register previously had no icon at all, unlike
+/// Login — now both match).
+struct AuthErrorBanner: View {
+    let message: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 13))
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.red.opacity(0.25))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.red.opacity(0.5), lineWidth: 1)
+                )
+        )
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 }
 
