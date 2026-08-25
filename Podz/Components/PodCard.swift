@@ -34,13 +34,11 @@ struct PodCard: View {
                         }
                     } label: {
                         Image(systemName: likesStore.isLiked(pod) ? "heart.fill" : "heart")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(likesStore.isLiked(pod) ? .red : .white)
-                            .frame(width: 25, height: 25)
-                            .background(.ultraThinMaterial, in: Circle())
-                            .overlay(Circle().strokeBorder(Color.white.opacity(0.5), lineWidth: 0.5))
                     }
-                    .padding(6)
+                    .padding(.top, 11)
+                    .padding(.trailing, 11)
                     .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
                 }
             }

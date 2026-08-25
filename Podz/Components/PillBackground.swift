@@ -4,7 +4,7 @@ import SwiftUI
 /// shadow, and a faint inset highlight along the top — matches every
 /// button/chip in the Figma file (Chip, Stepper, CheckButton, Save...).
 struct PillBackground: ViewModifier {
-    var fill: Color = .white
+    var fill: AnyShapeStyle = AnyShapeStyle(Color.white)
     var borderColor: Color = .appBorder
     var shadowColor: Color = .black.opacity(0.08)
 
@@ -36,7 +36,11 @@ struct PillBackground: ViewModifier {
 }
 
 extension View {
-    func pillStyle(fill: Color = .white, border: Color = .appBorder, shadow: Color = .black.opacity(0.08)) -> some View {
-        modifier(PillBackground(fill: fill, borderColor: border, shadowColor: shadow))
+    /// `fill` accepts any `ShapeStyle` — a plain `Color` (the common
+    /// case, inferred automatically) or a `LinearGradient` (the Lenny
+    /// chip's white-to-blue gradient) — wrapped in `AnyShapeStyle` so
+    /// `PillBackground` can hold either without being generic itself.
+    func pillStyle<S: ShapeStyle>(fill: S = Color.white, border: Color = .appBorder, shadow: Color = .black.opacity(0.08)) -> some View {
+        modifier(PillBackground(fill: AnyShapeStyle(fill), borderColor: border, shadowColor: shadow))
     }
 }

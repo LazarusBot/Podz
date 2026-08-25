@@ -45,6 +45,7 @@ struct LikeFolderPickerSheet: View {
                             pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
                             photoURLs: PodsStore.shared.primaryPhotoByPodId,
                             scale: 0.8,
+                            nameFontSize: 25,
                             onTap: { saveLike(into: folder.id) }
                         )
                     }
@@ -53,6 +54,7 @@ struct LikeFolderPickerSheet: View {
                         LikesFolderCard(
                             pods: [],
                             scale: 0.8,
+                            nameFontSize: 25,
                             editableName: $newFolderName,
                             onCommitName: commitNewFolder
                         )

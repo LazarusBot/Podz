@@ -24,49 +24,63 @@ struct CategoryChip: View {
     /// filled black "selected" state does elsewhere.
     private var isLenny: Bool { title == "Lenny" }
 
-    /// A darkened shade of `appLennyAccent`, used only for the shadow —
-    /// the plain accent color at low opacity read as a light amber halo
+    /// A darkened shade of the gradient's blue, used only for the
+    /// shadow — the gradient itself at low opacity read as a pale halo
     /// instead of a grounding drop shadow, same reason the rest of the
     /// app's pills use a dark shadow rather than a tinted-down fill color.
     private var lennyShadowColor: Color {
-        Color(red: 0.39, green: 0.22, blue: 0.11).opacity(0.35)
+        Color(red: 0.18, green: 0.35, blue: 0.57).opacity(0.18)
     }
 
-    /// #B36732 — fill only. Border/icon/text stay on `appLennyAccent` so
-    /// the pill still reads as one family of brown rather than two
-    /// unrelated colors, but the background itself gets its own slightly
-    /// lighter shade rather than just the accent at reduced opacity.
-    private var lennyBackgroundColor: Color {
-        Color(red: 0.702, green: 0.404, blue: 0.196)
+    /// Tint fed to the native Liquid Glass material — same blue as the
+    /// old gradient's bottom stop, at reduced opacity so the glass's own
+    /// translucency/refraction still shows through rather than reading
+    /// as a flat color.
+    private var lennyGlassTint: Color {
+        Color(red: 0.306, green: 0.580, blue: 0.953).opacity(0.5)
+    }
+
+    private var chipLabel: some View {
+        HStack(spacing: 8) {
+            if let icon {
+                ChipIcon(name: icon, isSelected: isSelected || isLenny)
+            }
+
+            Text(title)
+                .font(labelFont)
+                .foregroundColor((isSelected || isLenny) ? .white : .black)
+
+            if let count {
+                Text("\(count)")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(isSelected ? .black : .white)
+                    .frame(width: 20, height: 20)
+                    .background(Circle().fill(isSelected ? Color.white : Color.black))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if let icon {
-                    ChipIcon(name: icon, isSelected: isSelected || isLenny)
-                }
-
-                Text(title)
-                    .font(labelFont)
-                    .foregroundColor((isSelected || isLenny) ? .white : .black)
-
-                if let count {
-                    Text("\(count)")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(isSelected ? .black : .white)
-                        .frame(width: 20, height: 20)
-                        .background(Circle().fill(isSelected ? Color.white : Color.black))
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+        if isLenny {
+            // Liquid Glass instead of the flat pillStyle background —
+            // the whole point is the system material's own translucency/
+            // refraction of whatever's behind it, which a solid gradient
+            // fill can't give; a plain color .tint() replaces the old
+            // white-to-blue gradient as the closest equivalent. Kept as
+            // its own branch rather than teaching pillStyle about glass,
+            // since every other chip still wants the flat Capsule look.
+            Button(action: action) { chipLabel }
+                .glassEffect(.regular.tint(lennyGlassTint).interactive(), in: .capsule)
+                .shadow(color: lennyShadowColor, radius: 3, y: 1)
+        } else {
+            Button(action: action) { chipLabel }
+                .pillStyle(
+                    fill: isSelected ? .appAccentBlack : .white,
+                    border: .appBorder
+                )
         }
-        .pillStyle(
-            fill: isLenny ? lennyBackgroundColor.opacity(0.9) : (isSelected ? .appAccentBlack : .white),
-            border: isLenny ? .appLennyAccent : .appBorder,
-            shadow: isLenny ? lennyShadowColor : .black.opacity(0.08)
-        )
     }
 }
 
