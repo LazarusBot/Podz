@@ -76,43 +76,70 @@ struct PodDetailView: View {
 
     private var heroImage: some View {
         GeometryReader { proxy in
-            // Overscroll pull-down grows and re-offsets the photo layer so
-            // it stretches to fill the gap instead of leaving a gray strip
-            // above it — the buttons overlay stays outside this transform
-            // so it doesn't drift down with the stretch.
+            // Overscroll pull-down naturally translates this whole
+            // GeometryReader (and everything in it) down along with the
+            // scroll content. Counter-offsetting the *entire* ZStack — not
+            // just the photo — is what keeps the buttons pinned in place;
+            // the photo alone still grows taller by `stretch` so it
+            // stretches down to fill the gap instead of just sitting still.
             let stretch = max(0, proxy.frame(in: .global).minY)
 
             ZStack(alignment: .top) {
                 heroGallery
-                    .frame(width: proxy.size.width, height: 260 + stretch)
+                    .frame(width: proxy.size.width, height: 340 + stretch)
                     .clipped()
-                    .offset(y: -stretch)
 
                 HStack(spacing: 12) {
                     CircleIconButton(systemName: "chevron.left", accessibilityLabel: "Back", action: onBack)
                     Spacer()
-                    CircleIconButton(
-                        systemName: likesStore.isLiked(pod) ? "heart.fill" : "heart",
-                        tint: likesStore.isLiked(pod) ? .red : .black,
-                        accessibilityLabel: likesStore.isLiked(pod) ? "Remove from likes" : "Add to likes"
-                    ) {
-                        if likesStore.isLiked(pod) {
-                            Task { await likesStore.removeLike(pod) }
-                        } else {
-                            showFolderPicker = true
+                    // Grouped into one pill, same white-chrome language as
+                    // the back button, rather than two bare icons floating
+                    // separately on the photo — reads better at a glance.
+                    HStack(spacing: 0) {
+                        // Both icons get an identical 44x44 frame — Apple's
+                        // HIG minimum tap target — with the glyph centered
+                        // inside, which is what makes them align position-
+                        // wise. "heart"'s own glyph still renders visually
+                        // smaller than "square.and.arrow.up" at the same
+                        // point size though (SF Symbols aren't optically
+                        // equalized across glyphs) — bumped a couple points
+                        // to actually look the same size, not just centered
+                        // in the same box.
+                        Button {
+                            if likesStore.isLiked(pod) {
+                                Task { await likesStore.removeLike(pod) }
+                            } else {
+                                showFolderPicker = true
+                            }
+                        } label: {
+                            Image(systemName: likesStore.isLiked(pod) ? "heart.fill" : "heart")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(likesStore.isLiked(pod) ? .red : .black)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
+                        .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
+                        .accessibilityLabel(likesStore.isLiked(pod) ? "Remove from likes" : "Add to likes")
+
+                        ShareLink(item: shareText) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.black)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel("Share")
                     }
-                    .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
-                    ShareLink(item: shareText) {
-                        CircleIconGlyph(systemName: "square.and.arrow.up")
-                    }
-                    .accessibilityLabel("Share")
+                    .padding(.horizontal, 4)
+                    .background(Capsule().fill(Color.white.opacity(0.9)))
+                    .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 56)
             }
+            .offset(y: -stretch)
         }
-        .frame(height: 260)
+        .frame(height: 340)
     }
 
     @ViewBuilder
@@ -299,9 +326,9 @@ private struct CircleIconGlyph: View {
 
     var body: some View {
         Image(systemName: systemName)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.system(size: 16, weight: .semibold))
             .foregroundColor(tint)
-            .frame(width: 31, height: 31)
+            .frame(width: 44, height: 44)
             .background(Circle().fill(Color.white.opacity(0.9)))
             .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
     }
