@@ -146,14 +146,19 @@ final class LikesStore: ObservableObject {
                     onConflict: "user_id,pod_id"
                 )
                 .execute()
-            flashRecentLikeBadge()
         } catch {
             likes.removeValue(forKey: pod.id)
             lastError = error.localizedDescription
         }
     }
 
-    private func flashRecentLikeBadge() {
+    /// Kicks off the transient "+1" badge on the Likes tab. Callers that
+    /// present a dismissible sheet over the tab bar (LikeFolderPickerSheet)
+    /// should call this only once that sheet has actually closed — firing
+    /// it right after `like()` resolves let the badge play (and, at 1.6s,
+    /// often finish) while the sheet still covered the tab bar, so it went
+    /// unseen.
+    func flashRecentLikeBadge() {
         recentLikeBadgeTask?.cancel()
         // Low damping fraction on purpose — lets the spring overshoot
         // past its resting scale before settling, which reads as an
