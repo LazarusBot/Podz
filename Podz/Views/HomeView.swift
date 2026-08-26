@@ -9,6 +9,7 @@ struct HomeView: View {
     @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var filters = HomeFiltersState.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
+    @StateObject private var deepLinkRouter = DeepLinkRouter.shared
     @State private var selectedPod: Pod?
     @State private var locationSearch = ""
     @State private var showLennyCoachmark = false
@@ -236,12 +237,30 @@ struct HomeView: View {
                 lenny.cancel()
             }
         }
+        // Both triggers matter: a link tapped while the app is already
+        // running fires the pendingPodId change first (pods are already
+        // loaded by then); a cold launch from a link races fetchPods()
+        // against .onOpenURL, so pods finishing the fetch is what
+        // actually resolves it in that case.
+        .onChange(of: deepLinkRouter.pendingPodId) { _, _ in resolveDeepLink() }
+        .onChange(of: podsStore.pods) { _, _ in resolveDeepLink() }
+        .onAppear { resolveDeepLink() }
     }
 
     private func dismissLennyCoachmark() {
         withAnimation(.easeIn(duration: AppMotion.quick)) {
             showLennyCoachmark = false
         }
+    }
+
+    /// Opens `PodDetailView` for whatever pod `DeepLinkRouter` is holding,
+    /// once it's actually in `podsStore.pods` — a no-op otherwise (nothing
+    /// pending, or pods haven't loaded far enough to include it yet).
+    private func resolveDeepLink() {
+        guard let podId = deepLinkRouter.pendingPodId else { return }
+        guard let pod = podsStore.pods.first(where: { $0.id == podId }) else { return }
+        selectedPod = pod
+        deepLinkRouter.pendingPodId = nil
     }
 
     // MARK: - Feed states
