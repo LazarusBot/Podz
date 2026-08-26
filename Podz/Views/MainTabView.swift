@@ -5,6 +5,7 @@ struct MainTabView: View {
     @StateObject private var lenny = LennySearchViewModel.shared
     @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
+    @StateObject private var tabBarVisibility = TabBarVisibilityState.shared
     @State private var selectedTab: HomeTab = .feed
 
     var body: some View {
@@ -23,7 +24,7 @@ struct MainTabView: View {
             }
             .ignoresSafeArea(edges: .bottom)
 
-            if lenny.phase != .editing && !homeSearch.isExpanded {
+            if lenny.phase != .editing && !homeSearch.isExpanded && !tabBarVisibility.isHidden {
                 BottomTabBar(selected: $selectedTab, profileImageName: auth.profile?.avatarURL)
                     .padding(.horizontal, 18)
                     // Bottom-anchored, not the default center — shrinking
@@ -37,6 +38,7 @@ struct MainTabView: View {
         .animation(.easeOut(duration: 0.2), value: lenny.phase)
         .animation(.easeOut(duration: 0.2), value: homeSearch.isExpanded)
         .animation(.easeOut(duration: 0.2), value: scrollState.isScrollingDown)
+        .animation(.easeOut(duration: 0.2), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())
     }
 }
