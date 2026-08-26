@@ -434,9 +434,9 @@ struct AuthBackground<Content: View>: View {
                 if showBackButton {
                     Button(action: onBack) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
-                            .frame(width: 31, height: 31)
+                            .frame(width: 44, height: 44)
                             .background(Circle().fill(Color.white.opacity(0.12)))
                             .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5))
                     }

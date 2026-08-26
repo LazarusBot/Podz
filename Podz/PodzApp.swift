@@ -12,6 +12,9 @@ struct PodzApp: App {
     var body: some Scene {
         WindowGroup {
             OnboardingView()
+                .onOpenURL { url in
+                    DeepLinkRouter.shared.handle(url)
+                }
         }
     }
 }
