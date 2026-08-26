@@ -134,7 +134,11 @@ struct PodDetailView: View {
                     .background(Capsule().fill(Color.white.opacity(0.9)))
                     .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
                 }
-                .padding(.horizontal, 24)
+                // 20, not 24 — matches the horizontal inset every other
+                // section on this screen uses (header, dividers, prices/
+                // cancellation/map), so the back button actually lines up
+                // with the pod name directly beneath it.
+                .padding(.horizontal, 20)
                 .padding(.top, 56)
             }
             .offset(y: -stretch)
@@ -173,43 +177,54 @@ struct PodDetailView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            // pillLabel is already Darker Grotesque Black — the one text
+            // on this screen that's actually meant to be the heaviest
+            // weight, so no .fontWeight() needed (it'd be a no-op on a
+            // .custom font anyway; see the header/body fixes below).
             Text(pod.name)
                 .font(AppFont.pillLabel(24))
-                .fontWeight(.black)
                 .foregroundColor(.black)
 
-            HStack(spacing: 10) {
-                if let region = pod.region {
-                    Text(region)
-                        .font(AppFont.pillLabel(20))
-                        .foregroundColor(Color(white: 0.67))
-                    Circle().fill(Color(white: 0.67)).frame(width: 4, height: 4)
-                }
-                Text(pod.country)
-                    .font(AppFont.pillLabel(20))
-                    .foregroundColor(Color(white: 0.67))
-            }
-
-            if pod.altitudeM != nil || pod.bedsTotal != nil {
+            // 10, not matched to the outer VStack's 10 this time — the
+            // pill below is a visually distinct chip (its own capsule
+            // background), so it reads better with more separation from
+            // the plain region/country text above it, not the same gap.
+            // Combined with the pill's own 5pt top padding, that's a 15pt
+            // gap total.
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
-                    if let altitude = pod.altitudeM {
-                        Text("\(altitude) m")
-                            .font(AppFont.pillLabel(16))
+                    if let region = pod.region {
+                        Text(region)
+                            .font(AppFont.pillLabelMedium(20))
                             .foregroundColor(Color(white: 0.67))
-                    }
-                    if pod.altitudeM != nil && pod.bedsTotal != nil {
                         Circle().fill(Color(white: 0.67)).frame(width: 4, height: 4)
                     }
-                    if let beds = pod.bedsTotal {
-                        Text("\(beds) beds available")
-                            .font(AppFont.pillLabel(16))
-                            .foregroundColor(Color(white: 0.67))
-                    }
+                    Text(pod.country)
+                        .font(AppFont.pillLabelMedium(20))
+                        .foregroundColor(Color(white: 0.67))
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Capsule().fill(Color(white: 0.93)))
+
+                if pod.altitudeM != nil || pod.bedsTotal != nil {
+                    HStack(spacing: 10) {
+                        if let altitude = pod.altitudeM {
+                            Text("\(altitude) m")
+                                .font(AppFont.pillLabelMedium(16))
+                                .foregroundColor(Color(white: 0.67))
+                        }
+                        if pod.altitudeM != nil && pod.bedsTotal != nil {
+                            Circle().fill(Color(white: 0.67)).frame(width: 4, height: 4)
+                        }
+                        if let beds = pod.bedsTotal {
+                            Text("\(beds) beds available")
+                                .font(AppFont.pillLabelMedium(16))
+                                .foregroundColor(Color(white: 0.67))
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color(white: 0.93)))
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -221,19 +236,24 @@ struct PodDetailView: View {
 
     private var pricesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // pillLabelBold — not pillLabel(_).fontWeight(.bold), which
+            // silently no-ops on a .custom font and rendered this as Black,
+            // same weight as the pod name itself.
             Text("Prices and bedrooms")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
+                .font(AppFont.pillLabelBold(22))
                 .foregroundColor(.black)
 
             if isLoadingRooms {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 161)
             } else if rooms.isEmpty {
+                // Same 161 as the loading spinner and a real PodRoomCard —
+                // otherwise the section visibly collapses the instant
+                // loading finishes and turns up empty.
                 Text("No rooms listed yet")
-                    .font(AppFont.pillLabel(16))
+                    .font(AppFont.mediumLabel(16))
                     .foregroundColor(Color(white: 0.67))
-                    .frame(minHeight: 40)
+                    .frame(maxWidth: .infinity, minHeight: 161)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 15) {
@@ -253,12 +273,15 @@ struct PodDetailView: View {
     private var cancellationSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Cancel & reservation changes")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
+                .font(AppFont.pillLabelBold(22))
                 .foregroundColor(.black)
 
+            // Inter (mediumLabel), not the Darker Grotesque pill-label
+            // family — this is a real paragraph of body copy, not a pill
+            // label or a large number, the two things Darker Grotesque is
+            // meant for per AppFont's own doc comment.
             Text(cancellationPolicy)
-                .font(AppFont.pillLabel(16))
+                .font(AppFont.mediumLabel(16))
                 .foregroundColor(Color(white: 0.67))
         }
         .padding(.horizontal, 20)
@@ -270,8 +293,7 @@ struct PodDetailView: View {
     private var mapSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Find us quickly in the wild")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
+                .font(AppFont.pillLabelBold(22))
                 .foregroundColor(.black)
 
             ZStack(alignment: .top) {
@@ -355,12 +377,14 @@ private struct PodRoomCard: View {
         ZStack(alignment: .bottomLeading) {
             PodPhoto(url: room.photoURL)
 
+            // Vertical padding matches the map section's address pill (6,
+            // not 5) — same role, a translucent caption pill floating on a
+            // photo, so they should actually be the same pill.
             Text("\(room.priceMin, specifier: "%.2f")€ - \(room.priceMax, specifier: "%.2f")€")
-                .font(AppFont.pillLabel(11))
-                .fontWeight(.semibold)
+                .font(AppFont.pillLabelSemiBold(11))
                 .foregroundColor(.white)
                 .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.vertical, 6)
                 .background(Capsule().fill(Color.white.opacity(0.33)))
                 .overlay(Capsule().strokeBorder(Color.white.opacity(0.75), lineWidth: 0.5))
                 .padding(6)
