@@ -90,6 +90,24 @@ final class PodsStore: ObservableObject {
             return []
         }
     }
+
+    /// Full ordered photo set for a pod's detail screen — fetchPrimaryPhotos
+    /// only grabs position 0, enough for the Home cards.
+    func photos(forPodId podId: UUID) async -> [String] {
+        do {
+            let rows: [PodPhotoRow] = try await supabase
+                .from("pod_photos")
+                .select("pod_id, url, position")
+                .eq("pod_id", value: podId)
+                .order("position")
+                .execute()
+                .value
+            return rows.map { $0.url }
+        } catch {
+            lastError = error.localizedDescription
+            return []
+        }
+    }
     
     /// Simple client-side proximity search — fine at this data scale.
     /// Move to a PostGIS query server-side once the pods table grows large.
