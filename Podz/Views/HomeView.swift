@@ -11,6 +11,12 @@ struct HomeView: View {
     @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedPod: Pod?
     @State private var locationSearch = ""
+    @State private var showLennyCoachmark = false
+    /// Persisted so the coachmark only ever shows once, not once per
+    /// session — not routing-related (see AuthManager's justRegistered
+    /// note on the old hasSeenOnboarding bug), so plain @AppStorage is
+    /// fine here.
+    @AppStorage("podz.hasSeenLennyCoachmark") private var hasSeenLennyCoachmark = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -85,7 +91,7 @@ struct HomeView: View {
                             } else {
                                 ForEach(nonEmptySections, id: \.0) { country, pods in
                                     PodSection(
-                                        title: "Preferred pods - \(country)",
+                                        title: "Preferred pods — \(country)",
                                         pods: pods,
                                         photoURLs: podsStore.primaryPhotoByPodId,
                                         showLikeButtons: true,
@@ -135,18 +141,118 @@ struct HomeView: View {
                     }
                 }
                 .background(Color.appHomeBackground)
-                .task { await podsStore.fetchPods() }
-                .task { await likesStore.fetchAll() }
             }
         }
         .background(Color.appHomeBackground.ignoresSafeArea())
+        // On the outer ZStack, not the ScrollView above — that branch is
+        // torn down and rebuilt every time `selectedPod` toggles (feed <->
+        // detail), which was re-running both fetches on every single "back"
+        // tap. The ZStack's identity is stable for HomeView's whole
+        // lifetime, so this now runs once.
+        .task { await podsStore.fetchPods() }
+        .task { await likesStore.fetchAll() }
+        // Points at the "Lenny" chip via the anchor it reports in
+        // HomeSearchRow — attached up here rather than inside the
+        // ScrollView branch so it renders on top of everything (feed
+        // content included) instead of getting drawn over by whatever
+        // sibling comes after the search row.
+        .overlayPreferenceValue(LennyChipAnchorKey.self) { anchor in
+            GeometryReader { geo in
+                if let anchor, showLennyCoachmark, selectedPod == nil {
+                    let rect = geo[anchor]
+                    ZStack(alignment: .topLeading) {
+                        // Dims/blurs the whole screen, uniformly — no
+                        // cutout. A mask cut to the chip's plain layout
+                        // bounds didn't line up with the Liquid Glass
+                        // chip's actual rendered shape (glassEffect adds
+                        // its own shimmer/highlight bleed beyond the
+                        // Capsule's literal frame), so instead of a hole
+                        // hoping to reveal the real chip in perfect
+                        // alignment, a fresh chip is floated on top,
+                        // below, positioned from the same anchor —
+                        // alignment by construction, not by luck.
+                        LennySpotlightScrim(onDismiss: dismissLennyCoachmark)
+
+                        // Actually tappable, not just decorative — a
+                        // coachmark that highlights a control and then
+                        // eats the tap meant for it is a real
+                        // anti-pattern (point at the thing, don't let
+                        // them press the thing). Tapping it does exactly
+                        // what the real underlying chip would.
+                        CategoryChip(title: "Lenny", icon: "lenny") {
+                            lenny.activate()
+                            dismissLennyCoachmark()
+                        }
+                        .shadow(color: Color.appLennyAccent.opacity(0.45), radius: 14)
+                        .position(x: rect.midX, y: rect.midY)
+
+                        // Offset, not .position — .position needs the
+                        // bubble's own width up front to center it, which
+                        // would mean measuring it first (see
+                        // HomeSearchRow's Save button for how much
+                        // machinery that takes). Left-aligned, its leading
+                        // edge just needs to land exactly on the chip's,
+                        // which .offset gives for free relative to this
+                        // ZStack's (0, 0) topLeading origin.
+                        LennyCoachmark(tailCenterOffset: rect.width / 2, onDismiss: dismissLennyCoachmark)
+                            .offset(x: rect.minX, y: rect.maxY + 4)
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                }
+            }
+        }
+        .onChange(of: homeSearch.isExpanded) { _, expanded in
+            guard expanded, !hasSeenLennyCoachmark, lenny.phase == .idle else {
+                showLennyCoachmark = false
+                return
+            }
+            // Let HomeSearchRow's own chip row finish fading in (its 0.18s
+            // pause + 0.2s fade) before pointing at it, so the coachmark
+            // doesn't appear above an empty space.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                guard homeSearch.isExpanded else { return }
+                hasSeenLennyCoachmark = true
+                withAnimation(.easeOut(duration: AppMotion.standard)) {
+                    showLennyCoachmark = true
+                }
+            }
+        }
+        .onChange(of: lenny.phase) { _, phase in
+            // Once they've actually engaged Lenny there's nothing left to
+            // teach them.
+            if phase != .idle { showLennyCoachmark = false }
+        }
+        .onChange(of: homeSearch.feedReselected) { _, _ in
+            // BottomTabBar bumps this when Feed is tapped while already
+            // the active tab — back to the actual root: out of any pod
+            // detail, search collapsed, Lenny reset, same as if the tab
+            // had never been touched.
+            withAnimation(.easeOut(duration: AppMotion.standard)) {
+                selectedPod = nil
+            }
+            homeSearch.isExpanded = false
+            locationSearch = ""
+            if lenny.phase != .idle {
+                lenny.cancel()
+            }
+        }
+    }
+
+    private func dismissLennyCoachmark() {
+        withAnimation(.easeIn(duration: AppMotion.quick)) {
+            showLennyCoachmark = false
+        }
     }
 
     // MARK: - Feed states
 
     private var loadingState: some View {
         VStack(spacing: 12) {
+            // Tinted — the untinted default falls back to the system
+            // accent (blue), the one spot on this screen that would
+            // otherwise break from the app's black/white palette.
             ProgressView()
+                .tint(.appAccentBlack)
             Text("Loading pods…")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.appTextMuted)
@@ -208,6 +314,119 @@ struct HomeView: View {
         } else {
             return "No pods available yet."
         }
+    }
+}
+
+/// Dims and softly blurs the whole screen uniformly while the coachmark
+/// is up, so the floating chip clone + bubble above it read as the one
+/// thing in focus without a literal cutout to keep pixel-aligned against
+/// (see the call site for why that approach got dropped). Both layers
+/// are deliberately light — .ultraThinMaterial is already the softest
+/// blur Material offers, and scaling it down further via .opacity keeps
+/// this a gentle focus cue rather than a heavy-handed dimming.
+private struct LennySpotlightScrim: View {
+    var onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.14)
+            Rectangle().fill(.ultraThinMaterial).opacity(0.5)
+        }
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onDismiss)
+        .transition(.opacity)
+    }
+}
+
+/// First-time tip pointing at the search pill's "Lenny" chip — shown once
+/// (see `hasSeenLennyCoachmark`) the first time someone opens the search
+/// pill, so they know it's not just a plain location search. A single
+/// custom outline (`CoachmarkBubbleShape`) rather than a rounded rect
+/// plus a separate triangle glued underneath it — fill and stroke both
+/// trace the tail and body as one continuous edge, so there's no seam
+/// where a two-shape version would show a visible stroke line across the
+/// tail's base.
+private struct LennyCoachmark: View {
+    /// Tail center's distance from the bubble's leading edge. The bubble
+    /// itself stays left-aligned to the chip (see the call site's
+    /// `.offset`), but the tail is passed the chip's own width so it can
+    /// point at the chip's actual midpoint instead of just wherever
+    /// happens to be near the bubble's leading edge.
+    var tailCenterOffset: CGFloat
+    var onDismiss: () -> Void
+
+    private let tailWidth: CGFloat = 16
+    private let tailHeight: CGFloat = 9
+    private let cornerRadius: CGFloat = 16
+
+    private var shape: CoachmarkBubbleShape {
+        CoachmarkBubbleShape(cornerRadius: cornerRadius, tailWidth: tailWidth, tailHeight: tailHeight, tailInset: tailCenterOffset)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            // A plain info glyph, not a feature icon — this is explaining
+            // what the control is, not illustrating the hike itself.
+            Image(systemName: "questionmark.circle.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+            // mediumLabel (Inter), not pillLabelMedium (Darker Grotesque)
+            // — Darker Grotesque is the display face used for big chip
+            // labels/numbers and reads thin at paragraph size even at its
+            // own Medium weight; Inter Medium is the app's actual body
+            // font elsewhere in this screen (Lenny's status text, error
+            // messages) and carries more visual weight here.
+            Text("Switch to Lenny and describe your route — e.g. \"Chamonix to Zermatt in 5 days\" — and Lenny suggests pods along the way for you to compare and select.")
+                .font(AppFont.mediumLabel(15))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 260, alignment: .leading)
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, tailHeight + 14)
+        .padding(.bottom, 14)
+        .background(shape.fill(Color.appAccentBlack))
+        .overlay(shape.stroke(Color.white.opacity(0.14), lineWidth: 1))
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.4), radius: 18, y: 10)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onDismiss)
+        .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .topLeading)))
+    }
+}
+
+/// Rounded rect with a speech-bubble tail on its top edge, traced as one
+/// outline via tangent-based corners (`addArc(tangent1End:tangent2End:)`)
+/// rather than angle-based arcs — direction-agnostic, so there's no risk
+/// of the usual clockwise/flipped-Y sign mistakes that angle math invites.
+private struct CoachmarkBubbleShape: Shape {
+    var cornerRadius: CGFloat
+    var tailWidth: CGFloat
+    var tailHeight: CGFloat
+    var tailInset: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let body = CGRect(x: rect.minX, y: rect.minY + tailHeight, width: rect.width, height: rect.height - tailHeight)
+        let r = min(cornerRadius, body.width / 2, body.height / 2)
+        let tailCenterX = min(max(rect.minX + tailInset, body.minX + r + tailWidth / 2), body.maxX - r - tailWidth / 2)
+
+        var path = Path()
+        path.move(to: CGPoint(x: body.minX + r, y: body.minY))
+        path.addLine(to: CGPoint(x: tailCenterX - tailWidth / 2, y: body.minY))
+        path.addLine(to: CGPoint(x: tailCenterX, y: rect.minY))
+        path.addLine(to: CGPoint(x: tailCenterX + tailWidth / 2, y: body.minY))
+        path.addLine(to: CGPoint(x: body.maxX - r, y: body.minY))
+        path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.minY), tangent2End: CGPoint(x: body.maxX, y: body.minY + r), radius: r)
+        path.addLine(to: CGPoint(x: body.maxX, y: body.maxY - r))
+        path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.maxY), tangent2End: CGPoint(x: body.maxX - r, y: body.maxY), radius: r)
+        path.addLine(to: CGPoint(x: body.minX + r, y: body.maxY))
+        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY), tangent2End: CGPoint(x: body.minX, y: body.maxY - r), radius: r)
+        path.addLine(to: CGPoint(x: body.minX, y: body.minY + r))
+        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.minY), tangent2End: CGPoint(x: body.minX + r, y: body.minY), radius: r)
+        path.closeSubpath()
+        return path
     }
 }
 

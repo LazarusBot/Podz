@@ -19,9 +19,9 @@ struct PodCard: View {
             ZStack(alignment: .topTrailing) {
                 PodPhoto(url: photoURL)
                     .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.75), lineWidth: 3)
                     )
                 
@@ -33,32 +33,36 @@ struct PodCard: View {
                             showFolderPicker = true
                         }
                     } label: {
+                        // Padding moved inside the label (and the outer
+                        // positioning padding dropped to match) so the
+                        // icon's own visual position doesn't shift — this
+                        // just grows the tappable area from ~22pt to the
+                        // 44pt Apple's HIG minimum, instead of only the
+                        // glyph's own tight bounds being tappable.
                         Image(systemName: likesStore.isLiked(pod) ? "heart.fill" : "heart")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(likesStore.isLiked(pod) ? .red : .white)
+                            .padding(11)
+                            .contentShape(Rectangle())
                     }
-                    .padding(.top, 11)
-                    .padding(.trailing, 11)
                     .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
                 }
             }
             
+            // Photo + name only — region and bed-availability moved out.
+            // Tapping the card already opens PodDetailView, which shows
+            // both (region under the map, "N beds available" beside it);
+            // showing them again here was just repeating the card's own
+            // "there's more, go look" job in miniature.
+            // SemiBold, not Bold — Bold read too heavy for a plain card
+            // caption now that it's standing alone. 5pt leading nudge
+            // aligns it slightly off the photo's own edge instead of
+            // sitting flush with it.
             Text(pod.name)
-                .font(AppFont.pillLabelBold(16 * scale))
+                .font(AppFont.pillLabelSemiBold(16 * scale))
                 .foregroundColor(.black)
                 .lineLimit(1)
-
-            Text(pod.region ?? pod.country)
-                .font(AppFont.itemHelper(10 * scale))
-                .foregroundColor(.black)
-                .lineLimit(1)
-
-            HStack(spacing: 5 * scale) {
-                Circle().fill(Color.appAvailableGreen).frame(width: 6 * scale, height: 6 * scale)
-                Text("\(pod.bedsTotal ?? 0) beds available")
-                    .font(AppFont.itemHelper(10 * scale))
-                    .foregroundColor(.appAvailableGreen)
-            }
+                .padding(.leading, 5)
         }
         .frame(width: size, alignment: .leading)
         .contentShape(Rectangle())
@@ -67,7 +71,21 @@ struct PodCard: View {
     }
 }
 
-/// "Preferred pods - <Region>" section: title + horizontal scroll of cards
+/// Reports the width actually proposed to `PodSection` — same
+/// background-GeometryReader-plus-preference trick `HomeSearchRow` uses
+/// for its Save button (see `WidthPreferenceKey` in CategoryScroller.swift)
+/// — so `cardSize` tracks the real available width (correct in Slide
+/// Over/Split View on iPad) instead of `UIScreen.main.bounds.width`
+/// (the full physical screen, wrong the moment the app isn't using all
+/// of it).
+private struct SectionWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = UIScreen.main.bounds.width
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+/// "Preferred pods — <Region>" section: title + horizontal scroll of cards
 /// (node 3779:2081 / 3779:2114 pattern — repeat this per region).
 struct PodSection: View {
     let title: String
@@ -80,22 +98,27 @@ struct PodSection: View {
     private let cardSpacing: CGFloat = 12
     private let peekWidth: CGFloat = 24
 
+    // Seeded from UIScreen so the very first frame (before the
+    // GeometryReader below reports back) is still correctly sized rather
+    // than starting at 0.
+    @State private var availableWidth: CGFloat = UIScreen.main.bounds.width
+
     /// Sized so exactly two cards fit on screen and a sliver of the
     /// third peeks in at the trailing edge, signaling the row scrolls.
-    /// Derived from screen width (not GeometryReader) so it's correct
-    /// on the very first frame inside this ScrollView.
     private var cardSize: CGFloat {
-        (UIScreen.main.bounds.width - horizontalPadding - 2 * cardSpacing - peekWidth) / 2
+        (availableWidth - horizontalPadding - 2 * cardSpacing - peekWidth) / 2
     }
-
-    /// Matches the scale PodCard applies to its own text, so the section
-    /// title grows in step with the cards below it.
-    private var scale: CGFloat { cardSize / 160 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // Fixed size, not scaled with cardSize — a section title
+            // shrinking on smaller phones (and ballooning on iPads) reads
+            // as a typography bug, not a considered choice. PodCard's own
+            // internal text still scales with its own card size, which is
+            // the legitimate case: that's a card literally getting
+            // bigger, not a heading responding to a different screen.
             Text(title)
-                .font(AppFont.pillLabelBold(20 * scale))
+                .font(AppFont.pillLabelBold(20))
                 .foregroundColor(.black)
                 .padding(.leading, horizontalPadding)
 
@@ -109,6 +132,12 @@ struct PodSection: View {
             }
         }
         .padding(.vertical, 24)
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(key: SectionWidthPreferenceKey.self, value: geo.size.width)
+            }
+        )
+        .onPreferenceChange(SectionWidthPreferenceKey.self) { availableWidth = $0 }
     }
 }
 

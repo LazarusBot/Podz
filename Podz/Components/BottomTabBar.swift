@@ -35,6 +35,7 @@ enum HomeTab: String, CaseIterable {
 struct BottomTabBar: View {
     @Binding var selected: HomeTab
     var profileImageName: String? = nil
+    @ObservedObject private var likesStore = LikesStore.shared
 
     var body: some View {
         Group {
@@ -66,8 +67,19 @@ struct BottomTabBar: View {
                 let isActive = selected == tab
 
                 Button {
-                    withAnimation(.easeOut(duration: 0.15)) {
-                        selected = tab
+                    if isActive {
+                        // Re-tapping the already-active tab doesn't
+                        // change `selected` (same value in, same value
+                        // out — no onChange to hook), so Feed's "go back
+                        // to root" reset needs its own explicit signal
+                        // instead of piggybacking on the tab switch.
+                        if tab == .feed {
+                            HomeSearchState.shared.feedReselected += 1
+                        }
+                    } else {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            selected = tab
+                        }
                     }
                 } label: {
                     VStack(spacing: 4) {
@@ -79,6 +91,41 @@ struct BottomTabBar: View {
                                 .scaleEffect(isActive ? 1.08 : 1)
                         } else {
                             TabIcon(tab: tab, isActive: isActive)
+                                // Anchored to the icon's own bounds, not
+                                // the tab's full flexible-width button —
+                                // that button spans a fifth of the bar's
+                                // width, so .topTrailing on it landed the
+                                // badge well past the actual heart icon
+                                // instead of right over it.
+                                .overlay(alignment: .topTrailing) {
+                                    // Transient "+1", not a persistent
+                                    // count — a "that just happened"
+                                    // confirmation for a like added
+                                    // elsewhere (Home), not a running
+                                    // unread-style badge, so it
+                                    // self-clears rather than sticking
+                                    // around like a notification count.
+                                    if tab == .likes && likesStore.showRecentLikeBadge {
+                                        // .appTextMuted, not the tab
+                                        // bar's own inactive-icon gray
+                                        // (.white.opacity(0.55)) — that's
+                                        // white-based and reads as
+                                        // practically invisible against
+                                        // this white pill. This is the
+                                        // app's actual gray-text token
+                                        // instead (used for "Good
+                                        // morning," etc.), which stays
+                                        // legible here.
+                                        Text("+1")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(.appTextMuted)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 2)
+                                            .background(Capsule().fill(Color.white))
+                                            .offset(x: 12, y: -6)
+                                            .transition(.scale(scale: 0.3).combined(with: .opacity))
+                                    }
+                                }
                         }
 
                         Text(tab.rawValue)
