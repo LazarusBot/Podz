@@ -244,7 +244,15 @@ struct HomeView: View {
         // actually resolves it in that case.
         .onChange(of: deepLinkRouter.pendingPodId) { _, _ in resolveDeepLink() }
         .onChange(of: podsStore.pods) { _, _ in resolveDeepLink() }
-        .onAppear { resolveDeepLink() }
+        .onAppear {
+            resolveDeepLink()
+            // ScrollTrackingState is one singleton shared by every
+            // scrollable tab — without this, switching in from a tab
+            // scrolled down elsewhere could compute a spurious delta
+            // against that stale offset and flash the tab bar's shrink
+            // for a beat, unrelated to any actual scrolling here.
+            scrollState.reset()
+        }
     }
 
     private func dismissLennyCoachmark() {
