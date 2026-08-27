@@ -39,6 +39,11 @@ struct LikesFolderCard: View {
     /// this folder" animation, which needs to visually duck behind the
     /// front panel as it lands — nil for every other call site.
     var incomingDropContent: ((CGFloat) -> AnyView)? = nil
+    /// Avatars of friends this folder is currently shared with (read-only
+    /// access, see ShareFolderSheet) — shown as a small overlapping stack
+    /// on the front panel's bottom-leading corner, mirroring the count
+    /// badge's own bottom-trailing corner.
+    var sharedWithAvatarURLs: [String] = []
     @State private var isPressed = false
     @State private var wiggleAngle: Double = 0
     @FocusState private var isNameFocused: Bool
@@ -183,6 +188,18 @@ struct LikesFolderCard: View {
                             .padding(side * 0.06)
                     }
                     .frame(height: frontPanelHeight)
+                    .overlay(alignment: .bottomLeading) {
+                        if !sharedWithAvatarURLs.isEmpty {
+                            HStack(spacing: -side * 0.05) {
+                                ForEach(Array(sharedWithAvatarURLs.prefix(3).enumerated()), id: \.offset) { _, url in
+                                    AvatarView(imageName: url, size: side * 0.18)
+                                        .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                                }
+                            }
+                            .padding(side * 0.06)
+                        }
+                    }
                 }
                 .frame(width: side, height: side, alignment: .bottom)
                 .overlay(alignment: .topTrailing) {

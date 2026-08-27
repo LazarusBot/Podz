@@ -14,10 +14,13 @@ import SwiftUI
 struct LikesView: View {
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var podsStore = PodsStore.shared
+    @StateObject private var friendsStore = FriendsStore.shared
     @State private var selectedFolder: LikeFolder?
+    @State private var selectedSharedFolder: SharedFolder?
     @State private var selectedPod: Pod?
     @State private var isEditMode = false
     @State private var folderPendingDeletion: LikeFolder?
+    @State private var folderPendingShare: LikeFolder?
     
     private var likedPods: [Pod] {
         podsStore.pods.filter { likesStore.isLiked($0) }
@@ -26,7 +29,11 @@ struct LikesView: View {
     private func pods(in folder: LikeFolder) -> [Pod] {
         likesStore.pods(in: folder.id, from: likedPods)
     }
-    
+
+    private func sharedWithAvatarURLs(for folder: LikeFolder) -> [String] {
+        likesStore.friendIdsWithAccess(to: folder.id).compactMap { friendsStore.profilesById[$0]?.avatarURL }
+    }
+
     var body: some View {
         if let pod = selectedPod {
             PodDetailView(pod: pod, onBack: { selectedPod = nil })
@@ -35,6 +42,8 @@ struct LikesView: View {
                 .onChange(of: likesStore.likes) { _, _ in
                     if pods(in: folder).isEmpty { selectedFolder = nil }
                 }
+        } else if let sharedFolder = selectedSharedFolder {
+            sharedFolderContentView(folder: sharedFolder)
         } else {
             foldersOverview
         }
@@ -76,8 +85,36 @@ struct LikesView: View {
                                 onDelete: { folderPendingDeletion = folder },
                                 onLongPress: {
                                     withAnimation { isEditMode = true }
-                                }
+                                },
+                                sharedWithAvatarURLs: sharedWithAvatarURLs(for: folder)
                             )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                if !likesStore.foldersSharedWithMe.isEmpty {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                        ForEach(likesStore.foldersSharedWithMe) { folder in
+                            VStack(spacing: 2) {
+                                // Owner's avatar in the same bottom-left
+                                // spot owner-side cards show the friend
+                                // they shared with — same visual language
+                                // either direction, plus the "by X" caption
+                                // underneath for the actual name.
+                                LikesFolderCard(
+                                    country: folder.name,
+                                    pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
+                                    photoURLs: podsStore.primaryPhotoByPodId,
+                                    onTap: { selectedSharedFolder = folder },
+                                    sharedWithAvatarURLs: [friendsStore.profilesById[folder.ownerId]?.avatarURL].compactMap { $0 }
+                                )
+                                if let owner = friendsStore.profilesById[folder.ownerId] {
+                                    Text("by \(owner.displayName)")
+                                        .font(AppFont.mediumLabel(12))
+                                        .foregroundColor(.appTextMuted)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 24)
@@ -87,6 +124,10 @@ struct LikesView: View {
             }
         }
         .background(Color.appHomeBackground)
+        // Needed to resolve friendIdsWithAccess into actual avatar URLs
+        // for LikesFolderCard's shared-with stack — nothing else in this
+        // view's own reachable path guarantees FriendsStore has loaded.
+        .task { await friendsStore.fetchAll() }
         .onChange(of: likesStore.folders) { _, newFolders in
             if newFolders.isEmpty {
                 withAnimation { isEditMode = false }
@@ -119,8 +160,13 @@ struct LikesView: View {
         
         return ScrollView {
             VStack(spacing: 0) {
-                ProfileTopBar(title: folder.name, onBack: { selectedFolder = nil })
-                
+                ProfileTopBar(
+                    title: folder.name,
+                    onBack: { selectedFolder = nil },
+                    trailingIcon: "square.and.arrow.up",
+                    onTrailingTap: { folderPendingShare = folder }
+                )
+
                 VStack(spacing: 30) {
                     ForEach(folderPods) { pod in
                         LennyResultCard(
@@ -135,7 +181,44 @@ struct LikesView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 10)
-                
+
+                Color.clear.frame(height: 100)
+            }
+        }
+        .background(Color.appHomeBackground)
+        .sheet(item: $folderPendingShare) { folder in
+            ShareFolderSheet(folder: folder)
+        }
+    }
+
+    // MARK: - Inside a folder shared with you (read-only)
+
+    private func sharedFolderContentView(folder: SharedFolder) -> some View {
+        let folderPods = likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods)
+
+        return ScrollView {
+            VStack(spacing: 0) {
+                // No trailing share icon — you can't re-share a folder
+                // that isn't yours.
+                ProfileTopBar(title: folder.name, onBack: { selectedSharedFolder = nil })
+
+                VStack(spacing: 30) {
+                    ForEach(folderPods) { pod in
+                        LennyResultCard(
+                            pod: pod,
+                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
+                            isSelected: true,
+                            selectedIcon: "heart.fill",
+                            // No-op, not removeLike — this isn't your like
+                            // to remove. Read-only for now.
+                            onToggleSelect: {},
+                            onTapCard: { selectedPod = pod }
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 10)
+
                 Color.clear.frame(height: 100)
             }
         }
