@@ -185,7 +185,10 @@ struct LikesView: View {
                 ProfileTopBar(
                     title: folder.name,
                     onBack: { selectedFolder = nil },
-                    trailingIcon: "square.and.arrow.up",
+                    // Opens ShareFolderSheet's per-friend access toggle
+                    // list, not the native share sheet — "link" reads as
+                    // "manage sharing access" instead of "export/send".
+                    trailingIcon: "link",
                     onTrailingTap: { folderPendingShare = folder }
                 )
 
@@ -196,6 +199,7 @@ struct LikesView: View {
                             photoURL: podsStore.primaryPhotoByPodId[pod.id],
                             isSelected: true,
                             selectedIcon: "heart.fill",
+                            photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
                             onToggleSelect: { Task { await likesStore.removeLike(pod) } },
                             onTapCard: { selectedPod = pod }
                         )
@@ -236,6 +240,7 @@ struct LikesView: View {
                             photoURL: podsStore.primaryPhotoByPodId[pod.id],
                             isSelected: true,
                             selectedIcon: "heart.fill",
+                            photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
                             // No-op, not removeLike — this isn't your like
                             // to remove. Read-only for now.
                             onToggleSelect: {},

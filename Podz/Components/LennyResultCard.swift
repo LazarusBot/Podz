@@ -16,17 +16,21 @@ struct LennyResultCard: View {
     var isSelected: Bool
     var selectedIcon: String = "checkmark"
     var enableFolderPicker: Bool = false
+    /// LikesView's folder cards pass PodCard.scaledCornerRadius(for: 345)
+    /// so the rounding matches PodCard's at this much bigger photo size;
+    /// left at Lenny's original 10 everywhere else.
+    var photoCornerRadius: CGFloat = 10
     var onToggleSelect: () -> Void = {}
     var onTapCard: () -> Void = {}
     @State private var showFolderPicker = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Button(action: onTapCard) {
                 PodPhoto(url: photoURL)
                     .frame(width: 345, height: 345)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.white.opacity(0.75), lineWidth: 3))
+                    .clipShape(RoundedRectangle(cornerRadius: photoCornerRadius))
+                    .overlay(RoundedRectangle(cornerRadius: photoCornerRadius).strokeBorder(Color.white.opacity(0.75), lineWidth: 3))
             }
             .buttonStyle(.plain)
             
