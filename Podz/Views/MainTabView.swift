@@ -13,43 +13,61 @@ struct MainTabView: View {
     @StateObject private var messagesStore = MessagesStore.shared
     @State private var selectedTab: HomeTab = .feed
 
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                switch selectedTab {
-                case .feed:
-                    HomeView()
-                case .profile:
-                    ProfileView()
-                case .likes:
-                    LikesView()
-                case .mailbox:
-                    MailboxView()
-                case .pods:
-                    ComingSoonView(tab: selectedTab)
-                }
-            }
-            .ignoresSafeArea(edges: .bottom)
+    /// Distance from the bar's bottom edge to the true screen edge —
+    /// not from the system's own ~34pt home-indicator safe area.
+    private let barBottomGap: CGFloat = 24
 
-            if lenny.phase != .editing && !homeSearch.isExpanded && !tabBarVisibility.isHidden {
-                BottomTabBar(selected: $selectedTab, profileImageName: auth.profile?.avatarURL)
-                    // 24, not 18 — matches this app's actual spacing
-                    // system (24pt is the standard content margin
-                    // everywhere else: ProfileTopBar, every screen
-                    // header, etc.) instead of an unrelated leftover
-                    // value, so the bar's edges now line up with the
-                    // margins above it rather than sitting 6pt off.
-                    .padding(.horizontal, 24)
-                    // No added bottom margin — 6pt and 12pt were both
-                    // tried and read as no different from the safe-area
-                    // inset alone, so the bar just sits at that inset
-                    // with nothing extra on top of it.
-                    // Bottom-anchored, not the default center — shrinking
-                    // toward its own center would pull it upward off the
-                    // bottom edge as it scales down instead of settling
-                    // into it.
-                    .scaleEffect(scrollState.isScrollingDown ? 0.85 : 1, anchor: .bottom)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .bottom) {
+                Group {
+                    switch selectedTab {
+                    case .feed:
+                        HomeView()
+                    case .profile:
+                        ProfileView()
+                    case .likes:
+                        LikesView()
+                    case .mailbox:
+                        MailboxView()
+                    case .pods:
+                        ComingSoonView(tab: selectedTab)
+                    }
+                }
+                .ignoresSafeArea(edges: .bottom)
+
+                if lenny.phase != .editing && !homeSearch.isExpanded && !tabBarVisibility.isHidden {
+                    BottomTabBar(selected: $selectedTab, profileImageName: auth.profile?.avatarURL)
+                        // 24, not 18 — matches this app's actual spacing
+                        // system (24pt is the standard content margin
+                        // everywhere else: ProfileTopBar, every screen
+                        // header, etc.) instead of an unrelated leftover
+                        // value, so the bar's edges now line up with the
+                        // margins above it rather than sitting 6pt off.
+                        .padding(.horizontal, 24)
+                        // A plain `.padding(.bottom, _).ignoresSafeArea(_)`
+                        // here got silently clamped back to roughly the
+                        // system's own ~34pt home-indicator inset for any
+                        // modest value (0, 6, and 12 all landed in the
+                        // same spot; only an oversized 150 visibly moved
+                        // it) — the Liquid Glass capsule (`.glassEffect`)
+                        // appears to enforce its own minimum clearance
+                        // from the true edge at layout time, so asking it
+                        // to sit *closer* than that gets ignored.
+                        // `.offset` is a pure post-layout pixel shift
+                        // rather than a layout-time frame proposal, so
+                        // it isn't subject to that clamping — it reliably
+                        // lands wherever asked, hence computing the shift
+                        // from the real safe-area inset (via this
+                        // GeometryReader) instead.
+                        .offset(y: proxy.safeAreaInsets.bottom - barBottomGap)
+                        // Bottom-anchored, not the default center — shrinking
+                        // toward its own center would pull it upward off the
+                        // bottom edge as it scales down instead of settling
+                        // into it.
+                        .scaleEffect(scrollState.isScrollingDown ? 0.85 : 1, anchor: .bottom)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
         }
         .animation(.easeOut(duration: 0.2), value: lenny.phase)

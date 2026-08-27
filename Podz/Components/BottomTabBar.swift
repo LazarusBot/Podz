@@ -107,13 +107,14 @@ struct BottomTabBar: View {
     }
 
     private var tabRow: some View {
-        // 16 — with labels gone, edge-to-edge columns read as cramped
+        // 20 — with labels gone, edge-to-edge columns read as cramped
         // icons with nothing separating them; a real gap between each
         // tab's own zone (and so its own pill) is what actually makes
-        // the bar feel breathable, not just shorter. Bumped from 12 now
-        // that the pill itself is bigger too, so there's still real
-        // separation between adjacent pills, not just adjacent icons.
-        HStack(spacing: 16) {
+        // the bar feel breathable, not just shorter. Bumped from 12,
+        // then 16, now that the pill itself is bigger too, so there's
+        // still real separation between adjacent pills, not just
+        // adjacent icons.
+        HStack(spacing: 20) {
             ForEach(HomeTab.allCases, id: \.self) { tab in
                 tabContent(tab)
                     .frame(maxWidth: .infinity)

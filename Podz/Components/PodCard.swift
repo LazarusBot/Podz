@@ -9,6 +9,14 @@ struct PodCard: View {
     @ObservedObject private var likesStore = LikesStore.shared
     @State private var showFolderPicker = false
 
+    /// This card's own radius (18) is tuned for its default 160pt size —
+    /// other pod photos at a different size (e.g. LennyResultCard's much
+    /// bigger 345pt one) need the radius scaled by the same ratio, or the
+    /// rounding reads as barely-there next to this card's.
+    static func scaledCornerRadius(for photoSize: CGFloat) -> CGFloat {
+        photoSize * 18 / 160
+    }
+
     /// Text scales with the card so bigger cards (e.g. the 2-up "peek a
     /// third" sizing in PodSection) don't end up with captions that
     /// still look tuned for the old fixed 160pt card.
