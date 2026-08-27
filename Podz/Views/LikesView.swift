@@ -15,6 +15,12 @@ struct LikesView: View {
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var friendsStore = FriendsStore.shared
+    // Shared with HomeView — feeds the floating tab bar's scroll-down
+    // shrink (MainTabView), which used to only react to the Home feed's
+    // own ScrollView. Every ScrollView here keeps the tab bar visible
+    // (unlike FriendsView/ConversationView, which hide it outright), so
+    // they all report their offset the same way Home's does.
+    @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedFolder: LikeFolder?
     @State private var selectedSharedFolder: SharedFolder?
     @State private var selectedPod: Pod?
@@ -123,11 +129,27 @@ struct LikesView: View {
                 Color.clear.frame(height: 100)
             }
         }
+        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+            geometry.contentOffset.y
+        } action: { _, newValue in
+            scrollState.updateOffset(newValue)
+        }
         .background(Color.appHomeBackground)
         // Needed to resolve friendIdsWithAccess into actual avatar URLs
         // for LikesFolderCard's shared-with stack — nothing else in this
         // view's own reachable path guarantees FriendsStore has loaded.
         .task { await friendsStore.fetchAll() }
+        .onAppear {
+            // ScrollTrackingState is one singleton shared by every
+            // scrollable tab — without this, switching in from a tab
+            // scrolled down elsewhere could compute a spurious delta
+            // against that stale offset and flash the tab bar's shrink
+            // for a beat, unrelated to any actual scrolling here. This
+            // is the entry point for the whole tab (`selectedFolder`
+            // etc. reset to nil on every fresh mount), so resetting
+            // here covers switching into Likes generally.
+            scrollState.reset()
+        }
         .onChange(of: likesStore.folders) { _, newFolders in
             if newFolders.isEmpty {
                 withAnimation { isEditMode = false }
@@ -185,6 +207,11 @@ struct LikesView: View {
                 Color.clear.frame(height: 100)
             }
         }
+        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+            geometry.contentOffset.y
+        } action: { _, newValue in
+            scrollState.updateOffset(newValue)
+        }
         .background(Color.appHomeBackground)
         .sheet(item: $folderPendingShare) { folder in
             ShareFolderSheet(folder: folder)
@@ -222,9 +249,14 @@ struct LikesView: View {
                 Color.clear.frame(height: 100)
             }
         }
+        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+            geometry.contentOffset.y
+        } action: { _, newValue in
+            scrollState.updateOffset(newValue)
+        }
         .background(Color.appHomeBackground)
     }
-    
+
     // MARK: - Empty state
     
     private var emptyState: some View {

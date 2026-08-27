@@ -16,6 +16,20 @@ final class ScrollTrackingState: ObservableObject {
 
     private init() {}
 
+    /// Call from a tab's own `.onAppear` before any scroll updates come
+    /// in. This is one shared singleton feeding every scrollable tab
+    /// (Home, Likes, Mailbox) — without this, `lastOffset` carries over
+    /// whatever the *previous* tab's scroll position was, so a freshly
+    /// switched-to tab's very first offset (typically near 0) could
+    /// compute a large spurious delta against that stale value and flash
+    /// the tab bar's shrink for a beat right on tab entry, unrelated to
+    /// any actual scrolling in the new tab.
+    func reset() {
+        idleTask?.cancel()
+        lastOffset = 0
+        isScrollingDown = false
+    }
+
     /// Feed the ScrollView's `contentOffset.y` (via `onScrollGeometryChange`)
     /// in on every change. Increases as the user scrolls down.
     func updateOffset(_ offset: CGFloat) {
