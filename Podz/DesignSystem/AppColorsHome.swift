@@ -15,4 +15,10 @@ extension Color {
 
     /// #5AAF00 — green "beds still available" indicator
     static let appAvailableGreen = Color(red: 0x5A/255, green: 0xAF/255, blue: 0x00/255)
+
+    /// #3985FF — sent-message bubble fill and the Mailbox unread dot
+    static let appMessageBlue = Color(red: 0x39/255, green: 0x85/255, blue: 0xFF/255)
+
+    /// #F9F9F9 — received-message bubble fill (Mailbox thread)
+    static let appMessageReceivedBg = Color(red: 0xF9/255, green: 0xF9/255, blue: 0xF9/255)
 }
