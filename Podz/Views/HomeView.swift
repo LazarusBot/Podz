@@ -10,6 +10,21 @@ private struct PostsFeedWidthPreferenceKey: PreferenceKey {
     }
 }
 
+/// Which of Home's two feeds is showing — pod browsing (with search/
+/// filters/Lenny) or friends' posts. Previously both lived in one
+/// continuous scroll, posts always below every pod section; this splits
+/// them so each is reachable without scrolling past the other.
+private enum HomeFeedTab: CaseIterable {
+    case pods, friends
+
+    var title: String {
+        switch self {
+        case .pods: return "Pods"
+        case .friends: return "Friends"
+        }
+    }
+}
+
 /// node 3779:2045 — "Home"
 struct HomeView: View {
     @StateObject private var auth = AuthManager.shared
@@ -25,6 +40,7 @@ struct HomeView: View {
     @State private var locationSearch = ""
     @State private var showLennyCoachmark = false
     @State private var showPostComposer = false
+    @State private var feedTab: HomeFeedTab = .pods
     @State private var postsFeedAvailableWidth: CGFloat = UIScreen.main.bounds.width
     /// Persisted so the coachmark only ever shows once, not once per
     /// session — not routing-related (see AuthManager's justRegistered
@@ -99,27 +115,34 @@ struct HomeView: View {
                             if isAwaitingQuery {
                                 awaitingQueryState
                             } else {
-                                if podsStore.isLoading && podsStore.pods.isEmpty {
-                                    loadingState
-                                } else if nonEmptySections.isEmpty {
-                                    emptyState
-                                } else {
-                                    ForEach(nonEmptySections, id: \.0) { country, pods in
-                                        PodSection(
-                                            title: "Preferred pods — \(country)",
-                                            pods: pods,
-                                            photoURLs: podsStore.primaryPhotoByPodId,
-                                            showLikeButtons: true,
-                                            onTapPod: { selectedPod = $0 }
-                                        )
-                                    }
-                                }
+                                // Only alongside the pod-browsing content,
+                                // not while the search pill's own full-
+                                // screen "awaiting a query" prompt is
+                                // showing.
+                                HomeFeedToggle(selection: $feedTab)
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 4)
+                                    .padding(.bottom, 12)
 
-                                // Below every pod section, not above — only
-                                // alongside the pod-browsing content, not
-                                // while the search pill's own full-screen
-                                // "awaiting a query" prompt is showing.
-                                postsFeedSection
+                                if feedTab == .pods {
+                                    if podsStore.isLoading && podsStore.pods.isEmpty {
+                                        loadingState
+                                    } else if nonEmptySections.isEmpty {
+                                        emptyState
+                                    } else {
+                                        ForEach(nonEmptySections, id: \.0) { country, pods in
+                                            PodSection(
+                                                title: "Preferred pods — \(country)",
+                                                pods: pods,
+                                                photoURLs: podsStore.primaryPhotoByPodId,
+                                                showLikeButtons: true,
+                                                onTapPod: { selectedPod = $0 }
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    friendsFeedContent
+                                }
                             }
                         }
 
@@ -296,7 +319,7 @@ struct HomeView: View {
     // MARK: - Friends' posts
 
     @ViewBuilder
-    private var postsFeedSection: some View {
+    private var friendsFeedContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Friends' posts")
@@ -311,7 +334,9 @@ struct HomeView: View {
             }
             .padding(.horizontal, 24)
 
-            if !postsStore.posts.isEmpty {
+            if postsStore.posts.isEmpty {
+                friendsEmptyState
+            } else {
                 VStack(spacing: 16) {
                     ForEach(postsStore.posts) { post in
                         PostCard(post: post, cardWidth: postCardWidth, onTapPod: {
@@ -347,6 +372,21 @@ struct HomeView: View {
 
     private var postCardWidth: CGFloat {
         postsFeedAvailableWidth - 48
+    }
+
+    private var friendsEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.2")
+                .font(.system(size: 32))
+                .foregroundColor(.appTextMuted)
+            Text("No posts from friends yet — tap + to share one yourself.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.appTextMuted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+        .padding(.horizontal, 40)
     }
 
     // MARK: - Feed states
@@ -442,6 +482,45 @@ struct HomeView: View {
         } else {
             return "No pods available yet."
         }
+    }
+}
+
+/// Minimal two-segment "Pods / Friends" toggle switching Home's main
+/// content between pod browsing and friends' posts. Reuses the app's
+/// existing pill chrome (`pillStyle()`) for the track rather than a new
+/// visual language — the selected half slides via `matchedGeometryEffect`
+/// instead of two independently cross-fading capsules.
+private struct HomeFeedToggle: View {
+    @Binding var selection: HomeFeedTab
+    @Namespace private var namespace
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(HomeFeedTab.allCases, id: \.self) { tab in
+                Text(tab.title)
+                    .font(AppFont.pillLabelSemiBold(14))
+                    .foregroundColor(selection == tab ? .white : .black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background {
+                        if selection == tab {
+                            Capsule()
+                                .fill(Color.appAccentBlack)
+                                .matchedGeometryEffect(id: "selection", in: namespace)
+                        }
+                    }
+                    .contentShape(Capsule())
+                    .onTapGesture {
+                        guard selection != tab else { return }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.easeOut(duration: AppMotion.standard)) {
+                            selection = tab
+                        }
+                    }
+            }
+        }
+        .padding(3)
+        .pillStyle()
     }
 }
 
