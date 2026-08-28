@@ -81,14 +81,7 @@ struct AddFriendSheet: View {
             Spacer(minLength: 0)
         }
         .background(Color.appHomeBackground)
-        .alert("Couldn't send request", isPresented: Binding(
-            get: { errorMessage != nil },
-            set: { if !$0 { errorMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(errorMessage ?? "")
-        }
+        .errorAlert($errorMessage, title: "Couldn't send request")
     }
 
     private func resultRow(for profile: Profile) -> some View {

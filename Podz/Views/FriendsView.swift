@@ -27,7 +27,7 @@ struct FriendsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         if !friendsStore.incomingRequests.isEmpty {
-                            sectionHeader("Requests")
+                            SectionLabel(title: "Requests")
                             ForEach(friendsStore.incomingRequests) { request in
                                 FriendRequestRow(
                                     profile: friendsStore.profilesById[request.requesterId],
@@ -41,7 +41,7 @@ struct FriendsView: View {
                             }
                         }
 
-                        sectionHeader(friendsStore.friends.isEmpty ? "Accepted friends" : "Accepted friends (\(friendsStore.friends.count))")
+                        SectionLabel(title: friendsStore.friends.isEmpty ? "Accepted friends" : "Accepted friends (\(friendsStore.friends.count))")
 
                         if friendsStore.friends.isEmpty {
                             Text("No friends yet — tap + to add someone.")
@@ -89,15 +89,12 @@ struct FriendsView: View {
         // long as this screen is up, restore it on the way out.
         .onAppear { TabBarVisibilityState.shared.isHidden = true }
         .onDisappear { TabBarVisibilityState.shared.isHidden = false }
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(AppFont.pillLabelBold(18))
-            .foregroundColor(.black)
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .padding(.bottom, 10)
+        // Accept/decline/remove all set `friendsStore.lastError` on
+        // failure, same as every other store's write methods — nothing
+        // here was ever reading it, so a failed action (RLS, network)
+        // silently looked like a dead button. Same bug AddFriendSheet's
+        // own `errorMessage` was added to fix for sendRequest.
+        .errorAlert($friendsStore.lastError)
     }
 }
 

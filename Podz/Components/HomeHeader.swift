@@ -25,8 +25,9 @@ struct HomeHeader: View {
     }
 }
 
-/// Reusable round avatar with white ring + soft shadow, used in the
-/// header, the bottom tab bar ("Profile"), and the pinned post card.
+/// Reusable avatar with white ring + soft shadow, used in the header, the
+/// bottom tab bar ("Profile"), and various friend/post rows — round by
+/// default everywhere, since that's every existing call site.
 ///
 /// Accepts either a local asset name ("avatar-placeholder") or a remote
 /// URL string (e.g. a Supabase Storage public URL from `profile.avatarURL`)
@@ -34,7 +35,13 @@ struct HomeHeader: View {
 struct AvatarView: View {
     var imageName: String?
     var size: CGFloat = 42
-    
+    /// Nil (default) clips to a circle, matching every call site this
+    /// had before this parameter existed. A value switches to a rounded
+    /// square at that radius instead — e.g. ProfileView's own persistent
+    /// top-bar avatar, matching PodDetailView's small top-bar photo
+    /// (`RoundedRectangle(cornerRadius: 10, style: .continuous)`).
+    var cornerRadius: CGFloat? = nil
+
     var body: some View {
         Group {
             if let imageName, imageName.hasPrefix("http") {
@@ -47,13 +54,39 @@ struct AvatarView: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(Circle())
-        .overlay(Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1))
+        .modifier(AvatarClipStyle(cornerRadius: cornerRadius))
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 2)
     }
-    
+
+    /// A plain `Rectangle`, not `Circle` — this fills the *entire* square
+    /// frame regardless of which shape the outer clip ends up using;
+    /// a `Circle` here would leave a rounded square's corners visibly
+    /// uncovered instead of relying on the outer clip to crop correctly.
     private var placeholder: some View {
-        Circle().fill(Color.gray.opacity(0.3))
+        Rectangle().fill(Color.gray.opacity(0.3))
             .overlay(Image(systemName: "person.fill").foregroundColor(.white))
+    }
+}
+
+/// Circle vs. rounded-square clip + matching border, kept out of
+/// `AvatarView.body` itself since `.strokeBorder` needs a concrete
+/// `InsettableShape` type per branch — `AnyShape` doesn't conform to it,
+/// so a type-erased single code path isn't an option here.
+private struct AvatarClipStyle: ViewModifier {
+    let cornerRadius: CGFloat?
+
+    func body(content: Content) -> some View {
+        if let cornerRadius {
+            content
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                )
+        } else {
+            content
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1))
+        }
     }
 }
