@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// "Make your place a Podz" promo card (node 3827:1459).
-/// Exact Figma values: height 99, corner radius 15, border 0.5px #E1E1E1,
-/// shadow "1px 3px 4px rgba(166,166,166,0.1)" (= AppShadow.panel),
-/// inner padding 18 horizontal / 20 vertical, gap 18, outer padding
+/// Figma's own height (99) read as too small in practice — sized up to
+/// 124 (text/padding bumped to match), everything else still the exact
+/// Figma values: corner radius 15, border 0.5px #E1E1E1, shadow
+/// "1px 3px 4px rgba(166,166,166,0.1)" (= AppShadow.panel), outer padding
 /// 24 horizontal / 31 vertical around the card itself.
 struct ProfilePromoCard: View {
     var backgroundImageName: String = "Pod"
@@ -41,7 +42,7 @@ struct ProfilePromoCard: View {
                         Rectangle().fill(Color.gray.opacity(0.25))
                     }
                 }
-                .frame(width: 345, height: 99)
+                .frame(width: 345, height: 124)
                 .clipped()
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -55,9 +56,9 @@ struct ProfilePromoCard: View {
                     startPoint: .trailing, endPoint: .leading
                 )
 
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(promoTitle)
-                        .font(AppFont.pillLabel(16))
+                        .font(AppFont.pillLabel(18))
                         .fontWeight(.bold)
                         .foregroundColor(.black)
 
@@ -65,15 +66,15 @@ struct ProfilePromoCard: View {
                         Text("Set up easily and start earning from your home.")
                         Text("It's free.")
                     }
-                    .font(AppFont.itemHelper(10))
+                    .font(AppFont.itemHelper(11))
                     .foregroundColor(.black)
                 }
                 .padding(.horizontal, 18)
-                .padding(.vertical, 20)
+                .padding(.vertical, 24)
                 .frame(maxWidth: 266, alignment: .leading)
             }
         }
-        .frame(height: 99)
+        .frame(height: 124)
         .background(
             RoundedRectangle(cornerRadius: 15)
                 .fill(Color.appHomeBackground)

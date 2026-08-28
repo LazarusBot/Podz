@@ -21,15 +21,15 @@ struct ProfileEditRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(value)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(AppFont.pillLabelSemiBold(16))
                         .foregroundColor(.black)
                     Text(label)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(AppFont.mediumLabel(11))
                         .foregroundColor(.appTextMuted)
                 }
                 Spacer()
                 Image(systemName: "pencil")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.black)
             }
         }

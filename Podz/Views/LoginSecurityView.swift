@@ -31,7 +31,9 @@ struct LoginSecurityView: View {
             InfoRow(value: signInMethod, label: "Sign-in method")
 
             if signInMethod == "Email" {
-                ProfileMenuRow(icon: "envelope", title: "Send password reset email") {
+                // No chevron — this performs the send right here, it
+                // doesn't navigate to another screen.
+                ProfileMenuRow(icon: "envelope", title: "Send password reset email", showsChevron: false) {
                     Task {
                         guard await auth.resetPassword(email: email) else { return }
                         showResetConfirmation = true
@@ -47,14 +49,7 @@ struct LoginSecurityView: View {
         } message: {
             Text("Check \(email) for a link to reset your password.")
         }
-        .alert("Error", isPresented: Binding(
-            get: { auth.lastError != nil },
-            set: { if !$0 { auth.lastError = nil } }
-        )) {
-            Button("OK") { auth.lastError = nil }
-        } message: {
-            Text(auth.lastError ?? "")
-        }
+        .errorAlert($auth.lastError)
     }
 }
 
@@ -68,10 +63,10 @@ private struct InfoRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value)
-                .font(.system(size: 16, weight: .medium))
+                .font(AppFont.pillLabelSemiBold(16))
                 .foregroundColor(.black)
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(AppFont.mediumLabel(11))
                 .foregroundColor(.appTextMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

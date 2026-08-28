@@ -17,11 +17,13 @@ struct ProfileAccountRow<AvatarContent: View>: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(AppFont.pillLabelSemiBold(16))
                         .foregroundColor(.black)
                     Text(subtitle)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(AppFont.mediumLabel(11))
                         .foregroundColor(.appTextMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
 
                 Spacer()
@@ -48,12 +50,13 @@ extension ProfileAccountRow where AvatarContent == AvatarView {
         name: String,
         subtitle: String = "Show profile",
         avatarImageName: String? = nil,
+        avatarCornerRadius: CGFloat? = nil,
         onTap: @escaping () -> Void = {}
     ) {
         self.name = name
         self.subtitle = subtitle
         self.avatarImageName = avatarImageName
-        self.avatarContent = { AvatarView(imageName: avatarImageName, size: 42) }
+        self.avatarContent = { AvatarView(imageName: avatarImageName, size: 42, cornerRadius: avatarCornerRadius) }
         self.onTap = onTap
     }
 }
@@ -67,25 +70,50 @@ struct ProfileMenuRow: View {
     let icon: String
     let title: String
     var isDestructive: Bool = false
+    /// Nil or 0 hides the pill entirely — a badge reading "0" would read
+    /// as "there's something, but it's nothing," which is worse than no
+    /// badge at all.
+    var badgeCount: Int? = nil
+    /// Defaults to `!isDestructive` (every non-destructive row used to
+    /// always show one) — override to `false` for a row that performs an
+    /// action right here (e.g. LoginSecurityView's "Send password reset
+    /// email") rather than navigating to another screen. The chevron
+    /// promises "this goes somewhere else"; showing it on an action row
+    /// was a leftover inconsistency, not a deliberate choice.
+    var showsChevron: Bool? = nil
     var onTap: () -> Void = {}
 
     private var tint: Color { isDestructive ? .red : .black }
+    private var resolvedShowsChevron: Bool { showsChevron ?? !isDestructive }
 
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 11) {
                 Image(systemName: icon)
-                    .font(.system(size: 15))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(tint)
                     .frame(width: 17)
 
                 Text(title)
-                    .font(.system(size: 14))
+                    .font(AppFont.mediumLabel(14))
                     .foregroundColor(tint)
 
                 Spacer()
 
-                if !isDestructive {
+                if let badgeCount, badgeCount > 0 {
+                    // Same shape/weight as BottomTabBar's own Mailbox
+                    // unread pill — one shared "new activity" style
+                    // across the app, not a one-off for this row.
+                    Text(badgeCount > 9 ? "9+" : "\(badgeCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .frame(minWidth: 20)
+                        .background(Capsule().fill(Color.appMessageBlue))
+                }
+
+                if resolvedShowsChevron {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.black)
@@ -98,5 +126,25 @@ struct ProfileMenuRow: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
         }
+    }
+}
+
+/// Quiet, uppercase small-caps label above a group of rows — standard
+/// iOS Settings weight. Shared by ProfileView (Social / Account / Danger
+/// zone) and FriendsView (Requests / Accepted friends), which previously
+/// had two different section-header styles (this quiet one vs. a bold
+/// 18pt Darker Grotesque one) one tap apart in the same navigation flow.
+struct SectionLabel: View {
+    let title: String
+
+    var body: some View {
+        Text(title.uppercased())
+            .font(AppFont.itemTitle(12))
+            .tracking(0.5)
+            .foregroundColor(.appTextMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 6)
     }
 }

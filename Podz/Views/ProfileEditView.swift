@@ -62,14 +62,7 @@ struct ProfileEditView: View {
             Spacer()
         }
         .background(Color.appHomeBackground)
-        .alert("Error", isPresented: Binding(
-            get: { auth.lastError != nil },
-            set: { if !$0 { auth.lastError = nil } }
-        )) {
-            Button("OK") { auth.lastError = nil }
-        } message: {
-            Text(auth.lastError ?? "")
-        }
+        .errorAlert($auth.lastError)
         .alert(
             editingField?.title ?? "",
             isPresented: Binding(get: { editingField != nil }, set: { if !$0 { editingField = nil } })

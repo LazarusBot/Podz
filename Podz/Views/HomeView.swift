@@ -1,10 +1,21 @@
 import SwiftUI
 
+/// Reports the "Friends' posts" section's real available width — same
+/// background-GeometryReader-plus-preference trick as PodCard's
+/// `SectionWidthPreferenceKey`.
+private struct PostsFeedWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = UIScreen.main.bounds.width
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 /// node 3779:2045 — "Home"
 struct HomeView: View {
     @StateObject private var auth = AuthManager.shared
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var likesStore = LikesStore.shared
+    @StateObject private var postsStore = PostsStore.shared
     @StateObject private var lenny = LennySearchViewModel.shared
     @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var filters = HomeFiltersState.shared
@@ -13,6 +24,8 @@ struct HomeView: View {
     @State private var selectedPod: Pod?
     @State private var locationSearch = ""
     @State private var showLennyCoachmark = false
+    @State private var showPostComposer = false
+    @State private var postsFeedAvailableWidth: CGFloat = UIScreen.main.bounds.width
     /// Persisted so the coachmark only ever shows once, not once per
     /// session — not routing-related (see AuthManager's justRegistered
     /// note on the old hasSeenOnboarding bug), so plain @AppStorage is
@@ -85,20 +98,28 @@ struct HomeView: View {
 
                             if isAwaitingQuery {
                                 awaitingQueryState
-                            } else if podsStore.isLoading && podsStore.pods.isEmpty {
-                                loadingState
-                            } else if nonEmptySections.isEmpty {
-                                emptyState
                             } else {
-                                ForEach(nonEmptySections, id: \.0) { country, pods in
-                                    PodSection(
-                                        title: "Preferred pods — \(country)",
-                                        pods: pods,
-                                        photoURLs: podsStore.primaryPhotoByPodId,
-                                        showLikeButtons: true,
-                                        onTapPod: { selectedPod = $0 }
-                                    )
+                                if podsStore.isLoading && podsStore.pods.isEmpty {
+                                    loadingState
+                                } else if nonEmptySections.isEmpty {
+                                    emptyState
+                                } else {
+                                    ForEach(nonEmptySections, id: \.0) { country, pods in
+                                        PodSection(
+                                            title: "Preferred pods — \(country)",
+                                            pods: pods,
+                                            photoURLs: podsStore.primaryPhotoByPodId,
+                                            showLikeButtons: true,
+                                            onTapPod: { selectedPod = $0 }
+                                        )
+                                    }
                                 }
+
+                                // Below every pod section, not above — only
+                                // alongside the pod-browsing content, not
+                                // while the search pill's own full-screen
+                                // "awaiting a query" prompt is showing.
+                                postsFeedSection
                             }
                         }
 
@@ -152,6 +173,7 @@ struct HomeView: View {
         // lifetime, so this now runs once.
         .task { await podsStore.fetchPods() }
         .task { await likesStore.fetchAll() }
+        .task { await postsStore.fetchFeed() }
         // Points at the "Lenny" chip via the anchor it reports in
         // HomeSearchRow — attached up here rather than inside the
         // ScrollView branch so it renders on top of everything (feed
@@ -269,6 +291,62 @@ struct HomeView: View {
         guard let pod = podsStore.pods.first(where: { $0.id == podId }) else { return }
         selectedPod = pod
         deepLinkRouter.pendingPodId = nil
+    }
+
+    // MARK: - Friends' posts
+
+    @ViewBuilder
+    private var postsFeedSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Friends' posts")
+                    .font(AppFont.pillLabelBold(20))
+                    .foregroundColor(.black)
+                Spacer()
+                Button { showPostComposer = true } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.black)
+                }
+            }
+            .padding(.horizontal, 24)
+
+            if !postsStore.posts.isEmpty {
+                VStack(spacing: 16) {
+                    ForEach(postsStore.posts) { post in
+                        PostCard(post: post, cardWidth: postCardWidth, onTapPod: {
+                            if let pod = podsStore.pods.first(where: { $0.id == post.podId }) {
+                                selectedPod = pod
+                            }
+                        })
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+        }
+        .padding(.vertical, 16)
+        // Same background-GeometryReader-plus-preference trick as
+        // PodSection's own SectionWidthPreferenceKey — measured on this
+        // section's own outer VStack (full device width, before its
+        // internal 24pt horizontal padding below), then `postCardWidth`
+        // subtracts that padding to get each PostCard's own exact width.
+        // PostCard applies it as a hard `.frame(width:)`, not just a max,
+        // so nothing inside it (an aspect-ratio computation gone wrong,
+        // an offset stack, anything) can ever push the card wider than
+        // its actual place in the feed.
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(key: PostsFeedWidthPreferenceKey.self, value: geo.size.width)
+            }
+        )
+        .onPreferenceChange(PostsFeedWidthPreferenceKey.self) { postsFeedAvailableWidth = $0 }
+        .sheet(isPresented: $showPostComposer) {
+            PostComposerView()
+        }
+    }
+
+    private var postCardWidth: CGFloat {
+        postsFeedAvailableWidth - 48
     }
 
     // MARK: - Feed states

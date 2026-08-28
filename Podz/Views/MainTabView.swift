@@ -11,6 +11,10 @@ struct MainTabView: View {
     // opens, not only after the user has visited Mailbox at least once
     // this session.
     @StateObject private var messagesStore = MessagesStore.shared
+    // Same reasoning — the Profile tab's activity dot needs real data
+    // from launch, not only after HomeView's own fetch (or a Profile
+    // visit) happens to run first.
+    @StateObject private var postsStore = PostsStore.shared
     @State private var selectedTab: HomeTab = .feed
 
     /// Distance from the bar's bottom edge to the true screen edge —
@@ -79,6 +83,7 @@ struct MainTabView: View {
             await messagesStore.fetchAll()
             messagesStore.startRealtimeIfNeeded()
         }
+        .task { await postsStore.fetchFeed() }
     }
 }
 

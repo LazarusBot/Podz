@@ -1,4 +1,5 @@
 import SwiftUI
+internal import Auth
 
 enum HomeTab: String, CaseIterable {
     case feed = "Feed"
@@ -55,6 +56,14 @@ struct BottomTabBar: View {
     var profileImageName: String? = nil
     @ObservedObject private var likesStore = LikesStore.shared
     @ObservedObject private var messagesStore = MessagesStore.shared
+    @ObservedObject private var postsStore = PostsStore.shared
+    /// New (unseen) likes/comments on your own posts — same source
+    /// PostsActivityView itself reads, just reduced to a plain presence
+    /// check for the dot.
+    private var hasNewPostActivity: Bool {
+        guard let userId = AuthManager.shared.session?.user.id else { return false }
+        return postsStore.newActivityCount(onPostsAuthoredBy: userId) > 0
+    }
     /// Each tab's own on-screen frame, in the "tabRow" named coordinate
     /// space — populated by every tab's `.onGeometryChange` as soon as
     /// layout settles, read by the drag gesture to resolve a touch point
@@ -254,6 +263,18 @@ struct BottomTabBar: View {
                         Circle().strokeBorder(Color.black, lineWidth: isHighlighted ? 1.5 : 0)
                     )
                     .scaleEffect(isHighlighted ? 1.08 : 1)
+                    .overlay(alignment: .topTrailing) {
+                        // A plain dot, not a count pill — the count
+                        // itself already shows on the Posts row inside
+                        // Profile; this just needs to say "something's
+                        // there" from the tab bar.
+                        if hasNewPostActivity {
+                            Circle()
+                                .fill(Color.appMessageBlue)
+                                .frame(width: 9, height: 9)
+                                .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                        }
+                    }
             } else {
                 TabIcon(tab: tab, isActive: isHighlighted)
                     // Anchored to the icon's own bounds, not the tab's

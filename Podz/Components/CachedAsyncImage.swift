@@ -7,18 +7,60 @@
 
 import SwiftUI
 import ImageIO
+import CryptoKit
 
-/// In-memory cache so the same photo doesn't re-download every time its
-/// view is recreated (scrolling a list in and out of view, navigating
-/// back to a screen). Keeps decoded UIImages ready to draw, rather than
-/// raw data to redecode each time.
+/// Two-tier cache: an in-memory `NSCache` (instant, but wiped whenever
+/// the app is terminated), backed by a disk cache in Caches/ that
+/// survives across launches. Without the disk tier, every cold app open
+/// re-downloaded every pod photo from scratch even for pods already
+/// browsed last session — the "little wait before pictures show up on
+/// open" — since NSCache alone has nothing left the moment the process
+/// dies. Keeps decoded UIImages in memory ready to draw, rather than raw
+/// data to redecode each time.
 final class ImageCache {
     static let shared = ImageCache()
-    private let cache = NSCache<NSString, UIImage>()
-    private init() {}
+    private let memoryCache = NSCache<NSString, UIImage>()
+    private let diskDirectory: URL
 
-    func image(for url: String) -> UIImage? { cache.object(forKey: url as NSString) }
-    func set(_ image: UIImage, for url: String) { cache.setObject(image, forKey: url as NSString) }
+    private init() {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        diskDirectory = caches.appendingPathComponent("PodzImageCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: diskDirectory, withIntermediateDirectories: true)
+    }
+
+    /// SHA256 of the URL, not the URL string itself — URLs contain `/`
+    /// and other characters that aren't valid filenames, and a hash needs
+    /// to be *stable* across launches (unlike Swift's own `hashValue`,
+    /// which is randomly salted per process).
+    private func diskPath(for url: String) -> URL {
+        let digest = SHA256.hash(data: Data(url.utf8))
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return diskDirectory.appendingPathComponent(hex)
+    }
+
+    func image(for url: String) -> UIImage? {
+        if let cached = memoryCache.object(forKey: url as NSString) {
+            return cached
+        }
+        guard let data = try? Data(contentsOf: diskPath(for: url)),
+              let image = ImageLoader.decodeImage(from: data) else {
+            return nil
+        }
+        memoryCache.setObject(image, forKey: url as NSString)
+        return image
+    }
+
+    func set(_ image: UIImage, for url: String) {
+        memoryCache.setObject(image, forKey: url as NSString)
+        // Encoded synchronously (small, and keeps the write itself off
+        // the calling code's critical path) so the detached write task
+        // only captures Sendable values (Data, URL) — not the UIImage.
+        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+        let path = diskPath(for: url)
+        Task.detached(priority: .utility) {
+            try? data.write(to: path)
+        }
+    }
 }
 
 /// Shared download + decode pipeline — used by `CachedAsyncImage` and by
