@@ -27,37 +27,56 @@ final class AuthManager: ObservableObject {
     var isAuthenticated: Bool { session != nil }
     
     private var authStateTask: Task<Void, Never>?
-    
+    /// Safety-net timer for the case below — cancelled the moment a real
+    /// follow-up event arrives, so it only ever fires if the background
+    /// refresh never resolves at all.
+    private var expiredSessionFallbackTask: Task<Void, Never>?
+
     private init() {
         // Restores any existing session at launch, then keeps `session`
         // in sync automatically whenever it changes (sign in, sign out,
         // token refresh...). Also (re)loads the profile row whenever we
         // go from signed-out to signed-in, and clears it on sign-out.
         authStateTask = Task {
-            var receivedFirstEvent = false
             for await (_, session) in supabase.auth.authStateChanges {
                 // With emitLocalSessionAsInitialSession, the very first
-                // emission may be an expired locally-cached session —
-                // treat that as signed-out rather than authenticated.
-                if let session, session.isExpired {
-                    self.session = nil
-                    self.profile = nil
-                    if !receivedFirstEvent { isInitializing = false; receivedFirstEvent = true }
+                // emission may be an expired locally-cached session, which
+                // the SDK then refreshes in the background on its own.
+                // Previously this branch treated that first emission as an
+                // immediate sign-out, which flipped the UI to the auth
+                // screen for the split second before the refreshed session
+                // landed — the "login page appears and disappears" flash.
+                // Instead, stay on the launch skeleton and wait for that
+                // resolved event. A failed refresh (offline, revoked
+                // token) is swallowed silently by the SDK with no
+                // follow-up event, so fall back to signed-out after a
+                // short timeout rather than hanging on the skeleton forever.
+                if isInitializing, let session, session.isExpired {
+                    expiredSessionFallbackTask?.cancel()
+                    expiredSessionFallbackTask = Task {
+                        try? await Task.sleep(for: .seconds(6))
+                        guard !Task.isCancelled else { return }
+                        self.session = nil
+                        self.profile = nil
+                        self.isInitializing = false
+                    }
                     continue
                 }
+                expiredSessionFallbackTask?.cancel()
                 self.session = session
                 if session != nil {
                     await self.fetchProfile()
                 } else {
                     self.profile = nil
                 }
-                if !receivedFirstEvent { isInitializing = false; receivedFirstEvent = true }
+                isInitializing = false
             }
         }
     }
-    
+
     deinit {
         authStateTask?.cancel()
+        expiredSessionFallbackTask?.cancel()
     }
     
     // MARK: - Profile

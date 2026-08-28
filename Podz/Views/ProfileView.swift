@@ -167,19 +167,22 @@ struct ProfileView: View {
         .background(Color.appHomeBackground)
     }
 
-    /// 0 at rest, 1 shortly after — a narrow, conservative range (much
-    /// shorter than PodDetailView's, whose 340pt hero has far more room
-    /// to fade across). The previous range (20→90) assumed more
-    /// scrollable distance than every device actually has here — on a
-    /// taller-viewport phone the maximum reachable `scrollOffset` could
-    /// land under 90, so opacity settled short of 1 even at the very
-    /// bottom of the list instead of reaching fully visible. This range
-    /// completes early enough to be reached well before the end
-    /// regardless of device height or how much content exists below.
+    /// 0 at rest, 1 shortly after starting to scroll. Two earlier versions
+    /// of this waited for a specific amount of scroll before completing —
+    /// first a guessed pixel range (20→90, then 10→45), then the real
+    /// measured height of `ProfileAccountRow` above (~104pt) — and both
+    /// got reported stuck: on a profile without much content below, the
+    /// screen can't actually scroll that far at rest, so that opacity only
+    /// ever got reached via elastic overscroll (dragging past the natural
+    /// bottom), which springs back the instant you let go — the avatar
+    /// flashing in then vanishing as it settled. A small, fixed distance
+    /// close to 0 sidesteps that entirely: it's reachable through completely
+    /// ordinary scrolling on any device/content length (unless there's
+    /// truly nothing below to scroll to at all), so it can't depend on
+    /// slack that may not exist.
     private var avatarChromeOpacity: Double {
-        let fadeStart: CGFloat = 10
-        let fadeEnd: CGFloat = 45
-        return Double(min(max((scrollOffset - fadeStart) / (fadeEnd - fadeStart), 0), 1))
+        let fadeEnd: CGFloat = 24
+        return Double(min(max(scrollOffset / fadeEnd, 0), 1))
     }
 
     // MARK: - Stats + sections
