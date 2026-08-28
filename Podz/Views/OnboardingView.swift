@@ -32,14 +32,53 @@ struct OnboardingView: View {
 /// Shown for the brief moment between app launch and the auth state
 /// resolving — replaces what was previously a blank white flash while
 /// `session` sat at its default `nil` before authStateChanges emitted
-/// anything.
+/// anything. Echoes HomeView's own layout (header, search pill, a row of
+/// pod cards) as gray placeholder shapes, so launch reads as "your feed is
+/// arriving" rather than a generic spinner.
 private struct LaunchLoadingView: View {
+    /// Same sizing as `PodSection.cardSize` — two cards on screen plus a
+    /// sliver of a third peeking at the trailing edge.
+    private var cardSize: CGFloat {
+        (UIScreen.main.bounds.width - 24 - 2 * 12 - 24) / 2
+    }
+
     var body: some View {
-        ZStack {
-            Color.appHomeBackground.ignoresSafeArea()
-            ProgressView()
-                .tint(.appAccentBlack)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    SkeletonShape(cornerRadius: 4).frame(width: 90, height: 12)
+                    SkeletonShape(cornerRadius: 5).frame(width: 130, height: 20)
+                }
+                Spacer()
+                SkeletonShape(cornerRadius: 21).frame(width: 42, height: 42)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+
+            SkeletonShape(cornerRadius: 26)
+                .frame(height: 52)
+                .padding(.horizontal, 24)
+
+            SkeletonShape(cornerRadius: 5)
+                .frame(width: 170, height: 18)
+                .padding(.leading, 24)
+                .padding(.top, 28)
+                .padding(.bottom, 12)
+
+            HStack(spacing: 12) {
+                ForEach(0..<2, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 6) {
+                        SkeletonShape(cornerRadius: 18).frame(width: cardSize, height: cardSize)
+                        SkeletonShape(cornerRadius: 4).frame(width: cardSize * 0.55, height: 14)
+                            .padding(.leading, 5)
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
         }
+        .background(Color.appHomeBackground.ignoresSafeArea())
     }
 }
 

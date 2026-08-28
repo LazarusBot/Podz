@@ -176,47 +176,59 @@ struct LikesView: View {
         }
     }
     // MARK: - Inside one folder
-    
+
+    // 44 (back button) + 31pt padding top/bottom — matches ProfileTopBar's
+    // own metrics exactly, since it copies its visual style.
+    private let folderTopBarHeight: CGFloat = 106
+
     private func folderContentView(folder: LikeFolder) -> some View {
         let folderPods = pods(in: folder)
-        
-        return ScrollView {
-            VStack(spacing: 0) {
-                ProfileTopBar(
-                    title: folder.name,
-                    onBack: { selectedFolder = nil },
-                    // Opens ShareFolderSheet's per-friend access toggle
-                    // list, not the native share sheet — "link" reads as
-                    // "manage sharing access" instead of "export/send".
-                    trailingIcon: "link",
-                    onTrailingTap: { folderPendingShare = folder }
-                )
 
-                VStack(spacing: 30) {
-                    ForEach(folderPods) { pod in
-                        LennyResultCard(
-                            pod: pod,
-                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                            isSelected: true,
-                            selectedIcon: "heart.fill",
-                            photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
-                            onToggleSelect: { Task { await likesStore.removeLike(pod) } },
-                            onTapCard: { selectedPod = pod }
-                        )
+        return ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Room for the persistent top bar below to float over
+                    // — without this, a folder with enough pods to scroll
+                    // carried the back button away with the rest of the
+                    // content instead of keeping it reachable.
+                    Color.clear.frame(height: folderTopBarHeight)
+
+                    VStack(spacing: 30) {
+                        ForEach(folderPods) { pod in
+                            LennyResultCard(
+                                pod: pod,
+                                photoURL: podsStore.primaryPhotoByPodId[pod.id],
+                                isSelected: true,
+                                selectedIcon: "heart.fill",
+                                photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
+                                onToggleSelect: { Task { await likesStore.removeLike(pod) } },
+                                onTapCard: { selectedPod = pod }
+                            )
+                        }
                     }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 10)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 10)
 
-                Color.clear.frame(height: 100)
+                    Color.clear.frame(height: 100)
+                }
             }
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.y
+            } action: { _, newValue in
+                scrollState.updateOffset(newValue)
+            }
+            .background(Color.appHomeBackground)
+
+            ProfileTopBar(
+                title: folder.name,
+                onBack: { selectedFolder = nil },
+                // Opens ShareFolderSheet's per-friend access toggle
+                // list, not the native share sheet — "link" reads as
+                // "manage sharing access" instead of "export/send".
+                trailingIcon: "link",
+                onTrailingTap: { folderPendingShare = folder }
+            )
         }
-        .onScrollGeometryChange(for: CGFloat.self) { geometry in
-            geometry.contentOffset.y
-        } action: { _, newValue in
-            scrollState.updateOffset(newValue)
-        }
-        .background(Color.appHomeBackground)
         .sheet(item: $folderPendingShare) { folder in
             ShareFolderSheet(folder: folder)
         }
@@ -227,39 +239,44 @@ struct LikesView: View {
     private func sharedFolderContentView(folder: SharedFolder) -> some View {
         let folderPods = likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods)
 
-        return ScrollView {
-            VStack(spacing: 0) {
-                // No trailing share icon — you can't re-share a folder
-                // that isn't yours.
-                ProfileTopBar(title: folder.name, onBack: { selectedSharedFolder = nil })
+        return ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Same persistent-top-bar reasoning as folderContentView.
+                    Color.clear.frame(height: folderTopBarHeight)
 
-                VStack(spacing: 30) {
-                    ForEach(folderPods) { pod in
-                        LennyResultCard(
-                            pod: pod,
-                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                            isSelected: true,
-                            selectedIcon: "heart.fill",
-                            photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
-                            // No-op, not removeLike — this isn't your like
-                            // to remove. Read-only for now.
-                            onToggleSelect: {},
-                            onTapCard: { selectedPod = pod }
-                        )
+                    VStack(spacing: 30) {
+                        ForEach(folderPods) { pod in
+                            LennyResultCard(
+                                pod: pod,
+                                photoURL: podsStore.primaryPhotoByPodId[pod.id],
+                                isSelected: true,
+                                selectedIcon: "heart.fill",
+                                photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
+                                // No-op, not removeLike — this isn't your like
+                                // to remove. Read-only for now.
+                                onToggleSelect: {},
+                                onTapCard: { selectedPod = pod }
+                            )
+                        }
                     }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 10)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 10)
 
-                Color.clear.frame(height: 100)
+                    Color.clear.frame(height: 100)
+                }
             }
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.y
+            } action: { _, newValue in
+                scrollState.updateOffset(newValue)
+            }
+            .background(Color.appHomeBackground)
+
+            // No trailing share icon — you can't re-share a folder that
+            // isn't yours.
+            ProfileTopBar(title: folder.name, onBack: { selectedSharedFolder = nil })
         }
-        .onScrollGeometryChange(for: CGFloat.self) { geometry in
-            geometry.contentOffset.y
-        } action: { _, newValue in
-            scrollState.updateOffset(newValue)
-        }
-        .background(Color.appHomeBackground)
     }
 
     // MARK: - Empty state

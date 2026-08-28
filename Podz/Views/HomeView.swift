@@ -351,19 +351,42 @@ struct HomeView: View {
 
     // MARK: - Feed states
 
+    /// Same card-row shape as the launch skeleton (OnboardingView) — this
+    /// fires right after that one, while `PodsStore.fetchPods()` is still
+    /// in flight, so it reuses the same placeholder language instead of
+    /// dropping back to a plain spinner + text. Mirrors `PodSection`'s own
+    /// spacing exactly (`.padding(.vertical, 24)` per section, `spacing:
+    /// 10` between title and cards, `.padding(.leading, 24)` on both) —
+    /// anything looser here caused a visible jump once the real
+    /// `PodSection`s replaced it.
     private var loadingState: some View {
-        VStack(spacing: 12) {
-            // Tinted — the untinted default falls back to the system
-            // accent (blue), the one spot on this screen that would
-            // otherwise break from the app's black/white palette.
-            ProgressView()
-                .tint(.appAccentBlack)
-            Text("Loading pods…")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.appTextMuted)
+        ForEach(0..<2, id: \.self) { _ in
+            VStack(alignment: .leading, spacing: 10) {
+                SkeletonShape(cornerRadius: 5)
+                    .frame(width: 170, height: 18)
+                    .padding(.leading, 24)
+
+                HStack(spacing: 12) {
+                    ForEach(0..<2, id: \.self) { _ in
+                        VStack(alignment: .leading, spacing: 6) {
+                            SkeletonShape(cornerRadius: 18)
+                                .frame(width: podCardSkeletonSize, height: podCardSkeletonSize)
+                            SkeletonShape(cornerRadius: 4)
+                                .frame(width: podCardSkeletonSize * 0.55, height: 14)
+                                .padding(.leading, 5)
+                        }
+                    }
+                }
+                .padding(.leading, 24)
+            }
+            .padding(.vertical, 24)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 80)
+    }
+
+    /// Same sizing as `PodSection.cardSize` — two cards on screen plus a
+    /// sliver of a third peeking at the trailing edge.
+    private var podCardSkeletonSize: CGFloat {
+        (UIScreen.main.bounds.width - 24 - 2 * 12 - 24) / 2
     }
 
     private var awaitingQueryState: some View {
