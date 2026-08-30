@@ -12,6 +12,11 @@ struct ProfileTopBar: View {
     /// same 44x44 so the title stays centered either way.
     var trailingIcon: String? = nil
     var onTrailingTap: (() -> Void)? = nil
+    /// Small unseen-activity dot on the trailing icon (e.g. MyPostsView's
+    /// bell) — same plain-dot style as BottomTabBar's Profile tab, not a
+    /// count, since the real number already shows elsewhere (the "Posts"
+    /// row's badge, or whatever screen this leads to).
+    var trailingBadge: Bool = false
 
     var body: some View {
         HStack {
@@ -46,6 +51,14 @@ struct ProfileTopBar: View {
                 }
                 .background(Circle().fill(Color.white))
                 .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .overlay(alignment: .topTrailing) {
+                    if trailingBadge {
+                        Circle()
+                            .fill(Color.appMessageBlue)
+                            .frame(width: 9, height: 9)
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                    }
+                }
             } else {
                 // Empty placeholder to keep the title perfectly centered
                 // (matches the empty circle on the right in Figma, node 3827:1386).

@@ -10,6 +10,21 @@ private struct PostsFeedWidthPreferenceKey: PreferenceKey {
     }
 }
 
+/// Which of Home's two feeds is showing — pod browsing (with search/
+/// filters/Lenny) or friends' posts. Previously both lived in one
+/// continuous scroll, posts always below every pod section; this splits
+/// them so each is reachable without scrolling past the other.
+private enum HomeFeedTab: CaseIterable {
+    case pods, friends
+
+    var title: String {
+        switch self {
+        case .pods: return "Pods"
+        case .friends: return "Friends"
+        }
+    }
+}
+
 /// node 3779:2045 — "Home"
 struct HomeView: View {
     @StateObject private var auth = AuthManager.shared
@@ -25,6 +40,12 @@ struct HomeView: View {
     @State private var locationSearch = ""
     @State private var showLennyCoachmark = false
     @State private var showPostComposer = false
+    @State private var feedTab: HomeFeedTab = .pods
+    /// Transient "+1" on the toggle's "Friends" label after posting —
+    /// same self-clearing confirmation LikesStore's `flashRecentLikeBadge`
+    /// gives the bottom tab bar's Likes icon, not a running unread count.
+    @State private var showRecentPostBadge = false
+    @State private var recentPostBadgeTask: Task<Void, Never>?
     @State private var postsFeedAvailableWidth: CGFloat = UIScreen.main.bounds.width
     /// Persisted so the coachmark only ever shows once, not once per
     /// session — not routing-related (see AuthManager's justRegistered
@@ -99,27 +120,34 @@ struct HomeView: View {
                             if isAwaitingQuery {
                                 awaitingQueryState
                             } else {
-                                if podsStore.isLoading && podsStore.pods.isEmpty {
-                                    loadingState
-                                } else if nonEmptySections.isEmpty {
-                                    emptyState
-                                } else {
-                                    ForEach(nonEmptySections, id: \.0) { country, pods in
-                                        PodSection(
-                                            title: "Preferred pods — \(country)",
-                                            pods: pods,
-                                            photoURLs: podsStore.primaryPhotoByPodId,
-                                            showLikeButtons: true,
-                                            onTapPod: { selectedPod = $0 }
-                                        )
-                                    }
-                                }
+                                // Only alongside the pod-browsing content,
+                                // not while the search pill's own full-
+                                // screen "awaiting a query" prompt is
+                                // showing.
+                                HomeFeedToggle(selection: $feedTab, showFriendsBadge: showRecentPostBadge)
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 4)
+                                    .padding(.bottom, 12)
 
-                                // Below every pod section, not above — only
-                                // alongside the pod-browsing content, not
-                                // while the search pill's own full-screen
-                                // "awaiting a query" prompt is showing.
-                                postsFeedSection
+                                if feedTab == .pods {
+                                    if podsStore.isLoading && podsStore.pods.isEmpty {
+                                        loadingState
+                                    } else if nonEmptySections.isEmpty {
+                                        emptyState
+                                    } else {
+                                        ForEach(nonEmptySections, id: \.0) { country, pods in
+                                            PodSection(
+                                                title: "Preferred pods — \(country)",
+                                                pods: pods,
+                                                photoURLs: podsStore.primaryPhotoByPodId,
+                                                showLikeButtons: true,
+                                                onTapPod: { selectedPod = $0 }
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    friendsFeedContent
+                                }
                             }
                         }
 
@@ -283,6 +311,21 @@ struct HomeView: View {
         }
     }
 
+    /// Same pop-in-then-fade timing as `LikesStore.flashRecentLikeBadge`.
+    private func flashRecentPostBadge() {
+        recentPostBadgeTask?.cancel()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.45)) {
+            showRecentPostBadge = true
+        }
+        recentPostBadgeTask = Task {
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.25)) {
+                showRecentPostBadge = false
+            }
+        }
+    }
+
     /// Opens `PodDetailView` for whatever pod `DeepLinkRouter` is holding,
     /// once it's actually in `podsStore.pods` — a no-op otherwise (nothing
     /// pending, or pods haven't loaded far enough to include it yet).
@@ -296,7 +339,7 @@ struct HomeView: View {
     // MARK: - Friends' posts
 
     @ViewBuilder
-    private var postsFeedSection: some View {
+    private var friendsFeedContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Friends' posts")
@@ -311,7 +354,9 @@ struct HomeView: View {
             }
             .padding(.horizontal, 24)
 
-            if !postsStore.posts.isEmpty {
+            if postsStore.posts.isEmpty {
+                friendsEmptyState
+            } else {
                 VStack(spacing: 16) {
                     ForEach(postsStore.posts) { post in
                         PostCard(post: post, cardWidth: postCardWidth, onTapPod: {
@@ -341,12 +386,32 @@ struct HomeView: View {
         )
         .onPreferenceChange(PostsFeedWidthPreferenceKey.self) { postsFeedAvailableWidth = $0 }
         .sheet(isPresented: $showPostComposer) {
-            PostComposerView()
+            PostComposerView(onPosted: flashRecentPostBadge)
+                // Half-height, not the default full sheet — same
+                // presentation language as LikeFolderPickerSheet
+                // (.large there; this one's short enough not to need it).
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
     }
 
     private var postCardWidth: CGFloat {
         postsFeedAvailableWidth - 48
+    }
+
+    private var friendsEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.2")
+                .font(.system(size: 32))
+                .foregroundColor(.appTextMuted)
+            Text("No posts from friends yet — tap + to share one yourself.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.appTextMuted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+        .padding(.horizontal, 40)
     }
 
     // MARK: - Feed states
@@ -441,6 +506,57 @@ struct HomeView: View {
             return "No pods sleep \(filters.hikers) or more."
         } else {
             return "No pods available yet."
+        }
+    }
+}
+
+/// Minimal two-segment "Pods / Friends" toggle switching Home's main
+/// content between pod browsing and friends' posts. No pill/capsule chrome
+/// — just the two labels (muted when inactive, black and underlined when
+/// active) centered between a hairline rule stretching to each edge, same
+/// divider language as OnboardingView's `DividerOr`.
+private struct HomeFeedToggle: View {
+    @Binding var selection: HomeFeedTab
+    /// Transient "+1" on the "Friends" label — same self-clearing style
+    /// as BottomTabBar's Likes tab, driven by HomeView's
+    /// `flashRecentPostBadge`.
+    var showFriendsBadge: Bool = false
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
+
+            HStack(spacing: 20) {
+                ForEach(HomeFeedTab.allCases, id: \.self) { tab in
+                    Text(tab.title)
+                        .font(AppFont.pillLabelSemiBold(16))
+                        .foregroundColor(selection == tab ? .black : .appTextMuted)
+                        .underline(selection == tab, color: .black)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard selection != tab else { return }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.easeOut(duration: AppMotion.standard)) {
+                                selection = tab
+                            }
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            if tab == .friends && showFriendsBadge {
+                                Text("+1")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.appTextMuted))
+                                    .offset(x: 16, y: -8)
+                                    .transition(.scale(scale: 0.3).combined(with: .opacity))
+                            }
+                        }
+                }
+            }
+            .fixedSize()
+
+            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
         }
     }
 }
