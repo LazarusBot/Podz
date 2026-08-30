@@ -37,6 +37,14 @@ struct MyPostsView: View {
         return postsStore.posts.filter { $0.authorId == userId }
     }
 
+    /// Same source PostsActivityView itself reads, reduced to a plain
+    /// presence check — same reasoning as BottomTabBar's own
+    /// `hasNewPostActivity` dot on the Profile tab avatar.
+    private var hasNewActivity: Bool {
+        guard let userId = auth.session?.user.id else { return false }
+        return postsStore.newActivityCount(onPostsAuthoredBy: userId) > 0
+    }
+
     private let columnCount = 3
     private let cellSpacing: CGFloat = 2
 
@@ -63,7 +71,8 @@ struct MyPostsView: View {
                         title: "Posts",
                         onBack: onBack,
                         trailingIcon: "bell",
-                        onTrailingTap: { showActivity = true }
+                        onTrailingTap: { showActivity = true },
+                        trailingBadge: hasNewActivity
                     )
 
                     if myPosts.isEmpty {
@@ -91,10 +100,26 @@ struct MyPostsView: View {
                         .onPreferenceChange(MyPostsGridWidthPreferenceKey.self) { gridWidth = $0 }
                     }
                 }
+                // The empty state has no ScrollView/Spacer to greedily
+                // fill the screen the way the populated grid's ScrollView
+                // does — without this, MainTabView's outer ZStack sized
+                // itself to this shorter content instead of the full
+                // screen, which dragged the floating tab bar (bottom-
+                // aligned within that now-shrunk ZStack) up to sit right
+                // under it instead of at the true bottom edge. `.top`,
+                // not the default center — otherwise the short content
+                // (header included) centers within the now-full-height
+                // frame instead of staying pinned to the top.
+                .frame(maxHeight: .infinity, alignment: .top)
                 .background(Color.appHomeBackground)
                 .task { await postsStore.fetchFeed() }
                 .sheet(isPresented: $showActivity) {
                     PostsActivityView()
+                        // No search field, and its own doc comment already
+                        // frames this as "a lightweight, dismiss-anytime
+                        // overlay" — doesn't need the full sheet.
+                        .presentationDetents([.medium])
+                        .presentationDragIndicator(.visible)
                 }
             }
         }

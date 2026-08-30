@@ -231,6 +231,10 @@ struct LikesView: View {
         }
         .sheet(item: $folderPendingShare) { folder in
             ShareFolderSheet(folder: folder)
+                // Short toggle list, no search field — doesn't need the
+                // full sheet, same reasoning as PostComposerView.
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
     }
 

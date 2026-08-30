@@ -41,6 +41,11 @@ struct HomeView: View {
     @State private var showLennyCoachmark = false
     @State private var showPostComposer = false
     @State private var feedTab: HomeFeedTab = .pods
+    /// Transient "+1" on the toggle's "Friends" label after posting —
+    /// same self-clearing confirmation LikesStore's `flashRecentLikeBadge`
+    /// gives the bottom tab bar's Likes icon, not a running unread count.
+    @State private var showRecentPostBadge = false
+    @State private var recentPostBadgeTask: Task<Void, Never>?
     @State private var postsFeedAvailableWidth: CGFloat = UIScreen.main.bounds.width
     /// Persisted so the coachmark only ever shows once, not once per
     /// session — not routing-related (see AuthManager's justRegistered
@@ -119,7 +124,7 @@ struct HomeView: View {
                                 // not while the search pill's own full-
                                 // screen "awaiting a query" prompt is
                                 // showing.
-                                HomeFeedToggle(selection: $feedTab)
+                                HomeFeedToggle(selection: $feedTab, showFriendsBadge: showRecentPostBadge)
                                     .padding(.horizontal, 24)
                                     .padding(.top, 4)
                                     .padding(.bottom, 12)
@@ -306,6 +311,21 @@ struct HomeView: View {
         }
     }
 
+    /// Same pop-in-then-fade timing as `LikesStore.flashRecentLikeBadge`.
+    private func flashRecentPostBadge() {
+        recentPostBadgeTask?.cancel()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.45)) {
+            showRecentPostBadge = true
+        }
+        recentPostBadgeTask = Task {
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.25)) {
+                showRecentPostBadge = false
+            }
+        }
+    }
+
     /// Opens `PodDetailView` for whatever pod `DeepLinkRouter` is holding,
     /// once it's actually in `podsStore.pods` — a no-op otherwise (nothing
     /// pending, or pods haven't loaded far enough to include it yet).
@@ -366,7 +386,12 @@ struct HomeView: View {
         )
         .onPreferenceChange(PostsFeedWidthPreferenceKey.self) { postsFeedAvailableWidth = $0 }
         .sheet(isPresented: $showPostComposer) {
-            PostComposerView()
+            PostComposerView(onPosted: flashRecentPostBadge)
+                // Half-height, not the default full sheet — same
+                // presentation language as LikeFolderPickerSheet
+                // (.large there; this one's short enough not to need it).
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -486,41 +511,53 @@ struct HomeView: View {
 }
 
 /// Minimal two-segment "Pods / Friends" toggle switching Home's main
-/// content between pod browsing and friends' posts. Reuses the app's
-/// existing pill chrome (`pillStyle()`) for the track rather than a new
-/// visual language — the selected half slides via `matchedGeometryEffect`
-/// instead of two independently cross-fading capsules.
+/// content between pod browsing and friends' posts. No pill/capsule chrome
+/// — just the two labels (muted when inactive, black and underlined when
+/// active) centered between a hairline rule stretching to each edge, same
+/// divider language as OnboardingView's `DividerOr`.
 private struct HomeFeedToggle: View {
     @Binding var selection: HomeFeedTab
-    @Namespace private var namespace
+    /// Transient "+1" on the "Friends" label — same self-clearing style
+    /// as BottomTabBar's Likes tab, driven by HomeView's
+    /// `flashRecentPostBadge`.
+    var showFriendsBadge: Bool = false
 
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(HomeFeedTab.allCases, id: \.self) { tab in
-                Text(tab.title)
-                    .font(AppFont.pillLabelSemiBold(14))
-                    .foregroundColor(selection == tab ? .white : .black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background {
-                        if selection == tab {
-                            Capsule()
-                                .fill(Color.appAccentBlack)
-                                .matchedGeometryEffect(id: "selection", in: namespace)
+        HStack(spacing: 16) {
+            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
+
+            HStack(spacing: 20) {
+                ForEach(HomeFeedTab.allCases, id: \.self) { tab in
+                    Text(tab.title)
+                        .font(AppFont.pillLabelSemiBold(16))
+                        .foregroundColor(selection == tab ? .black : .appTextMuted)
+                        .underline(selection == tab, color: .black)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard selection != tab else { return }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.easeOut(duration: AppMotion.standard)) {
+                                selection = tab
+                            }
                         }
-                    }
-                    .contentShape(Capsule())
-                    .onTapGesture {
-                        guard selection != tab else { return }
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.easeOut(duration: AppMotion.standard)) {
-                            selection = tab
+                        .overlay(alignment: .topTrailing) {
+                            if tab == .friends && showFriendsBadge {
+                                Text("+1")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.appTextMuted))
+                                    .offset(x: 16, y: -8)
+                                    .transition(.scale(scale: 0.3).combined(with: .opacity))
+                            }
                         }
-                    }
+                }
             }
+            .fixedSize()
+
+            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
         }
-        .padding(3)
-        .pillStyle()
     }
 }
 
