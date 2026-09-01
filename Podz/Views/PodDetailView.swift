@@ -547,21 +547,23 @@ struct PodDetailView: View {
     /// node 3850:1245's "Nav Elements" — a whole floating bar of its own,
     /// stacked above the app's global floating tab bar (MainTabView's
     /// `BottomTabBar`), not a button embedded in the scrolling content.
+    /// Deliberately a dark glass tint rather than BottomTabBar's white one,
+    /// so this bar reads as distinct from the app's global tab bar.
     private var reservationBar: some View {
         Group {
             if #available(iOS 26, *) {
                 GlassEffectContainer {
                     reservationBarContent
-                        .glassEffect(.regular.tint(.white.opacity(0.4)), in: .capsule)
+                        .glassEffect(.regular.tint(.black.opacity(0.1)), in: .capsule)
                 }
             } else {
                 // Pre-iOS 26 fallback: closest approximation with materials —
-                // same as BottomTabBar's own fallback.
+                // same as BottomTabBar's own fallback, but dark-tinted.
                 reservationBarContent
                     .background(
                         Capsule()
                             .fill(.ultraThinMaterial)
-                            .overlay(Capsule().fill(Color.white.opacity(0.4)))
+                            .overlay(Capsule().fill(Color.black.opacity(0.1)))
                     )
             }
         }
