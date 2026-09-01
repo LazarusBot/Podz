@@ -322,7 +322,7 @@ struct BottomTabBar: View {
                                 // for 1- and 2-digit counts alike.
                                 .frame(minWidth: 18)
                                 .background(Capsule().fill(Color.appMessageBlue))
-                                .offset(x: 12, y: -6)
+                                .offset(x: 7, y: -6)
                                 .transition(.scale(scale: 0.3).combined(with: .opacity))
                         }
                     }
