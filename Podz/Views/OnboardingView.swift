@@ -121,7 +121,7 @@ struct AuthFlow: View {
                 .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: route)
+        .animation(.easeInOut(duration: AppMotion.snappy), value: route)
     }
 }
 
@@ -301,6 +301,7 @@ struct LegalDocumentView: View {
                         .frame(width: 31, height: 31)
                         .background(Circle().fill(Color(white: 0.93)))
                 }
+                .accessibilityLabel("Close")
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -660,6 +661,7 @@ struct AuthBackground<Content: View>: View {
                             .background(Circle().fill(Color.white.opacity(0.12)))
                             .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5))
                     }
+                    .accessibilityLabel("Back")
                 }
                 Spacer()
             }
@@ -797,6 +799,7 @@ struct AuthTextField: View {
                     Image(systemName: isRevealed ? "eye.slash" : "eye")
                         .font(.system(size: 14))
                         .foregroundColor(.appPlaceholder)
+                        .accessibilityLabel(isRevealed ? "Hide password" : "Show password")
                 }
                 .buttonStyle(.plain)
             }
@@ -856,6 +859,7 @@ struct AuthErrorBanner: View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.circle.fill")
                 .font(.system(size: 13))
+                .accessibilityHidden(true)
             Text(friendlyMessage)
                 .font(.system(size: 13, weight: .medium))
                 .fixedSize(horizontal: false, vertical: true)

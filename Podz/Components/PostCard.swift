@@ -137,6 +137,7 @@ struct PostCard: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.appBorder)
             }
+            .accessibilityLabel("View pod")
         }
     }
 
@@ -233,7 +234,7 @@ struct PostCard: View {
         // meant. A single tap just cycles the hero to the next photo.
         .contentShape(Rectangle())
         .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withAnimation(.easeInOut(duration: AppMotion.snappy)) {
                 selectedPhotoIndex = (safeSelectedIndex + 1) % photos.count
             }
         }
@@ -258,9 +259,10 @@ struct PostCard: View {
                     }
                 }
             }
+            .accessibilityLabel(postsStore.isLiked(post) ? "Unlike" : "Like")
 
             Button {
-                withAnimation(.easeOut(duration: 0.2)) { isCommentsExpanded.toggle() }
+                withAnimation(.easeOut(duration: AppMotion.snappy)) { isCommentsExpanded.toggle() }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "bubble.left")
@@ -272,6 +274,7 @@ struct PostCard: View {
                     }
                 }
             }
+            .accessibilityLabel(isCommentsExpanded ? "Hide comments" : "Show comments")
 
             Spacer()
         }
@@ -311,6 +314,7 @@ struct PostCard: View {
                         .foregroundColor(commentDraft.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty ? .appBorder : .black)
                 }
                 .disabled(commentDraft.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel("Send comment")
             }
         }
     }

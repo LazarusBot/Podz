@@ -31,6 +31,7 @@ struct LikeFolderPickerSheet: View {
                         .frame(width: 31, height: 31)
                         .background(Circle().fill(Color(white: 0.93)))
                 }
+                .accessibilityLabel("Close")
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -116,7 +117,7 @@ struct LikeFolderPickerSheet: View {
     /// Dashed-outline empty folder tile — tap to start creating.
     private var newFolderTile: some View {
         Button {
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 isCreatingFolder = true
                 newFolderName = ""
             }
@@ -162,7 +163,7 @@ struct LikeFolderPickerSheet: View {
         let trimmed = newFolderName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             // Empty name on submit — cancel, back to the normal grid.
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 isCreatingFolder = false
             }
             return
@@ -208,7 +209,7 @@ struct LikeFolderPickerSheet: View {
         // same reason HomeSearchRow's showControls fade-in waits a beat
         // after isFocused before animating in).
         DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 dropStage = .midArc
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

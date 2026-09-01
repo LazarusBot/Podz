@@ -218,7 +218,7 @@ private struct SwipeToDeleteRow<Content: View>: View {
                     offset = max(-revealWidth, min(0, base + translation))
                 }
                 .onEnded { _ in
-                    withAnimation(.easeOut(duration: 0.2)) {
+                    withAnimation(.easeOut(duration: AppMotion.snappy)) {
                         if offset < -revealWidth / 2 {
                             offset = -revealWidth
                             isRevealed = true
@@ -232,14 +232,14 @@ private struct SwipeToDeleteRow<Content: View>: View {
         .clipped()
         .alert("Remove this friend?", isPresented: $showConfirmation) {
             Button("Remove", role: .destructive) {
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.easeOut(duration: AppMotion.snappy)) {
                     offset = 0
                     isRevealed = false
                 }
                 onDelete()
             }
             Button("Cancel", role: .cancel) {
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.easeOut(duration: AppMotion.snappy)) {
                     offset = 0
                     isRevealed = false
                 }
