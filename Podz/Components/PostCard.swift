@@ -19,14 +19,37 @@ struct PostCard: View {
     /// can ever push it wider than its actual place in the feed.
     var cardWidth: CGFloat
     var onTapPod: (() -> Void)? = nil
+    /// Fires only for a tap on the hero photo — everything else on the
+    /// card (like, comment-expand, pod-arrow) keeps its own independent
+    /// behavior. HomeView's feed uses this to push `PostDetailView` for
+    /// this post. `nil` (the default) leaves the photo non-navigable,
+    /// which is what `PostDetailView` itself wants when it re-renders
+    /// this same card for its own "here's the post" content.
+    var onTapPhoto: (() -> Void)? = nil
+    /// Forces the full thread + input row open regardless of the local
+    /// toggle below — off in the feed (comments there open via the
+    /// comment button, same as always) and on inside `PostDetailView`.
+    var showComments: Bool = false
 
     @ObservedObject private var postsStore = PostsStore.shared
     @ObservedObject private var podsStore = PodsStore.shared
-    @State private var isCommentsExpanded = false
-    @State private var commentDraft = ""
     /// Which photo is currently the big "hero" when there's more than
     /// one — tapping a small stacked thumbnail promotes it here instead.
     @State private var selectedPhotoIndex = 0
+    /// The comment button's own inline expand/collapse — independent of
+    /// `showComments`, which only ever forces it *open* (never closed).
+    @State private var isCommentsExpanded = false
+
+    /// Backed by `PostsStore` rather than local `@State` — the feed's
+    /// inline card and `PostDetailView`'s pushed one are two separate
+    /// `PostCard` instances for the same post, and need to share whatever
+    /// draft is currently typed if you back out and come back in.
+    private var commentDraft: Binding<String> {
+        Binding(
+            get: { postsStore.commentDraft(for: post.id) },
+            set: { postsStore.setCommentDraft($0, for: post.id) }
+        )
+    }
 
     private var author: Profile? { postsStore.profile(for: post.authorId) }
     private var pod: Pod? { podsStore.pods.first { $0.id == post.podId } }
@@ -60,7 +83,7 @@ struct PostCard: View {
 
             actionRow
 
-            if isCommentsExpanded {
+            if isCommentsExpanded || showComments {
                 commentsSection
             }
         }
@@ -72,6 +95,10 @@ struct PostCard: View {
                 .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
         )
         .frame(width: cardWidth, alignment: .leading)
+        // Fetches regardless of whether the thread is actually shown —
+        // the feed's inline card keeps comments collapsed by default, but
+        // its comment *count* in actionRow still needs the real data.
+        .task { await postsStore.fetchCommentsIfNeeded(for: post.id) }
     }
 
     private var header: some View {
@@ -126,9 +153,15 @@ struct PostCard: View {
                 .frame(width: contentWidth, height: photoHeight)
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .contentShape(Rectangle())
+                .onTapGesture { onTapPhoto?() }
         } else {
             ZStack(alignment: .bottomTrailing) {
                 heroPhoto
+                    .contentShape(Rectangle())
+                    .onTapGesture { onTapPhoto?() }
+                // photoStack sits on top with its own tap gesture (cycles
+                // the hero) — taps landing on it resolve there, not here.
                 photoStack
             }
             // A passive "1/3" readout, always there regardless of
@@ -265,7 +298,7 @@ struct PostCard: View {
             }
 
             HStack(spacing: 8) {
-                TextField("Add a comment...", text: $commentDraft)
+                TextField("Add a comment...", text: commentDraft)
                     .font(AppFont.mediumLabel(13))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -275,19 +308,16 @@ struct PostCard: View {
                 Button(action: sendComment) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 26))
-                        .foregroundColor(commentDraft.trimmingCharacters(in: .whitespaces).isEmpty ? .appBorder : .black)
+                        .foregroundColor(commentDraft.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty ? .appBorder : .black)
                 }
-                .disabled(commentDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(commentDraft.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-        }
-        .onAppear {
-            Task { await postsStore.fetchCommentsIfNeeded(for: post.id) }
         }
     }
 
     private func sendComment() {
-        let text = commentDraft
-        commentDraft = ""
+        let text = commentDraft.wrappedValue
+        commentDraft.wrappedValue = ""
         Task { await postsStore.addComment(to: post, body: text) }
     }
 
