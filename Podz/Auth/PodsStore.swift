@@ -91,6 +91,25 @@ final class PodsStore: ObservableObject {
         }
     }
 
+    /// `pod.bedsTotal` is the shelter's static total capacity — it never
+    /// reflects who's actually booked. This calls the `beds_available_now`
+    /// RPC (see SQL/beds_available.sql) instead, which subtracts every
+    /// guest's *confirmed* reservations covering today server-side —
+    /// client-side RLS only ever exposes your own reservations, so this is
+    /// the only way to get a real cross-user count. `nil` on failure (RPC
+    /// not deployed yet, network error, ...) — the caller falls back to
+    /// the static total rather than showing a broken number.
+    func bedsAvailableNow(forPodId podId: UUID) async -> Int? {
+        do {
+            return try await supabase
+                .rpc("beds_available_now", params: ["p_pod_id": podId])
+                .execute()
+                .value
+        } catch {
+            return nil
+        }
+    }
+
     /// Full ordered photo set for a pod's detail screen — fetchPrimaryPhotos
     /// only grabs position 0, enough for the Home cards.
     func photos(forPodId podId: UUID) async -> [String] {

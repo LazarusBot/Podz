@@ -18,6 +18,7 @@ struct ProfileView: View {
     @State private var showEditProfile = false
     @State private var showFriends = false
     @State private var showMyPosts = false
+    @State private var showReservations = false
     @State private var showLoginSecurity = false
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
@@ -34,6 +35,8 @@ struct ProfileView: View {
                 FriendsView(onBack: { showFriends = false })
             } else if showMyPosts {
                 MyPostsView(onBack: { showMyPosts = false })
+            } else if showReservations {
+                MyReservationsView(onBack: { showReservations = false })
             } else if showLoginSecurity {
                 LoginSecurityView(onBack: { showLoginSecurity = false })
             } else if showAccessibility {
@@ -66,6 +69,9 @@ struct ProfileView: View {
                                 }
                                 ProfileMenuRow(icon: "square.stack", title: "Posts", badgeCount: postsActivityCount) {
                                     showMyPosts = true
+                                }
+                                ProfileMenuRow(icon: "calendar", title: "Reservations") {
+                                    showReservations = true
                                 }
                             }
 
