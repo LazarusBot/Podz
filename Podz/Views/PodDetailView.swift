@@ -125,6 +125,17 @@ struct PodDetailView: View {
             .scrollEdgeEffectStyle(.hard, for: .top)
             .ignoresSafeArea(edges: .top)
             .background(Color.appHomeBackground)
+            // Tap-outside-to-dismiss for the reservation panel — same
+            // pattern HomeView uses for its own search/filters pill.
+            // Only intercepts anything while the panel is actually open;
+            // a plain tap on the scrolling content otherwise reaches it
+            // as normal.
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if isReservationExpanded {
+                    isReservationExpanded = false
+                }
+            }
 
             topBar
 
@@ -619,6 +630,24 @@ struct PodDetailView: View {
                 ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable) {
                     isReservationExpanded = false
                 }
+                // .identity, not the implicit opacity fade a plain `if`
+                // gets under an `.animation` — the panel should just be
+                // there or not, with only the surrounding VStack's own
+                // height change animating, not a separate crossfade on
+                // top of it.
+                .transition(.identity)
+                // Drag-to-dismiss, same expectation a real `.sheet()`
+                // would set — this is now plain inline content, so that
+                // gesture doesn't come for free and has to be added by
+                // hand.
+                .gesture(
+                    DragGesture(minimumDistance: 12)
+                        .onEnded { value in
+                            if value.translation.height > 60 {
+                                isReservationExpanded = false
+                            }
+                        }
+                )
             }
         }
         // Overrides reservationBar's own faster radius animation (it
