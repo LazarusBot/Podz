@@ -636,6 +636,11 @@ struct PodDetailView: View {
                 // height change animating, not a separate crossfade on
                 // top of it.
                 .transition(.identity)
+                // Without this, the drag gesture below only hit-tests
+                // ReservationSheet's actual drawn content (text, fields,
+                // the button) — not the padding/whitespace between rows,
+                // which is most of where a real swipe-down starts.
+                .contentShape(Rectangle())
                 // Drag-to-dismiss, same expectation a real `.sheet()`
                 // would set — this is now plain inline content, so that
                 // gesture doesn't come for free and has to be added by

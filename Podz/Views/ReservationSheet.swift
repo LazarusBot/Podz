@@ -53,11 +53,26 @@ struct ReservationSheet: View {
     }
 
     var body: some View {
-        if didSucceed {
-            confirmationState
-        } else {
-            formState
+        VStack(spacing: 0) {
+            dragIndicator
+            if didSucceed {
+                confirmationState
+            } else {
+                formState
+            }
         }
+    }
+
+    /// Same grabber a real `.sheet(presentationDragIndicator: .visible)`
+    /// would draw — signals this panel can be swiped down to dismiss,
+    /// which isn't otherwise obvious now that it's plain inline content
+    /// instead of an actual sheet presentation.
+    private var dragIndicator: some View {
+        Capsule()
+            .fill(Color.appBorder)
+            .frame(width: 36, height: 4)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
     }
 
     private var formState: some View {
