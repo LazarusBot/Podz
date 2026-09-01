@@ -129,7 +129,7 @@ struct PodDetailView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
         .sheet(isPresented: $showReservationSheet) {
-            ReservationSheet(pod: pod)
+            ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }

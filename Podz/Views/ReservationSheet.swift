@@ -13,6 +13,17 @@ import SwiftUI
 /// screen, since this is a short, self-contained form.
 struct ReservationSheet: View {
     let pod: Pod
+    /// Same `beds_available_now` RPC result PodDetailView's header pill
+    /// and Reserve button already use (see its own doc comment there) —
+    /// passed through so the guest stepper's ceiling matches what the
+    /// server will actually accept instead of the pod's static total.
+    /// The capacity-enforcing trigger in SQL/reservations.sql is the
+    /// real backstop either way (it rejects overbooking server-side,
+    /// race conditions included) — this just means a doomed guest count
+    /// gets caught by the stepper's own bound instead of surfacing only
+    /// after a round trip and a failed insert. `nil` (e.g. while it's
+    /// still loading) falls back to the static total, same as elsewhere.
+    var liveBedsAvailable: Int? = nil
 
     @StateObject private var reservationsStore = ReservationsStore.shared
     @Environment(\.dismiss) private var dismiss
@@ -23,9 +34,14 @@ struct ReservationSheet: View {
     @State private var isSubmitting = false
     @State private var didSucceed = false
 
-    /// Falls back to a sensible cap when the pod has no recorded bed
-    /// count — StepperControl needs a real upper bound regardless.
-    private var maxGuests: Int { max(pod.bedsTotal ?? 8, 1) }
+    /// The tighter of the pod's static total and its live availability —
+    /// falls back to a sensible cap when neither is known, since
+    /// StepperControl needs a real upper bound regardless.
+    private var maxGuests: Int {
+        let staticCapacity = pod.bedsTotal ?? 8
+        guard let liveBedsAvailable else { return max(staticCapacity, 1) }
+        return max(min(staticCapacity, liveBedsAvailable), 1)
+    }
 
     private var nights: Int {
         max(Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 0, 0)
@@ -41,6 +57,7 @@ struct ReservationSheet: View {
                         .frame(width: 31, height: 31)
                         .background(Circle().fill(Color(white: 0.93)))
                 }
+                .accessibilityLabel("Close")
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -92,7 +109,7 @@ struct ReservationSheet: View {
                 }
 
                 FilterRow(title: "Guests", helper: "Number of beds to reserve.") {
-                    StepperControl(value: $guests, range: 1...maxGuests, showsValueBackground: false)
+                    StepperControl(value: $guests, range: 1...maxGuests, showsValueBackground: false, label: "guests")
                 }
 
                 if nights > 0 {
@@ -136,7 +153,7 @@ struct ReservationSheet: View {
                     .padding(.bottom, 20)
             }
             .padding(.horizontal, 20)
-            .animation(.easeOut(duration: 0.2), value: reservationsStore.lastError)
+            .animation(.easeOut(duration: AppMotion.snappy), value: reservationsStore.lastError)
         }
     }
 
