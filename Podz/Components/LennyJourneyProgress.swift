@@ -29,10 +29,10 @@ struct LennyJourneyProgress: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(stop.isResolved ? stop.name : "-")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(stop.isResolved ? .black : Color(white: 0.8))
+                            .foregroundColor(stop.isResolved ? .appTextPrimary : .appJourneyUnresolvedIcon)
                         Text("\(stop.podsFound) pods found matching your needs")
                             .font(.system(size: 8, weight: .medium))
-                            .foregroundColor(stop.isResolved ? .appTextMuted : Color(white: 0.8))
+                            .foregroundColor(stop.isResolved ? .appTextMuted : .appJourneyUnresolvedIcon)
                     }
                     .frame(width: 100, alignment: .leading)
                 }
@@ -45,7 +45,7 @@ struct LennyJourneyProgress: View {
     private func dot(resolved: Bool) -> some View {
         ZStack {
             Circle()
-                .strokeBorder(resolved ? Color.red : Color(white: 0.85), lineWidth: 1.5)
+                .strokeBorder(resolved ? Color.red : Color.appJourneyUnresolvedRing, lineWidth: 1.5)
                 .frame(width: 12, height: 12)
             if resolved {
                 Circle().fill(Color.red).frame(width: 8, height: 8)
@@ -55,12 +55,12 @@ struct LennyJourneyProgress: View {
 
     private func dashedLine(resolved: Bool) -> some View {
         Rectangle()
-            .fill(resolved ? Color.red.opacity(0.4) : Color(white: 0.85))
+            .fill(resolved ? Color.red.opacity(0.4) : Color.appJourneyUnresolvedRing)
             .frame(height: 1)
             .overlay(
                 Rectangle()
                     .stroke(style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    .foregroundColor(resolved ? Color.red.opacity(0.4) : Color(white: 0.85))
+                    .foregroundColor(resolved ? Color.red.opacity(0.4) : Color.appJourneyUnresolvedRing)
             )
             .frame(maxWidth: .infinity)
     }

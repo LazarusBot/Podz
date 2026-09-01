@@ -682,10 +682,10 @@ struct HomeSearchRow: View {
             // shape once expanded) — keeping it constant means only the
             // height animates during the transition, not the radius too.
             if !isLennyBusy {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous)
                     .fill(Color.white)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous)
                             .strokeBorder(Color.appBorder, lineWidth: 0.5)
                     )
             }
@@ -696,7 +696,7 @@ struct HomeSearchRow: View {
         // sliding cleanly inside it. The shadow has to be applied after
         // this (not inside the background above) or the clip would cut
         // the shadow's blur off too.
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous))
         .shadow(color: isLennyBusy ? .clear : .black.opacity(0.08), radius: 3, y: 1)
         // Dead space inside the pill (a FilterRow's label, the gap
         // between it and its control, a DashedDivider...) has no
@@ -704,7 +704,7 @@ struct HomeSearchRow: View {
         // HomeView's tap-outside-to-dismiss catcher on the ScrollView
         // and closed the whole panel — tapping *inside* the pill
         // shouldn't dismiss anything, only genuinely outside it.
-        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous))
         .onTapGesture {}
         .animation(.easeInOut(duration: AppMotion.standard), value: isFocused)
         .animation(.easeInOut(duration: AppMotion.quick), value: isLennyMode)

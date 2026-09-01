@@ -89,9 +89,9 @@ struct PostCard: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 15)
+            RoundedRectangle(cornerRadius: AppRadius.r15)
                 .fill(Color.appFieldBg)
-                .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .overlay(RoundedRectangle(cornerRadius: AppRadius.r15).strokeBorder(Color.appBorder, lineWidth: 0.5))
                 .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
         )
         .frame(width: cardWidth, alignment: .leading)
@@ -153,7 +153,7 @@ struct PostCard: View {
             PodPhoto(url: photo.url, contentMode: .fill)
                 .frame(width: contentWidth, height: photoHeight)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppRadius.r12, style: .continuous))
                 .contentShape(Rectangle())
                 .onTapGesture { onTapPhoto?() }
         } else {
@@ -184,7 +184,7 @@ struct PostCard: View {
         PodPhoto(url: photos[safeSelectedIndex].url, contentMode: .fill)
             .frame(width: contentWidth, height: photoHeight)
             .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.r12, style: .continuous))
     }
 
     /// Clamped so a stale index (shouldn't happen — `photos` doesn't
@@ -208,11 +208,11 @@ struct PostCard: View {
                 let distanceFromFront = visible.count - 1 - position
                 PodPhoto(url: photos[photoIndex].url)
                     .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.white, lineWidth: 2))
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.r8, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: AppRadius.r8).strokeBorder(Color.white, lineWidth: 2))
                     .overlay {
                         if position == visible.count - 1 && overflow > 0 {
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: AppRadius.r8)
                                 .fill(Color.black.opacity(0.45))
                                 .overlay(
                                     Text("+\(overflow)")

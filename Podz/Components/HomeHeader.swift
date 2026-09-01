@@ -39,7 +39,7 @@ struct AvatarView: View {
     /// had before this parameter existed. A value switches to a rounded
     /// square at that radius instead — e.g. ProfileView's own persistent
     /// top-bar avatar, matching PodDetailView's small top-bar photo
-    /// (`RoundedRectangle(cornerRadius: 10, style: .continuous)`).
+    /// (`RoundedRectangle(cornerRadius: AppRadius.r10, style: .continuous)`).
     var cornerRadius: CGFloat? = nil
 
     var body: some View {

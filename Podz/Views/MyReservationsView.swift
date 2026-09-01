@@ -117,7 +117,7 @@ private struct ReservationRow: View {
         HStack(spacing: 12) {
             PodPhoto(url: photoURL)
                 .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppRadius.r12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(pod?.name ?? "Pod")

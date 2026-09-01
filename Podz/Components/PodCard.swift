@@ -27,9 +27,9 @@ struct PodCard: View {
             ZStack(alignment: .topTrailing) {
                 PodPhoto(url: photoURL)
                     .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.r18, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppRadius.r18, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.75), lineWidth: 3)
                     )
                 

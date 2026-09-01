@@ -151,7 +151,7 @@ struct ProfileView: View {
                 } else {
                     // 10 — same corner radius PodDetailView uses for its
                     // own small persistent top-bar photo.
-                    AvatarView(imageName: auth.profile?.avatarURL, size: 32, cornerRadius: 10)
+                    AvatarView(imageName: auth.profile?.avatarURL, size: 32, cornerRadius: AppRadius.r10)
                         .frame(width: 44, height: 44)
                         .opacity(avatarChromeOpacity)
                 }

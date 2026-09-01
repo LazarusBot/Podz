@@ -24,14 +24,7 @@ struct LikeFolderPickerSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: cancelAndDismiss) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.appTextMuted)
-                        .frame(width: 31, height: 31)
-                        .background(Circle().fill(Color(white: 0.93)))
-                }
-                .accessibilityLabel("Close")
+                CloseButton(action: cancelAndDismiss)
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -136,7 +129,7 @@ struct LikeFolderPickerSheet: View {
                 // 0.74x-tall back panel inside its square.
                 GeometryReader { proxy in
                     let side = min(proxy.size.width, proxy.size.height)
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: AppRadius.r20)
                         .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                         .foregroundColor(.appTextMuted.opacity(0.5))
                         .overlay(

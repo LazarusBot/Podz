@@ -224,9 +224,9 @@ struct PodDetailView: View {
 
             PodPhoto(url: heroPhotoURLs.first)
                 .frame(width: 36, height: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppRadius.r10, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppRadius.r10, style: .continuous)
                         .strokeBorder(Color.appBorder, lineWidth: 0.5)
                 )
                 .opacity(chromeOpacity)
@@ -447,12 +447,12 @@ struct PodDetailView: View {
                     if let region = pod.region {
                         Text(region)
                             .font(AppFont.pillLabelMedium(20))
-                            .foregroundColor(Color(white: 0.67))
-                        Circle().fill(Color(white: 0.67)).frame(width: 4, height: 4)
+                            .foregroundColor(Color.appTextSubtle)
+                        Circle().fill(Color.appTextSubtle).frame(width: 4, height: 4)
                     }
                     Text(pod.country)
                         .font(AppFont.pillLabelMedium(20))
-                        .foregroundColor(Color(white: 0.67))
+                        .foregroundColor(Color.appTextSubtle)
                 }
 
                 // Two separate pills, not one shared capsule with a dot
@@ -463,10 +463,10 @@ struct PodDetailView: View {
                         if let altitude = pod.altitudeM {
                             Text("\(altitude) m")
                                 .font(AppFont.pillLabelMedium(16))
-                                .foregroundColor(Color(white: 0.67))
+                                .foregroundColor(Color.appTextSubtle)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
-                                .background(Capsule().fill(Color(white: 0.93)))
+                                .background(Capsule().fill(Color.appIconButtonBackground))
                         }
                         // Live count when it's loaded (see
                         // `liveBedsAvailable`'s own doc comment) — falls
@@ -672,7 +672,7 @@ struct PodDetailView: View {
                 // loading finishes and turns up empty.
                 Text("No rooms listed yet")
                     .font(AppFont.mediumLabel(16))
-                    .foregroundColor(Color(white: 0.67))
+                    .foregroundColor(Color.appTextSubtle)
                     .frame(maxWidth: .infinity, minHeight: 161)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -718,7 +718,7 @@ struct PodDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Find us quickly in the wild")
                 .font(AppFont.pillLabelBold(19))
-                .foregroundColor(Color(white: 0.35))
+                .foregroundColor(Color.appSectionHeadingMuted)
 
             ZStack(alignment: .top) {
                 if let lat = pod.latitude, let lng = pod.longitude {
@@ -750,8 +750,8 @@ struct PodDetailView: View {
                 }
             }
             .frame(height: 283)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.white, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.r20))
+            .overlay(RoundedRectangle(cornerRadius: AppRadius.r20).strokeBorder(Color.white, lineWidth: 1))
         }
         .padding(.horizontal, 24)
         .padding(.top, 36)
@@ -822,8 +822,8 @@ private struct PodRoomCard: View {
                 .padding(6)
         }
         .frame(width: 241, height: 161)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.white.opacity(0.75), lineWidth: 2))
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.r10))
+        .overlay(RoundedRectangle(cornerRadius: AppRadius.r10).strokeBorder(Color.white.opacity(0.75), lineWidth: 2))
     }
 }
 

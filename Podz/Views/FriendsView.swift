@@ -109,7 +109,7 @@ private struct FriendRequestRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(profile?.displayName ?? "Someone")
                     .font(AppFont.pillLabelBold(15))
-                    .foregroundColor(.black)
+                    .foregroundColor(.appTextPrimary)
                 if let username = profile?.username {
                     Text("@\(username)")
                         .font(AppFont.mediumLabel(13))
@@ -122,15 +122,17 @@ private struct FriendRequestRow: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.appTextMuted)
                     .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color(white: 0.93)))
+                    .background(Circle().fill(Color.appIconButtonBackground))
             }
+            .accessibilityLabel("Decline")
             Button(action: onAccept) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.black))
+                    .background(Circle().fill(Color.appAccentBlack))
             }
+            .accessibilityLabel("Accept")
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 8)

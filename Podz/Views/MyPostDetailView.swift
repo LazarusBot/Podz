@@ -42,7 +42,7 @@ struct MyPostDetailView: View {
                                 ForEach(photos) { photo in
                                     PodPhoto(url: photo.url)
                                         .frame(width: 280, height: 280)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                        .clipShape(RoundedRectangle(cornerRadius: AppRadius.r14, style: .continuous))
                                 }
                             }
                             .padding(.horizontal, 24)

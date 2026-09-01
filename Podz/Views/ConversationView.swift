@@ -291,10 +291,10 @@ private struct MessageBubble: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 11)
                     .background(
-                        RoundedRectangle(cornerRadius: 18)
+                        RoundedRectangle(cornerRadius: AppRadius.r18)
                             .fill(isMine ? Color.appMessageBlue : Color.appMessageReceivedBg)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 18)
+                                RoundedRectangle(cornerRadius: AppRadius.r18)
                                     .strokeBorder(isMine ? Color.appMessageBlue.opacity(0.3) : Color.appBorder, lineWidth: 0.5)
                             )
                     )

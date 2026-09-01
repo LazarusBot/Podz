@@ -76,11 +76,11 @@ struct ProfilePromoCard: View {
         }
         .frame(height: 124)
         .background(
-            RoundedRectangle(cornerRadius: 15)
+            RoundedRectangle(cornerRadius: AppRadius.r15)
                 .fill(Color.appHomeBackground)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 15))
-        .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(Color.appBorder, lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.r15))
+        .overlay(RoundedRectangle(cornerRadius: AppRadius.r15).strokeBorder(Color.appBorder, lineWidth: 0.5))
         .padding(.horizontal, 24)
         .padding(.vertical, 31)
     }
