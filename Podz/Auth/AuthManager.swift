@@ -163,16 +163,39 @@ final class AuthManager: ObservableObject {
         justRegistered = false
     }
     
-    func signIn(email: String, password: String) async {
+    /// `identifier` is whatever's typed into Login's single field — an
+    /// email straight through, or a username resolved server-side first
+    /// (see SQL/get_email_for_username.sql) to the email Supabase Auth
+    /// actually signs in with. Auth itself only ever knows email/password;
+    /// this is the one place username gets translated into that.
+    func signIn(identifier: String, password: String) async {
         isLoading = true
         lastError = nil
         defer { isLoading = false }
 
         do {
+            let email = try await resolvedEmail(for: identifier)
             try await supabase.auth.signIn(email: email, password: password)
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    /// A bare heuristic ("@" present) is enough here — this only decides
+    /// whether to skip the username lookup, not whether the string is a
+    /// well-formed email; an actually-malformed email still reaches
+    /// `supabase.auth.signIn` unchanged and fails there with its own
+    /// normal error, same as always.
+    private func resolvedEmail(for identifier: String) async throws -> String {
+        guard !identifier.contains("@") else { return identifier }
+        let email: String? = try await supabase
+            .rpc("get_email_for_username", params: ["p_username": identifier])
+            .execute()
+            .value
+        guard let email else {
+            throw UsernameLookupError.notFound
+        }
+        return email
     }
 
     /// Sends a password reset email. Returns whether it succeeded so the
@@ -228,6 +251,16 @@ final class AuthManager: ObservableObject {
             try await supabase.auth.signOut()
         } catch {
             lastError = error.localizedDescription
+        }
+    }
+}
+
+private enum UsernameLookupError: LocalizedError {
+    case notFound
+
+    var errorDescription: String? {
+        switch self {
+        case .notFound: "No account found for that username."
         }
     }
 }
