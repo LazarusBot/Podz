@@ -48,7 +48,10 @@ struct PodDetailView: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
     @ObservedObject private var likesStore = LikesStore.shared
     @State private var showFolderPicker = false
-    @State private var showReservationSheet = false
+    /// Drives the reservation bar growing in place to show the booking
+    /// form — same idea as CategoryScroller's `filters.isExpanded`, not a
+    /// `.sheet()` presentation.
+    @State private var isReservationExpanded = false
     /// Vertical scroll content offset — 0 at rest, grows positive
     /// scrolling down. `onScrollGeometryChange` is the reliable way to
     /// track this; a GeometryReader-in-a-PreferenceKey probe was tried
@@ -128,15 +131,12 @@ struct PodDetailView: View {
             reservationBar
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
-        .sheet(isPresented: $showReservationSheet) {
-            ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
-        // Refreshes the header's live count the moment the sheet closes —
+        // Refreshes the header's live count the moment the bar collapses —
         // a reservation made just now should be reflected immediately,
-        // not only the next time this screen happens to reload.
-        .onChange(of: showReservationSheet) { _, isShowing in
+        // not only the next time this screen happens to reload. Fires
+        // whether it collapsed via a cancel (the toggle button again) or
+        // a successful submission (ReservationSheet's own onDismiss).
+        .onChange(of: isReservationExpanded) { _, isShowing in
             guard !isShowing else { return }
             Task { liveBedsAvailable = await PodsStore.shared.bedsAvailableNow(forPodId: pod.id) }
         }
@@ -556,28 +556,58 @@ struct PodDetailView: View {
     /// stacked above the app's global floating tab bar (MainTabView's
     /// `BottomTabBar`), not a button embedded in the scrolling content.
     /// Deliberately a dark glass tint rather than BottomTabBar's white one,
-    /// so this bar reads as distinct from the app's global tab bar.
+    /// so this bar reads as distinct from the app's global tab bar. Grows
+    /// downward in place to reveal the reservation form — same pattern as
+    /// CategoryScroller's `filtersPanel` growing inside HomeSearchRow —
+    /// rather than presenting `ReservationSheet` as a separate `.sheet()`.
     private var reservationBar: some View {
         Group {
             if #available(iOS 26, *) {
                 GlassEffectContainer {
-                    reservationBarContent
-                        .glassEffect(.regular.tint(.black.opacity(0.1)), in: .capsule)
+                    reservationBarBody
+                        .glassEffect(.regular.tint(.black.opacity(0.1)), in: reservationBarShape)
                 }
             } else {
                 // Pre-iOS 26 fallback: closest approximation with materials —
                 // same as BottomTabBar's own fallback, but dark-tinted.
-                reservationBarContent
+                reservationBarBody
                     .background(
-                        Capsule()
+                        reservationBarShape
                             .fill(.ultraThinMaterial)
-                            .overlay(Capsule().fill(Color.black.opacity(0.1)))
+                            .overlay(reservationBarShape.fill(Color.black.opacity(0.1)))
                     )
             }
         }
-        .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+        .overlay(reservationBarShape.strokeBorder(Color.appBorder, lineWidth: 0.5))
+        // Without this, the form panel's grow/shrink transition briefly
+        // renders past the bar's own rounded edge instead of staying
+        // clipped inside it — same reasoning as HomeSearchRow's own
+        // `.clipShape` after its `.background`.
+        .clipShape(reservationBarShape)
         .padding(.horizontal, 24)
         .padding(.bottom, globalTabBarTopEdge + gapAboveGlobalTabBar)
+        .animation(.easeInOut(duration: AppMotion.standard), value: isReservationExpanded)
+    }
+
+    /// Fixed radius, not a literal `.capsule` — same reasoning as
+    /// HomeSearchRow's own search pill: a plain `Capsule()` chases
+    /// height/2 and balloons into an exaggerated stadium shape once this
+    /// grows tall for the form, instead of reading as one container that
+    /// simply grew. At the bar's normal collapsed height this radius
+    /// still reads as a full capsule, so nothing changes at rest.
+    private var reservationBarShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous)
+    }
+
+    private var reservationBarBody: some View {
+        VStack(spacing: 0) {
+            reservationBarContent
+            if isReservationExpanded {
+                ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable) {
+                    isReservationExpanded = false
+                }
+            }
+        }
     }
 
     private var reservationBarContent: some View {
@@ -604,16 +634,28 @@ struct PodDetailView: View {
 
             Spacer(minLength: 12)
 
-            Button(action: { showReservationSheet = true }) {
-                HStack(spacing: 10) {
-                    Text("Reserve")
-                        .font(.system(size: 15, weight: .semibold))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+            // Doubles as the collapse control once expanded (icon-only,
+            // no "Reserve" text) — the form panel below already has its
+            // own "Confirm reservation" button, so this one only ever
+            // toggles the panel, never submits.
+            Button(action: { isReservationExpanded.toggle() }) {
+                Group {
+                    if isReservationExpanded {
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 21, height: 21)
+                    } else {
+                        HStack(spacing: 10) {
+                            Text("Reserve")
+                                .font(.system(size: 15, weight: .semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .padding(.leading, 24)
+                        .padding(.trailing, 20)
+                    }
                 }
                 .foregroundColor(.white)
-                .padding(.leading, 24)
-                .padding(.trailing, 20)
                 .padding(.vertical, 12)
             }
             .disabled(!canReserve)
