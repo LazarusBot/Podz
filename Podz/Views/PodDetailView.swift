@@ -133,10 +133,16 @@ struct PodDetailView: View {
             renderer.scale = UIScreen.main.scale
             shareCardImage = renderer.uiImage
             if let lat = pod.latitude, let lng = pod.longitude {
-                cameraPosition = .region(
-                    MKCoordinateRegion(
-                        center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                // A tilted `.camera` instead of a flat top-down `.region`
+                // — realistic elevation (below) only actually reads as 3D
+                // terrain relief from an angled viewpoint; straight down,
+                // it looks the same as the flat style.
+                cameraPosition = .camera(
+                    MapCamera(
+                        centerCoordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                        distance: 350,
+                        heading: 0,
+                        pitch: 60
                     )
                 )
             }
@@ -470,7 +476,7 @@ struct PodDetailView: View {
     /// title size/color anymore.
     private var hostSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Hôte")
+            Text("Host")
                 .font(AppFont.pillLabelBold(24))
                 .foregroundColor(.black)
 
@@ -482,7 +488,7 @@ struct PodDetailView: View {
                         .foregroundColor(.black)
                     Text(hostBlurb)
                         .font(AppFont.mediumLabel(14))
-                        .foregroundColor(Color(white: 0.67))
+                        .foregroundColor(.appTextMuted)
                 }
                 Spacer(minLength: 0)
             }
@@ -541,7 +547,7 @@ struct PodDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Cancel & reservation changes")
                 .font(AppFont.pillLabelBold(19))
-                .foregroundColor(Color(white: 0.35))
+                .foregroundColor(.appTextSecondary)
 
             // Inter (mediumLabel), not the Darker Grotesque pill-label
             // family — this is a real paragraph of body copy, not a pill
@@ -549,7 +555,7 @@ struct PodDetailView: View {
             // meant for per AppFont's own doc comment.
             Text(cancellationPolicy)
                 .font(AppFont.mediumLabel(16))
-                .foregroundColor(Color(white: 0.67))
+                .foregroundColor(.appTextMuted)
         }
         .padding(.horizontal, 24)
         .padding(.top, 36)
@@ -570,9 +576,11 @@ struct PodDetailView: View {
                     // vertical ScrollView, so its own pan/pinch would
                     // otherwise fight the page scroll. Tapping it opens
                     // the real, interactive map in Apple Maps instead.
-                    Map(position: $cameraPosition, interactionModes: []) {
-                        Marker(pod.name, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng))
-                    }
+                    // No Marker/Annotation — this close in, at this pitch,
+                    // the shelter itself is already visible in the 3D
+                    // terrain, so a pin pointing at it is redundant.
+                    Map(position: $cameraPosition, interactionModes: [])
+                    .mapStyle(.standard(elevation: .realistic))
                     .onTapGesture { openInMaps(lat: lat, lng: lng) }
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel("Open \(pod.name) location in Maps")
