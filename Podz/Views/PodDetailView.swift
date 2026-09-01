@@ -544,6 +544,14 @@ struct PodDetailView: View {
         (liveBedsAvailable ?? pod.bedsTotal ?? 1) > 0
     }
 
+    /// `BottomTabBar` (MainTabView) sits with its bottom edge 24pt above
+    /// the true screen edge (`barBottomGap`) and is ~52pt tall itself
+    /// (26pt icons + 13pt vertical padding each side) — so its top edge
+    /// lands ~76pt up. This is this bar's own dedicated clearance above
+    /// that top edge, not just enough to avoid touching it.
+    private let gapAboveGlobalTabBar: CGFloat = 20
+    private var globalTabBarTopEdge: CGFloat { 76 }
+
     /// node 3850:1245's "Nav Elements" — a whole floating bar of its own,
     /// stacked above the app's global floating tab bar (MainTabView's
     /// `BottomTabBar`), not a button embedded in the scrolling content.
@@ -569,7 +577,7 @@ struct PodDetailView: View {
         }
         .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
         .padding(.horizontal, 24)
-        .padding(.bottom, 90)
+        .padding(.bottom, globalTabBarTopEdge + gapAboveGlobalTabBar)
     }
 
     private var reservationBarContent: some View {
