@@ -574,17 +574,19 @@ struct PodDetailView: View {
 
     private var reservationBarContent: some View {
         HStack(spacing: 14) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 // node 3630:955 (checked/"Variant2") — same black-circle-
                 // white-check asset as before, but through `.pillStyle()`
                 // instead of a bare Circle so it actually picks up the
                 // border + drop shadow + white inset-highlight "volume"
                 // every other pill/circle button in this app already has,
-                // rather than sitting flat.
+                // rather than sitting flat. Sized up from the original
+                // 20.5pt so it holds its own next to the 17pt pod name
+                // instead of reading as an afterthought beside it.
                 Image(systemName: "checkmark")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 20.5, height: 20.5)
+                    .frame(width: 26, height: 26)
                     .pillStyle(fill: .appAccentBlack, border: .appBorder)
                 Text(pod.name)
                     .font(AppFont.pillLabelBold(17))
@@ -629,7 +631,12 @@ struct PodDetailView: View {
                     .mask(Capsule())
             )
         }
-        .padding(10)
+        // Was a uniform 10 — cramped the checkmark badge right up against
+        // the capsule's own stroke. 16/12 gives it real breathing room
+        // without ballooning the bar's overall height past the Reserve
+        // button's own baked-in 12pt vertical padding.
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Prices and bedrooms
