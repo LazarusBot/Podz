@@ -586,7 +586,16 @@ struct PodDetailView: View {
         .clipShape(reservationBarShape)
         .padding(.horizontal, 24)
         .padding(.bottom, globalTabBarTopEdge + gapAboveGlobalTabBar)
-        .animation(.easeInOut(duration: AppMotion.standard), value: isReservationExpanded)
+        // Quicker than reservationBarBody's own (slower) grow animation
+        // for the same isReservationExpanded value — the corner should
+        // already read as resolved well before the bar finishes growing
+        // into the form, not still visibly rounding off partway through.
+        // This modifier governs the shape everywhere it's used above
+        // (glassEffect/overlay/clipShape); reservationBarBody's own
+        // nested `.animation` overrides it back to the slower pace for
+        // just the height change, since that one sits closer to the
+        // actual content that grows.
+        .animation(.easeInOut(duration: AppMotion.quick), value: isReservationExpanded)
     }
 
     /// One `RoundedRectangle` throughout, not a `Capsule()`/`RoundedRectangle`
@@ -613,6 +622,11 @@ struct PodDetailView: View {
                 }
             }
         }
+        // Overrides reservationBar's own faster radius animation (it
+        // wraps this) for just this height-changing content — the panel
+        // growing in should still read as a deliberate reveal at the
+        // app's standard pace, not as snappy as the corner resolving.
+        .animation(.easeInOut(duration: AppMotion.standard), value: isReservationExpanded)
     }
 
     private var reservationBarContent: some View {
