@@ -59,7 +59,7 @@ struct ProfileView: View {
 
                             ProfilePromoCard()
 
-                            SectionLabel(title: "Social")
+                            SectionLabel(title: "Social", trailing: "Kangchenjunga · 8,586m")
                             VStack(spacing: 0) {
                                 ProfileMenuRow(icon: "person.2", title: "Friends") {
                                     showFriends = true
@@ -69,7 +69,7 @@ struct ProfileView: View {
                                 }
                             }
 
-                            SectionLabel(title: "Account")
+                            SectionLabel(title: "Account", trailing: "K2 · 8,611m")
                             VStack(spacing: 0) {
                                 ProfileMenuRow(icon: "lock.shield", title: "Login and security") {
                                     showLoginSecurity = true
@@ -79,7 +79,7 @@ struct ProfileView: View {
                                 }
                             }
 
-                            SectionLabel(title: "Danger zone")
+                            SectionLabel(title: "Danger zone", trailing: "Everest · 8,849m")
                             VStack(spacing: 0) {
                                 ProfileMenuRow(icon: "rectangle.portrait.and.arrow.right", title: "Log out", isDestructive: true) {
                                     Task { await AuthManager.shared.signOut() }

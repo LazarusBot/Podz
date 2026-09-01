@@ -136,15 +136,30 @@ struct ProfileMenuRow: View {
 /// 18pt Darker Grotesque one) one tap apart in the same navigation flow.
 struct SectionLabel: View {
     let title: String
+    /// Optional right-aligned text on the same row as the title — e.g.
+    /// ProfileView's mountain-height gag culminating in its Danger zone
+    /// section. `nil` for every other call site (Requests, Accepted
+    /// friends…), which keeps just the title.
+    var trailing: String? = nil
 
     var body: some View {
-        Text(title.uppercased())
-            .font(AppFont.itemTitle(12))
-            .tracking(0.5)
-            .foregroundColor(.appTextMuted)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .padding(.bottom, 6)
+        HStack {
+            Text(title.uppercased())
+                .font(AppFont.itemTitle(12))
+                .tracking(0.5)
+                .foregroundColor(.appTextMuted)
+
+            if let trailing {
+                Spacer()
+                Text(trailing)
+                    .font(AppFont.itemTitle(12))
+                    .tracking(0.5)
+                    .foregroundColor(.appTextMuted)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+        .padding(.bottom, 6)
     }
 }
