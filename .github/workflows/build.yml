@@ -1,0 +1,44 @@
+name: Build
+
+# There's no test target in this project yet (no XCTest/Swift Testing
+# suite exists as of this workflow's introduction) — this is a build-
+# verification gate, not a real test run. It still catches the most
+# common thing a PR can break: a compile error. Once a test target
+# exists, swap the `build` action below for `test` (and add
+# `-only-testing`/`-resultBundlePath` as needed) so this becomes a real
+# testing flow instead of just a build check.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # This project tracks a very recent iOS SDK (iOS 26) — if this step
+      # fails because the runner's default Xcode is too old, list what's
+      # actually installed with `ls /Applications | grep Xcode` in a
+      # debug step and pin an explicit version here, e.g.:
+      #   sudo xcode-select -s /Applications/Xcode_16.x.app
+      - name: Select Xcode
+        run: sudo xcode-select -p
+
+      - name: Resolve Swift package dependencies
+        run: xcodebuild -resolvePackageDependencies -project Podz.xcodeproj -scheme Podz
+
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild build \
+            -project Podz.xcodeproj \
+            -scheme Podz \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipMacroValidation
