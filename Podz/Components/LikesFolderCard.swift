@@ -191,8 +191,31 @@ struct LikesFolderCard: View {
                     .overlay(alignment: .bottomLeading) {
                         if !sharedWithAvatarURLs.isEmpty {
                             HStack(spacing: -side * 0.05) {
-                                ForEach(Array(sharedWithAvatarURLs.prefix(3).enumerated()), id: \.offset) { _, url in
+                                // Identified by the URL itself, not
+                                // position — `id: \.offset` let a
+                                // recycled `CachedAsyncImage` at a given
+                                // slot keep showing whichever photo it
+                                // had loaded for a *previous* row at that
+                                // same slot for a moment during scroll,
+                                // instead of reliably reloading for
+                                // *this* row's actual avatar.
+                                ForEach(sharedWithAvatarURLs.prefix(3), id: \.self) { url in
                                     AvatarView(imageName: url, size: side * 0.18)
+                                        // These circles overlap (the
+                                        // negative spacing above) — with
+                                        // no opaque backing of its own,
+                                        // one avatar's brief fade-in
+                                        // crossfade (CachedAsyncImage's
+                                        // placeholder→photo transition)
+                                        // let the *other*, overlapping
+                                        // avatar show through underneath
+                                        // for that instant, which read as
+                                        // "avatar A briefly shows avatar
+                                        // B's photo." A solid circle
+                                        // behind it blocks that bleed-
+                                        // through regardless of what's
+                                        // mid-transition on top.
+                                        .background(Circle().fill(Color.white))
                                         .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
                                         .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                 }

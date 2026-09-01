@@ -18,6 +18,13 @@ struct PostsActivityView: View {
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var auth = AuthManager.shared
     @Environment(\.dismiss) private var dismiss
+    /// `activitySeenAt` as of *before* this screen marks everything seen —
+    /// captured once on appear, before that call moves it to now. Rows
+    /// compare against this frozen snapshot (not the live, now-updated
+    /// `postsStore.activitySeenAt`) to tell which items were already seen
+    /// on a previous visit and grey those out, vs. ones that are new this
+    /// time and still get full-strength treatment for this one viewing.
+    @State private var seenBeforeThisVisit: Date?
 
     private var activity: [PostActivity] {
         guard let userId = auth.session?.user.id else { return [] }
@@ -66,7 +73,8 @@ struct PostsActivityView: View {
                             ActivityRow(
                                 item: item,
                                 actorProfile: postsStore.profile(for: item.actorId),
-                                podName: podsStore.pods.first(where: { $0.id == postForPostId(item.postId)?.podId })?.name
+                                podName: podsStore.pods.first(where: { $0.id == postForPostId(item.postId)?.podId })?.name,
+                                isSeen: (seenBeforeThisVisit ?? .distantPast) >= item.createdAt
                             )
                         }
                     }
@@ -76,8 +84,14 @@ struct PostsActivityView: View {
         .background(Color.appHomeBackground)
         // Opening this screen is what "seeing" the activity means — the
         // tab-bar dot and the Posts row's pill both key off
-        // `activitySeenAt`, so this is what actually clears them.
-        .onAppear { postsStore.markActivitySeen() }
+        // `activitySeenAt`, so this is what actually clears them. Snapshot
+        // the old value first — `markActivitySeen()` immediately moves
+        // `activitySeenAt` to now, and rows need the *previous* threshold
+        // to know what was already seen before this visit.
+        .onAppear {
+            seenBeforeThisVisit = postsStore.activitySeenAt
+            postsStore.markActivitySeen()
+        }
     }
 
     private func postForPostId(_ postId: UUID) -> Post? {
@@ -89,6 +103,11 @@ private struct ActivityRow: View {
     let item: PostActivity
     let actorProfile: Profile?
     let podName: String?
+    /// Already seen on a previous visit to this screen — recolored flat
+    /// gray (not just faded via opacity, which left the icon's own red/
+    /// blue and the bold name text still reading at near-full strength)
+    /// so a seen row unmistakably desaturates instead of just dimming.
+    var isSeen: Bool = false
 
     private var actionText: String {
         switch item.kind {
@@ -107,7 +126,7 @@ private struct ActivityRow: View {
                         + Text(" \(actionText)")
                 )
                 .font(AppFont.mediumLabel(14))
-                .foregroundColor(.black)
+                .foregroundColor(isSeen ? .appTextMuted : .black)
 
                 if case .comment(let body) = item.kind {
                     Text("\u{201C}\(body)\u{201D}")
@@ -131,7 +150,7 @@ private struct ActivityRow: View {
 
             Image(systemName: item.isLike ? "heart.fill" : "bubble.left.fill")
                 .font(.system(size: 13))
-                .foregroundColor(item.isLike ? .red : .appMessageBlue)
+                .foregroundColor(isSeen ? .appTextMuted : (item.isLike ? .red : .appMessageBlue))
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)

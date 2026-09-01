@@ -188,7 +188,18 @@ struct CachedAsyncImage<Placeholder: View>: View {
         // out), and clearing to nil first — even for an already-cached
         // photo — meant a guaranteed placeholder flash for a frame before
         // flipping right back, which is what was visible as "flashing."
+        //
+        // The disk-cache read inside `ImageCache.image(for:)` is
+        // synchronous — no `await` in it — so it's never a cooperative-
+        // cancellation checkpoint. A fast scroll in a LazyVGrid recycles
+        // this same view for a *different* avatar's `url` faster than a
+        // disk read completes; without this explicit check, a now-stale
+        // load for the URL this view *used* to have could still finish
+        // and overwrite whatever the newer task already loaded for the
+        // URL it has now — the exact "wrong photo flashes in" bug.
+        guard !Task.isCancelled else { return }
         if let cached = ImageCache.shared.image(for: url) {
+            guard !Task.isCancelled else { return }
             loadError = nil
             uiImage = cached
             return
@@ -200,6 +211,7 @@ struct CachedAsyncImage<Placeholder: View>: View {
         do {
             let downloaded = try await ImageLoader.load(urlString: url)
             ImageCache.shared.set(downloaded, for: url)
+            guard !Task.isCancelled else { return }
             withAnimation(.easeOut(duration: 0.25)) {
                 uiImage = downloaded
             }
