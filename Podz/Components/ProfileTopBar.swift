@@ -12,6 +12,9 @@ struct ProfileTopBar: View {
     /// same 44x44 so the title stays centered either way.
     var trailingIcon: String? = nil
     var onTrailingTap: (() -> Void)? = nil
+    /// What the trailing icon does (e.g. "Share folder", "Delete post") —
+    /// the icon alone has nothing else to announce to VoiceOver.
+    var trailingAccessibilityLabel: String = "More"
     /// Small unseen-activity dot on the trailing icon (e.g. MyPostsView's
     /// bell) — same plain-dot style as BottomTabBar's Profile tab, not a
     /// count, since the real number already shows elsewhere (the "Posts"
@@ -29,6 +32,7 @@ struct ProfileTopBar: View {
                 }
                 .background(Circle().fill(Color.white))
                 .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .accessibilityLabel("Back")
             } else {
                 Color.clear.frame(width: 44, height: 44)
             }
@@ -51,6 +55,7 @@ struct ProfileTopBar: View {
                 }
                 .background(Circle().fill(Color.white))
                 .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .accessibilityLabel(trailingAccessibilityLabel)
                 .overlay(alignment: .topTrailing) {
                     if trailingBadge {
                         // No extra offset — aligning this 12pt badge's own

@@ -236,6 +236,7 @@ struct LikesFolderCard: View {
                                 .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
                                 .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                         }
+                        .accessibilityLabel("Remove folder")
                         // Land on the back panel's visible frosted corner
                         // (skip past the empty space above it, then its
                         // own transparent tab gap), drawn last so it

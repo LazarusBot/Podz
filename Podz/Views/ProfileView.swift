@@ -147,6 +147,7 @@ struct ProfileView: View {
                     }
                     .background(Circle().fill(Color.white))
                     .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                    .accessibilityLabel("Back")
                 } else {
                     // 10 — same corner radius PodDetailView uses for its
                     // own small persistent top-bar photo.

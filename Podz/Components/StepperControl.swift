@@ -9,16 +9,20 @@ struct StepperControl: View {
     /// guest stepper wants just the bare number between the +/- circles,
     /// no background of its own.
     var showsValueBackground: Bool = true
+    /// What the value counts (e.g. "hikers", "guests") — folded into the
+    /// +/- buttons' VoiceOver labels ("Decrease hikers") since the bare
+    /// glyphs alone don't say what they're stepping.
+    var label: String = "value"
 
     var body: some View {
         HStack(spacing: 10) {
-            stepButton(systemImage: "minus") {
+            stepButton(systemImage: "minus", accessibilityLabel: "Decrease \(label)") {
                 if value > range.lowerBound { value -= 1 }
             }
 
             valueLabel
 
-            stepButton(systemImage: "plus") {
+            stepButton(systemImage: "plus", accessibilityLabel: "Increase \(label)") {
                 if value < range.upperBound { value += 1 }
             }
         }
@@ -38,7 +42,7 @@ struct StepperControl: View {
         }
     }
 
-    private func stepButton(systemImage: String, action: @escaping () -> Void) -> some View {
+    private func stepButton(systemImage: String, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: 10, weight: .bold))
@@ -46,6 +50,7 @@ struct StepperControl: View {
                 .frame(width: 25, height: 25)
         }
         .pillStyle()
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

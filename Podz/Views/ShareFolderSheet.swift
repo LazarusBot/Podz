@@ -30,6 +30,7 @@ struct ShareFolderSheet: View {
                         .frame(width: 31, height: 31)
                         .background(Circle().fill(Color(white: 0.93)))
                 }
+                .accessibilityLabel("Close")
                 Spacer()
             }
             .padding(.horizontal, 20)

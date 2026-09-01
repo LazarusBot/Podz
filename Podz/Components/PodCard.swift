@@ -54,6 +54,7 @@ struct PodCard: View {
                             .contentShape(Rectangle())
                     }
                     .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
+                    .accessibilityLabel(likesStore.isLiked(pod) ? "Unlike" : "Like")
                 }
             }
             

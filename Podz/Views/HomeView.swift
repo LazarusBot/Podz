@@ -366,6 +366,7 @@ struct HomeView: View {
                         .font(.system(size: 22))
                         .foregroundColor(.black)
                 }
+                .accessibilityLabel("New post")
             }
             .padding(.horizontal, 24)
 

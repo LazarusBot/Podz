@@ -5,6 +5,10 @@ import SwiftUI
 /// Unchecked = plain pill circle. Checked = filled black with a checkmark.
 struct ToggleCheckButton: View {
     @Binding var isOn: Bool
+    /// What's being toggled (e.g. "Wifi", "Pets") — the button itself is
+    /// a bare circle/checkmark with no visible text of its own, so
+    /// VoiceOver needs this to say anything meaningful at all.
+    var label: String = "Filter"
 
     var body: some View {
         Button {
@@ -25,6 +29,8 @@ struct ToggleCheckButton: View {
                 }
             }
         }
+        .accessibilityLabel(label)
+        .accessibilityValue(isOn ? "On" : "Off")
     }
 }
 

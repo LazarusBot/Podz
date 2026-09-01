@@ -31,7 +31,8 @@ struct MyPostDetailView: View {
                     title: pod?.name ?? "Post",
                     onBack: onBack,
                     trailingIcon: "trash",
-                    onTrailingTap: { showDeleteConfirmation = true }
+                    onTrailingTap: { showDeleteConfirmation = true },
+                    trailingAccessibilityLabel: "Delete post"
                 )
 
                 VStack(alignment: .leading, spacing: 16) {

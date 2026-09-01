@@ -60,6 +60,7 @@ struct PostComposerView: View {
                         .frame(width: 31, height: 31)
                         .background(Circle().fill(Color(white: 0.93)))
                 }
+                .accessibilityLabel(showingPodPicker ? "Back" : "Close")
                 Spacer()
                 if !showingPodPicker {
                     Button(action: post) {
@@ -241,6 +242,7 @@ struct PostComposerView: View {
                                 .background(Circle().fill(Color.black.opacity(0.5)))
                         }
                         .offset(x: 6, y: -6)
+                        .accessibilityLabel("Remove photo")
                     }
                 }
             }
