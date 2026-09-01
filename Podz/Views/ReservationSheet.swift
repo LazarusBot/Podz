@@ -164,7 +164,7 @@ struct ReservationSheet: View {
             let success = await reservationsStore.create(podId: pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests)
             isSubmitting = false
             if success {
-                withAnimation(.easeOut(duration: 0.25)) {
+                withAnimation(.easeOut(duration: AppMotion.standard)) {
                     didSucceed = true
                 }
                 try? await Task.sleep(nanoseconds: 1_400_000_000)

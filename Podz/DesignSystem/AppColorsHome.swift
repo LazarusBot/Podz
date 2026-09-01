@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Additional color tokens for the Home feed, on top of AppColors.swift
-/// (Filters) and AppColorsAuth.swift (auth flow).
+/// Additional color tokens for the Home feed, on top of AppColorsAuth.swift
+/// (auth flow).
 extension Color {
     /// #FBFBFB — app background (slightly different from the #F9F9F9 used
     /// on the Filters panel — Figma uses both, keep them distinct)

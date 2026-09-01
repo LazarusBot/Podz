@@ -439,7 +439,7 @@ struct BottomTabBar: View {
             // modifier above, which takes precedence over this for that
             // specific value — this easeOut is what actually animates
             // MainTabView's screen swap (Feed/Likes/Profile/...).
-            withAnimation(.easeOut(duration: 0.15)) {
+            withAnimation(.easeOut(duration: AppMotion.quick)) {
                 selected = tab
             }
         }

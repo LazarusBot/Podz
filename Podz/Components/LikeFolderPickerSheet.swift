@@ -220,7 +220,7 @@ struct LikeFolderPickerSheet: View {
                     dropStage = .landed
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                    withAnimation(.easeIn(duration: 0.15)) {
+                    withAnimation(.easeIn(duration: AppMotion.quick)) {
                         dropStage = .vanished
                     }
                     // The actual data update — and with it, the real

@@ -100,7 +100,7 @@ struct ConversationView: View {
             // Deliberately faster than the system's own keyboard timing
             // (~0.25s) — matching it made the composer feel like it was
             // trailing the keyboard up rather than rising with it.
-            withAnimation(.easeOut(duration: 0.15)) {
+            withAnimation(.easeOut(duration: AppMotion.quick)) {
                 keyboardHeight = visibleHeight
             }
         }

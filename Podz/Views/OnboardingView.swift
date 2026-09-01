@@ -458,8 +458,8 @@ struct LoginView: View {
             .padding(.horizontal, 32)
             .contentShape(Rectangle())
             .onTapGesture { focusedField = nil }
-            .animation(.easeOut(duration: 0.25), value: auth.lastError)
-            .animation(.easeOut(duration: 0.25), value: identifierError)
+            .animation(.easeOut(duration: AppMotion.standard), value: auth.lastError)
+            .animation(.easeOut(duration: AppMotion.standard), value: identifierError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -622,9 +622,9 @@ struct RegisterView: View {
             .padding(.horizontal, 32)
             .contentShape(Rectangle())
             .onTapGesture { focusedField = nil }
-            .animation(.easeOut(duration: 0.25), value: auth.lastError)
-            .animation(.easeOut(duration: 0.25), value: emailError)
-            .animation(.easeOut(duration: 0.25), value: passwordError)
+            .animation(.easeOut(duration: AppMotion.standard), value: auth.lastError)
+            .animation(.easeOut(duration: AppMotion.standard), value: emailError)
+            .animation(.easeOut(duration: AppMotion.standard), value: passwordError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -688,10 +688,7 @@ struct AuthBackground<Content: View>: View {
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .clipped()
                     } else {
-                        LinearGradient(
-                            colors: [Color(red: 0.1, green: 0.3, blue: 0.4), .black],
-                            startPoint: .top, endPoint: .bottom
-                        )
+                        LinearGradient.appAuthImageFallback
                     }
                     
                     if showGradient {
@@ -815,7 +812,7 @@ struct AuthTextField: View {
                 )
                 .shadow(color: Color.black.opacity(isFocused ? 0.18 : 0.12), radius: isFocused ? 6 : 4, x: 1, y: 3)
         )
-        .animation(.easeOut(duration: 0.15), value: isFocused)
+        .animation(.easeOut(duration: AppMotion.quick), value: isFocused)
         .onChange(of: validationMessage) { _, new in
             onValidationChange(new)
         }
@@ -975,14 +972,6 @@ final class AppleSignInWrapper: ObservableObject {
     }
     
     func start(hashedNonce: String) { coordinator.start(hashedNonce: hashedNonce) }
-}
-
-// MARK: - Small color tokens used by auth UI
-extension Color {
-    static let appPlaceholder = Color.black.opacity(0.25)
-    static let appLinkGreen = Color(red: 0xC4/255, green: 0xFF/255, blue: 0xC9/255)
-    static let appWhite88 = Color.white.opacity(0.88)
-    static let appFieldBg = Color.white.opacity(0.99)
 }
 
 // Previews
