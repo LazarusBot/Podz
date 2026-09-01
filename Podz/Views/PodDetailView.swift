@@ -35,12 +35,20 @@ struct PodDetailView: View {
 
     @State private var rooms: [PodRoom] = []
     @State private var isLoadingRooms = true
+    /// `beds_available_now` RPC result — `pod.bedsTotal` minus the
+    /// busiest night's worth of everyone's confirmed reservations over the
+    /// next 30 days, computed server-side since client-side RLS only ever
+    /// exposes your own reservations. `nil` until it loads (or if the RPC
+    /// call fails), in which case the header pill falls back to the
+    /// static total.
+    @State private var liveBedsAvailable: Int?
     @State private var heroPhotoURLs: [String]
     /// Optional — required by `.scrollPosition(id:)`'s binding type.
     @State private var heroPageIndex: Int? = 0
     @State private var cameraPosition: MapCameraPosition = .automatic
     @ObservedObject private var likesStore = LikesStore.shared
     @State private var showFolderPicker = false
+    @State private var showReservationSheet = false
     /// Vertical scroll content offset — 0 at rest, grows positive
     /// scrolling down. `onScrollGeometryChange` is the reliable way to
     /// track this; a GeometryReader-in-a-PreferenceKey probe was tried
@@ -98,7 +106,10 @@ struct PodDetailView: View {
                     pricesSection
                     cancellationSection
                     mapSection
-                    Color.clear.frame(height: 80)
+                    // Extra clearance (not the old 80) — the floating
+                    // reservation card now sits above the app's own
+                    // floating tab bar, and content needs to clear both.
+                    Color.clear.frame(height: 160)
                 }
             }
             // contentOffset.y is 0 at rest and grows positive scrolling
@@ -113,13 +124,30 @@ struct PodDetailView: View {
             .background(Color.appHomeBackground)
 
             topBar
+
+            reservationBar
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        }
+        .sheet(isPresented: $showReservationSheet) {
+            ReservationSheet(pod: pod)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        // Refreshes the header's live count the moment the sheet closes —
+        // a reservation made just now should be reflected immediately,
+        // not only the next time this screen happens to reload.
+        .onChange(of: showReservationSheet) { _, isShowing in
+            guard !isShowing else { return }
+            Task { liveBedsAvailable = await PodsStore.shared.bedsAvailableNow(forPodId: pod.id) }
         }
         .task {
             async let roomsTask = PodsStore.shared.rooms(forPodId: pod.id)
             async let photosTask = PodsStore.shared.photos(forPodId: pod.id)
-            let (fetchedRooms, fetchedPhotos) = await (roomsTask, photosTask)
+            async let bedsTask = PodsStore.shared.bedsAvailableNow(forPodId: pod.id)
+            let (fetchedRooms, fetchedPhotos, fetchedBeds) = await (roomsTask, photosTask, bedsTask)
             rooms = fetchedRooms
             isLoadingRooms = false
+            liveBedsAvailable = fetchedBeds
             if !fetchedPhotos.isEmpty {
                 heroPhotoURLs = fetchedPhotos
             }
@@ -440,13 +468,24 @@ struct PodDetailView: View {
                                 .padding(.vertical, 5)
                                 .background(Capsule().fill(Color(white: 0.93)))
                         }
-                        if let beds = pod.bedsTotal {
-                            Text("\(beds) beds available")
+                        // Live count when it's loaded (see
+                        // `liveBedsAvailable`'s own doc comment) — falls
+                        // back to the static total while that's still
+                        // loading or if the RPC isn't reachable, so this
+                        // pill never just disappears.
+                        if let beds = liveBedsAvailable ?? pod.bedsTotal {
+                            // Red + "Fully booked" once there's nothing
+                            // left, instead of the green "available" pill
+                            // just reading "0 beds available" — that read
+                            // as a glitch more than a real status.
+                            let isFull = beds <= 0
+                            let tint = isFull ? Color.red : Color.appAvailableGreen
+                            Text(isFull ? "Fully booked" : "\(beds) beds available")
                                 .font(AppFont.pillLabelMedium(16))
-                                .foregroundColor(Color.appAvailableGreen)
+                                .foregroundColor(tint)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
-                                .background(Capsule().fill(Color.appAvailableGreen.opacity(0.12)))
+                                .background(Capsule().fill(tint.opacity(0.12)))
                                 .overlay(alignment: .topTrailing) {
                                     // Stroke matches the page background,
                                     // not the pill's own — punches a clean
@@ -454,7 +493,7 @@ struct PodDetailView: View {
                                     // sitting on top of the pill's corner
                                     // rather than blending into its edge.
                                     Circle()
-                                        .fill(Color.appAvailableGreen)
+                                        .fill(tint)
                                         .frame(width: 12, height: 12)
                                         .overlay(Circle().strokeBorder(Color.appHomeBackground, lineWidth: 2))
                                         .offset(x: 2, y: -2)
@@ -495,6 +534,100 @@ struct PodDetailView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 24)
+    }
+
+    /// Same source as the header's "beds available" pill — while
+    /// `liveBedsAvailable` is still loading, falls back to the static
+    /// total rather than blocking the button on a number that hasn't
+    /// arrived yet.
+    private var canReserve: Bool {
+        (liveBedsAvailable ?? pod.bedsTotal ?? 1) > 0
+    }
+
+    /// node 3850:1245's "Nav Elements" — a whole floating bar of its own,
+    /// stacked above the app's global floating tab bar (MainTabView's
+    /// `BottomTabBar`), not a button embedded in the scrolling content.
+    private var reservationBar: some View {
+        Group {
+            if #available(iOS 26, *) {
+                GlassEffectContainer {
+                    reservationBarContent
+                        .glassEffect(.regular.tint(.white.opacity(0.4)), in: .capsule)
+                }
+            } else {
+                // Pre-iOS 26 fallback: closest approximation with materials —
+                // same as BottomTabBar's own fallback.
+                reservationBarContent
+                    .background(
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .overlay(Capsule().fill(Color.white.opacity(0.4)))
+                    )
+            }
+        }
+        .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+        .padding(.horizontal, 24)
+        .padding(.bottom, 90)
+    }
+
+    private var reservationBarContent: some View {
+        HStack(spacing: 14) {
+            HStack(spacing: 10) {
+                // node 3630:955 (checked/"Variant2") — same black-circle-
+                // white-check asset as before, but through `.pillStyle()`
+                // instead of a bare Circle so it actually picks up the
+                // border + drop shadow + white inset-highlight "volume"
+                // every other pill/circle button in this app already has,
+                // rather than sitting flat.
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 20.5, height: 20.5)
+                    .pillStyle(fill: .appAccentBlack, border: .appBorder)
+                Text(pod.name)
+                    .font(AppFont.pillLabelBold(17))
+                    .foregroundColor(.black)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 12)
+
+            Button(action: { showReservationSheet = true }) {
+                HStack(spacing: 10) {
+                    Text("Reserve")
+                        .font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.leading, 24)
+                .padding(.trailing, 20)
+                .padding(.vertical, 12)
+            }
+            .disabled(!canReserve)
+            // node 3850:1250 — shadow is `rgba(200,200,200,0.1)`, a
+            // light warm gray, not pillStyle's own default black shadow.
+            .pillStyle(
+                fill: canReserve ? .appAccentBlack : .appTextMuted,
+                border: canReserve ? .appBorder : .appTextMuted,
+                shadow: Color(red: 200 / 255, green: 200 / 255, blue: 200 / 255).opacity(0.1)
+            )
+            // pillStyle's own built-in inset highlight (white 0.25 opacity,
+            // 1pt blur) is a lot thinner/fainter than Figma's spec here —
+            // `inset 2px 5px 4px rgba(230,230,230,0.5)` — which is what's
+            // actually giving the button its "volume" (a glossy top sheen
+            // reading as real depth). Layering a stronger one on top,
+            // scoped to just this button rather than pillStyle's shared
+            // default, so nothing else in the app changes.
+            .overlay(
+                Capsule()
+                    .stroke(Color(red: 230 / 255, green: 230 / 255, blue: 230 / 255).opacity(0.5), lineWidth: 2)
+                    .blur(radius: 3)
+                    .offset(y: -2)
+                    .mask(Capsule())
+            )
+        }
+        .padding(10)
     }
 
     // MARK: - Prices and bedrooms

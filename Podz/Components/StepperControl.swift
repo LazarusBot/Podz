@@ -4,6 +4,11 @@ import SwiftUI
 struct StepperControl: View {
     @Binding var value: Int
     var range: ClosedRange<Int> = 0...20
+    /// True (default, every existing call site — Home's "Hikers" filter)
+    /// keeps the pill background behind the number. ReservationSheet's
+    /// guest stepper wants just the bare number between the +/- circles,
+    /// no background of its own.
+    var showsValueBackground: Bool = true
 
     var body: some View {
         HStack(spacing: 10) {
@@ -11,15 +16,25 @@ struct StepperControl: View {
                 if value > range.lowerBound { value -= 1 }
             }
 
-            Text("\(value)")
-                .font(AppFont.stepperValue())
-                .foregroundColor(.appTextPrimary)
-                .frame(minWidth: 31, minHeight: 31)
-                .pillStyle()
+            valueLabel
 
             stepButton(systemImage: "plus") {
                 if value < range.upperBound { value += 1 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var valueLabel: some View {
+        let text = Text("\(value)")
+            .font(AppFont.stepperValue())
+            .foregroundColor(.appTextPrimary)
+            .frame(minWidth: 31, minHeight: 31)
+
+        if showsValueBackground {
+            text.pillStyle()
+        } else {
+            text
         }
     }
 
