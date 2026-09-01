@@ -652,59 +652,57 @@ struct PodDetailView: View {
 
             Spacer(minLength: 12)
 
-            // Doubles as the collapse control once expanded (icon-only,
-            // no "Reserve" text) — the form panel below already has its
-            // own "Confirm reservation" button, so this one only ever
-            // toggles the panel, never submits.
-            Button(action: { isReservationExpanded.toggle() }) {
-                Group {
-                    if isReservationExpanded {
-                        Image(systemName: "chevron.up")
-                            .font(.system(size: 14, weight: .semibold))
-                            .frame(width: 21, height: 21)
-                    } else {
-                        HStack(spacing: 10) {
-                            Text("Reserve")
-                                .font(.system(size: 15, weight: .semibold))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                        }
-                        .padding(.leading, 24)
-                        .padding(.trailing, 20)
+            // Only while collapsed — no separate collapse control once
+            // expanded (the form panel below has its own "Confirm
+            // reservation" button, and its own scroll/dismiss handles
+            // getting back out).
+            if !isReservationExpanded {
+                Button(action: { isReservationExpanded = true }) {
+                    HStack(spacing: 10) {
+                        Text("Reserve")
+                            .font(.system(size: 15, weight: .semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
                     }
+                    .foregroundColor(.white)
+                    .padding(.leading, 24)
+                    .padding(.trailing, 20)
+                    .padding(.vertical, 10)
                 }
-                .foregroundColor(.white)
-                .padding(.vertical, 12)
+                .disabled(!canReserve)
+                // node 3850:1250 — shadow is `rgba(200,200,200,0.1)`, a
+                // light warm gray, not pillStyle's own default black shadow.
+                .pillStyle(
+                    fill: canReserve ? .appAccentBlack : .appTextMuted,
+                    border: canReserve ? .appBorder : .appTextMuted,
+                    shadow: Color(red: 200 / 255, green: 200 / 255, blue: 200 / 255).opacity(0.1)
+                )
+                // pillStyle's own built-in inset highlight (white 0.25
+                // opacity, 1pt blur) is a lot thinner/fainter than
+                // Figma's spec here — `inset 2px 5px 4px
+                // rgba(230,230,230,0.5)` — which is what's actually
+                // giving the button its "volume" (a glossy top sheen
+                // reading as real depth). Layering a stronger one on
+                // top, scoped to just this button rather than
+                // pillStyle's shared default, so nothing else in the
+                // app changes.
+                .overlay(
+                    Capsule()
+                        .stroke(Color(red: 230 / 255, green: 230 / 255, blue: 230 / 255).opacity(0.5), lineWidth: 2)
+                        .blur(radius: 3)
+                        .offset(y: -2)
+                        .mask(Capsule())
+                )
             }
-            .disabled(!canReserve)
-            // node 3850:1250 — shadow is `rgba(200,200,200,0.1)`, a
-            // light warm gray, not pillStyle's own default black shadow.
-            .pillStyle(
-                fill: canReserve ? .appAccentBlack : .appTextMuted,
-                border: canReserve ? .appBorder : .appTextMuted,
-                shadow: Color(red: 200 / 255, green: 200 / 255, blue: 200 / 255).opacity(0.1)
-            )
-            // pillStyle's own built-in inset highlight (white 0.25 opacity,
-            // 1pt blur) is a lot thinner/fainter than Figma's spec here —
-            // `inset 2px 5px 4px rgba(230,230,230,0.5)` — which is what's
-            // actually giving the button its "volume" (a glossy top sheen
-            // reading as real depth). Layering a stronger one on top,
-            // scoped to just this button rather than pillStyle's shared
-            // default, so nothing else in the app changes.
-            .overlay(
-                Capsule()
-                    .stroke(Color(red: 230 / 255, green: 230 / 255, blue: 230 / 255).opacity(0.5), lineWidth: 2)
-                    .blur(radius: 3)
-                    .offset(y: -2)
-                    .mask(Capsule())
-            )
         }
         // Was a uniform 10 — cramped the checkmark badge right up against
-        // the capsule's own stroke. 16/12 gives it real breathing room
-        // without ballooning the bar's overall height past the Reserve
-        // button's own baked-in 12pt vertical padding.
+        // the capsule's own stroke. 16/12 (9 vertical while collapsed)
+        // gives it real breathing room without ballooning the bar past
+        // the global tab bar's own height — the Reserve button's own
+        // padding above already dropped from 12 to 10 for the same
+        // reason.
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, isReservationExpanded ? 12 : 9)
     }
 
     // MARK: - Prices and bedrooms
