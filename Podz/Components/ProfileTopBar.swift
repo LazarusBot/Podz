@@ -53,10 +53,17 @@ struct ProfileTopBar: View {
                 .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
                 .overlay(alignment: .topTrailing) {
                     if trailingBadge {
+                        // No extra offset — aligning this 12pt badge's own
+                        // corner to the 44pt button's corner already lands
+                        // its center right at the button's circular edge
+                        // (44pt box corner sits ~22.6pt from center, same
+                        // as the button's own 22pt radius), so it straddles
+                        // the stroke instead of floating past it or
+                        // sitting deep inside.
                         Circle()
                             .fill(Color.appMessageBlue)
-                            .frame(width: 9, height: 9)
-                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                            .frame(width: 12, height: 12)
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
                     }
                 }
             } else {
