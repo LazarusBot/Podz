@@ -578,11 +578,7 @@ struct PodDetailView: View {
                     )
             }
         }
-        // .stroke, not .strokeBorder — AnyShape only conforms to Shape,
-        // not InsettableShape, so strokeBorder's inset variant isn't
-        // available here. At this 0.5pt line weight the centered-vs-inset
-        // difference isn't visible.
-        .overlay(reservationBarShape.stroke(Color.appBorder, lineWidth: 0.5))
+        .overlay(reservationBarShape.strokeBorder(Color.appBorder, lineWidth: 0.5))
         // Without this, the form panel's grow/shrink transition briefly
         // renders past the bar's own rounded edge instead of staying
         // clipped inside it — same reasoning as HomeSearchRow's own
@@ -593,18 +589,19 @@ struct PodDetailView: View {
         .animation(.easeInOut(duration: AppMotion.standard), value: isReservationExpanded)
     }
 
-    /// A literal `.capsule` at rest — matches the global `BottomTabBar`'s
-    /// own shape exactly, rather than a fixed radius that only
-    /// approximates it. Switches to a fixed radius once expanded, since a
-    /// real capsule chases height/2 and balloons into an exaggerated
-    /// stadium shape once this grows tall for the form — AnyShape ties
-    /// the two branches to one type so every modifier below (glassEffect,
-    /// overlay, clipShape, the pre-iOS-26 fill) can share this one
-    /// property regardless of which shape it resolves to.
-    private var reservationBarShape: AnyShape {
-        isReservationExpanded
-            ? AnyShape(RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous))
-            : AnyShape(Capsule())
+    /// One `RoundedRectangle` throughout, not a `Capsule()`/`RoundedRectangle`
+    /// switch — swapping between two different `Shape` types (even via
+    /// `AnyShape`) cuts instantly instead of morphing, since there's no
+    /// single `animatableData` connecting two structurally different
+    /// shapes. A huge radius here clamps to min(width, height) / 2 — i.e.
+    /// renders as a real capsule — exactly matching the global
+    /// `BottomTabBar`'s own shape at rest, and because it's the *same*
+    /// `RoundedRectangle` whose `cornerRadius` just changes value, the
+    /// `.animation` below smoothly interpolates every intermediate radius
+    /// on the way down to the fixed one this grows into for the form,
+    /// rather than a hard cut between two disconnected shapes.
+    private var reservationBarShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: isReservationExpanded ? AppRadius.r24 : 1000, style: .continuous)
     }
 
     private var reservationBarBody: some View {
