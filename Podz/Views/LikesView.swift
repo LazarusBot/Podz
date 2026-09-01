@@ -37,7 +37,16 @@ struct LikesView: View {
     }
 
     private func sharedWithAvatarURLs(for folder: LikeFolder) -> [String] {
-        likesStore.friendIdsWithAccess(to: folder.id).compactMap { friendsStore.profilesById[$0]?.avatarURL }
+        // `friendIdsWithAccess` returns a Set — its iteration order isn't
+        // guaranteed stable between separate calls, so without sorting,
+        // this array's order (and therefore which avatar lands in which
+        // on-screen slot) could come out differently on every re-render.
+        // Scrolling re-evaluates this constantly, which is what made two
+        // avatars appear to swap places mid-scroll — they genuinely were,
+        // each time this recomputed in a new order.
+        likesStore.friendIdsWithAccess(to: folder.id)
+            .sorted { $0.uuidString < $1.uuidString }
+            .compactMap { friendsStore.profilesById[$0]?.avatarURL }
     }
 
     var body: some View {
