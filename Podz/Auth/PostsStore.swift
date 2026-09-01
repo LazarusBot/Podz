@@ -36,6 +36,12 @@ final class PostsStore: ObservableObject {
     /// looked, instead of staying on forever the moment a single like
     /// ever lands.
     @Published private(set) var activitySeenAt: Date
+    /// In-progress comment text per post, keyed off the post itself rather
+    /// than owned by `PostCard`'s own `@State` — the feed's inline card
+    /// and `PostDetailView`'s pushed one are two separate `PostCard`
+    /// instances for the same post, and both need to read/write the same
+    /// draft if you back out and come back in.
+    @Published private var commentDrafts: [UUID: String] = [:]
 
     private static let activitySeenAtDefaultsKey = "podz.postsActivitySeenAt"
 
@@ -57,6 +63,14 @@ final class PostsStore: ObservableObject {
 
     func comments(for postId: UUID) -> [PostComment] {
         commentsByPostId[postId] ?? []
+    }
+
+    func commentDraft(for postId: UUID) -> String {
+        commentDrafts[postId] ?? ""
+    }
+
+    func setCommentDraft(_ text: String, for postId: UUID) {
+        commentDrafts[postId] = text
     }
 
     func likeCount(for postId: UUID) -> Int {

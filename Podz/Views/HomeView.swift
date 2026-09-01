@@ -47,6 +47,10 @@ struct HomeView: View {
     @State private var showRecentPostBadge = false
     @State private var recentPostBadgeTask: Task<Void, Never>?
     @State private var postsFeedAvailableWidth: CGFloat = UIScreen.main.bounds.width
+    /// Set by tapping anywhere on a `PostCard` in the friends feed —
+    /// pushes `PostDetailView` for that post, same manual @State push/pop
+    /// pattern `selectedPod` already uses for `PodDetailView`.
+    @State private var selectedPost: Post?
     /// Persisted so the coachmark only ever shows once, not once per
     /// session — not routing-related (see AuthManager's justRegistered
     /// note on the old hasSeenOnboarding bug), so plain @AppStorage is
@@ -57,6 +61,17 @@ struct HomeView: View {
         ZStack(alignment: .bottom) {
             if let pod = selectedPod {
                 PodDetailView(pod: pod, onBack: { selectedPod = nil })
+            } else if let post = selectedPost {
+                PostDetailView(
+                    post: post,
+                    onBack: { selectedPost = nil },
+                    onTapPod: {
+                        if let pod = podsStore.pods.first(where: { $0.id == post.podId }) {
+                            selectedPost = nil
+                            selectedPod = pod
+                        }
+                    }
+                )
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
@@ -363,6 +378,8 @@ struct HomeView: View {
                             if let pod = podsStore.pods.first(where: { $0.id == post.podId }) {
                                 selectedPod = pod
                             }
+                        }, onTapPhoto: {
+                            selectedPost = post
                         })
                     }
                 }
