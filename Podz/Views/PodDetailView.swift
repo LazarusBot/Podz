@@ -636,25 +636,23 @@ struct PodDetailView: View {
                 // height change animating, not a separate crossfade on
                 // top of it.
                 .transition(.identity)
-                // Without this, the drag gesture below only hit-tests
-                // ReservationSheet's actual drawn content (text, fields,
-                // the button) — not the padding/whitespace between rows,
-                // which is most of where a real swipe-down starts.
-                .contentShape(Rectangle())
-                // Drag-to-dismiss, same expectation a real `.sheet()`
-                // would set — this is now plain inline content, so that
-                // gesture doesn't come for free and has to be added by
-                // hand.
-                .gesture(
-                    DragGesture(minimumDistance: 12)
-                        .onEnded { value in
-                            if value.translation.height > 60 {
-                                isReservationExpanded = false
-                            }
-                        }
-                )
             }
         }
+        // On the whole VStack, not just the panel below — so a downward
+        // swipe starting anywhere on the expanded bar (including the
+        // pod-name row up top) dismisses it, the same way grabbing a
+        // real sheet anywhere on its surface would, not only within the
+        // form's own drawn content.
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 12)
+                .onEnded { value in
+                    guard isReservationExpanded else { return }
+                    if value.translation.height > 60 {
+                        isReservationExpanded = false
+                    }
+                }
+        )
         // Overrides reservationBar's own faster radius animation (it
         // wraps this) for just this height-changing content — the panel
         // growing in should still read as a deliberate reveal at the
@@ -727,6 +725,11 @@ struct PodDetailView: View {
                         .offset(y: -2)
                         .mask(Capsule())
                 )
+                // .identity — same fix as the form panel below: a plain
+                // `if` under an active `.animation` fades by default,
+                // and this button should just vanish the instant the
+                // panel opens, not visibly fade out alongside it.
+                .transition(.identity)
             }
         }
         // Was a uniform 10 — cramped the checkmark badge right up against
