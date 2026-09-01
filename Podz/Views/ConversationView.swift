@@ -20,6 +20,13 @@ struct ConversationView: View {
     @StateObject private var messagesStore = MessagesStore.shared
     @State private var draft = ""
     @State private var keyboardHeight: CGFloat = 0
+    @FocusState private var isDraftFocused: Bool
+    /// Set by swiping a message — shown as a small removable banner above
+    /// the composer and focuses the field, but doesn't tag the sent
+    /// message in any way (there's no reply/thread column on `Message`);
+    /// it's purely "jump into replying to this one," cleared on send or
+    /// cancel.
+    @State private var replyingTo: Message?
 
     private var thread: [Message] {
         messagesStore.thread(with: friendId)
@@ -40,8 +47,11 @@ struct ConversationView: View {
                                     .padding(.top, 18)
                                     .padding(.bottom, 6)
                             }
-                            MessageBubble(message: message, isMine: message.senderId == currentUserId)
-                                .id(message.id)
+                            MessageBubble(message: message, isMine: message.senderId == currentUserId) {
+                                replyingTo = message
+                                isDraftFocused = true
+                            }
+                            .id(message.id)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -54,6 +64,8 @@ struct ConversationView: View {
                 .onAppear {
                     scrollToLast(proxy, animated: false)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { isDraftFocused = false }
             }
 
             composer
@@ -141,24 +153,47 @@ struct ConversationView: View {
     }
 
     private var composer: some View {
-        HStack(spacing: 10) {
-            TextField("Message", text: $draft, axis: .vertical)
-                .font(AppFont.mediumLabel(16))
-                .lineLimit(1...4)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                // Apple HIG: keep every tappable control at least 44x44pt —
-                // the padding above already gets close, this is the floor
-                // that holds regardless of font metrics, while still
-                // growing taller for Dynamic Type / multi-line drafts.
-                .frame(minHeight: 44)
-                .pillStyle()
+        // .bottom, not the default .center — otherwise the send button
+        // re-centers itself against the field's full height as it grows
+        // to two rows, drifting upward instead of staying anchored where
+        // your thumb expects it.
+        HStack(alignment: .bottom, spacing: 10) {
+            // The reply banner (when swiping a message) lives inside this
+            // same pill, stacked above the field, instead of as its own
+            // separate bar above the whole composer.
+            VStack(alignment: .leading, spacing: 18) {
+                if let replyingTo {
+                    replyBanner(for: replyingTo)
+                }
+
+                TextField("", text: $draft, prompt: Text("Message").foregroundColor(Color(red: 0xAA/255, green: 0xAA/255, blue: 0xAA/255)), axis: .vertical)
+                    .font(AppFont.mediumLabel(15))
+                    .lineLimit(1...4)
+                    .focused($isDraftFocused)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 15)
+            .frame(minHeight: 50)
+            // Fixed 24pt radius once the reply banner pushes this taller
+            // than a single line — same reasoning as HomeSearchRow's own
+            // search pill: a plain Capsule() would balloon into a stadium
+            // shape at that height instead of reading as one rounded
+            // container that simply grew.
+            .pillStyle(cornerRadius: replyingTo != nil ? 24 : nil)
+            // Bigger tap target than the pill itself actually draws —
+            // `contentShape` only changes hit-testing, not layout, so
+            // this doesn't shift the send button or grow anything on
+            // screen. A tap that lands on the real TextField still hits
+            // it directly first (for normal cursor placement); this only
+            // catches the margin just outside the pill's visible edge.
+            .contentShape(Rectangle().inset(by: -10))
+            .onTapGesture { isDraftFocused = true }
 
             Button(action: send) {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 45, height: 45)
+                    .frame(width: 50, height: 50)
                     .background(Circle().fill(canSend ? Color.black : Color.appBorder))
             }
             .disabled(!canSend)
@@ -170,6 +205,32 @@ struct ConversationView: View {
         .background(Color.appHomeBackground)
     }
 
+    private func replyBanner(for message: Message) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrowshape.turn.up.left.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.appMessageBlue)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Replying to \(message.senderId == currentUserId ? "yourself" : (friendProfile?.displayName ?? "them"))")
+                    .font(AppFont.pillLabelBold(14))
+                    .foregroundColor(.black)
+                Text(message.body)
+                    .font(AppFont.mediumLabel(12))
+                    .foregroundColor(.appTextMuted)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button(action: { replyingTo = nil }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.appTextMuted)
+            }
+        }
+    }
+
     private var canSend: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -178,6 +239,7 @@ struct ConversationView: View {
         guard canSend else { return }
         let text = draft
         draft = ""
+        replyingTo = nil
         Task { await messagesStore.send(to: friendId, body: text) }
     }
 
@@ -197,23 +259,68 @@ struct ConversationView: View {
 private struct MessageBubble: View {
     let message: Message
     let isMine: Bool
+    var onSwipeToReply: () -> Void = {}
+
+    /// How far the bubble has been dragged right, in points — 0 at rest.
+    /// Same swipe-right-to-reply direction regardless of `isMine`, since
+    /// there's more room to reveal the reply icon on the leading side for
+    /// either bubble alignment.
+    @State private var dragOffset: CGFloat = 0
+    private let maxSwipe: CGFloat = 56
+    private let replyThreshold: CGFloat = 40
 
     var body: some View {
         HStack {
             if isMine { Spacer(minLength: 40) }
-            Text(message.body)
-                .font(AppFont.mediumLabel(14))
-                .foregroundColor(isMine ? .white : .black)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 11)
-                .background(
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(isMine ? Color.appMessageBlue : Color.appMessageReceivedBg)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18)
-                                .strokeBorder(isMine ? Color.appMessageBlue.opacity(0.3) : Color.appBorder, lineWidth: 0.5)
-                        )
-                )
+
+            ZStack(alignment: .leading) {
+                Image(systemName: "arrowshape.turn.up.left.fill")
+                    .font(.system(size: 15))
+                    .foregroundColor(.appTextMuted)
+                    .opacity(Double(dragOffset / maxSwipe))
+                    .offset(x: -28)
+
+                Text(message.body)
+                    .font(AppFont.mediumLabel(14))
+                    .foregroundColor(isMine ? .white : .black)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(isMine ? Color.appMessageBlue : Color.appMessageReceivedBg)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .strokeBorder(isMine ? Color.appMessageBlue.opacity(0.3) : Color.appBorder, lineWidth: 0.5)
+                            )
+                    )
+                    .offset(x: dragOffset)
+            }
+            .gesture(
+                DragGesture(minimumDistance: 12)
+                    .onChanged { value in
+                        // Only once the drag reads as clearly horizontal —
+                        // otherwise an ordinary vertical scroll through
+                        // the thread gets caught here instead of reaching
+                        // the ScrollView.
+                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                        let proposed = max(0, value.translation.width)
+                        // Rubber-band past the max instead of hard-
+                        // clamping — communicates "you can keep pulling,
+                        // it just won't go further" rather than feeling
+                        // like it's stuck on a wall.
+                        dragOffset = proposed <= maxSwipe ? proposed : maxSwipe + (proposed - maxSwipe) * 0.2
+                    }
+                    .onEnded { value in
+                        if value.translation.width > replyThreshold {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            onSwipeToReply()
+                        }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            dragOffset = 0
+                        }
+                    }
+            )
+
             if !isMine { Spacer(minLength: 40) }
         }
         .frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)
