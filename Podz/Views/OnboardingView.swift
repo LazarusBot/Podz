@@ -85,7 +85,7 @@ private struct LaunchLoadingView: View {
 // MARK: - AuthFlow
 struct AuthFlow: View {
     enum Route { case welcome, login, register }
-    
+
     @State private var route: Route = .welcome
 
     var body: some View {
@@ -97,23 +97,31 @@ struct AuthFlow: View {
                     onRegister: { route = .register }
                 )
                 .transition(.opacity)
-                
+
             case .login:
                 LoginView(
                     onBack: { route = .welcome },
                     onGoToRegister: { route = .register }
                 )
-                .transition(.move(edge: .trailing))
-                
+                // Plain crossfade, same as Welcome's own transition —
+                // `.move` translates the whole rendered layer (background
+                // photo included) as one unit, and that translation's edge
+                // anti-aliases against whatever sits behind it in the
+                // ZStack, showing up as a hairline seam the whole time it's
+                // moving (any backdrop color still shows through it, just
+                // recolored). A pure opacity dissolve never moves that
+                // edge, so there's nothing to seam.
+                .transition(.opacity)
+
             case .register:
                 RegisterView(
                     onBack: { route = .welcome },
                     onGoToLogin: { route = .login }
                 )
-                .transition(.move(edge: .trailing))
+                .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: route)
+        .animation(.easeInOut(duration: 0.2), value: route)
     }
 }
 
@@ -121,6 +129,8 @@ struct AuthFlow: View {
 struct WelcomeView: View {
     var onLogin: () -> Void
     var onRegister: () -> Void
+
+    @State private var legalDocument: LegalDocument?
 
     var body: some View {
         AuthBackground(showBackButton: false, showLogo: false) {
@@ -139,6 +149,24 @@ struct WelcomeView: View {
                 Spacer(minLength: 250)
                 
                 VStack(spacing: 32) {
+                    Button(action: onRegister) {
+                        HStack(spacing: 10) {
+                            Text("Get started")
+                                .font(.system(size: 15, weight: .semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    // Border distinct from the fill, not matching it —
+                    // `appAccentBlack` is near-solid black, which all but
+                    // disappears against `AuthBackground`'s photo gradient
+                    // (it fades to black right where this button sits).
+                    // Same translucent-white-border-on-dark-photo trick as
+                    // the back chevron button elsewhere in `AuthBackground`.
+                    .pillStyle(fill: .appAccentBlack, border: .white.opacity(0.3))
+
                     Button(action: onLogin) {
                         HStack(spacing: 10) {
                             Text("Login")
@@ -146,29 +174,156 @@ struct WelcomeView: View {
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 12, weight: .semibold))
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                    }
-                    .pillStyle(fill: .appAccentBlack, border: .appAccentBlack)
-
-                    Button(action: onRegister) {
-                        HStack(spacing: 10) {
-                            Text("Register")
-                                .font(.system(size: 15, weight: .semibold))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                        }
                         .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, minHeight: 50)
                     }
                     .pillStyle(fill: .white, border: .appBorder)
                 }
                 .padding(.horizontal, 32)
-                .padding(.bottom, 20)
+
+                legalCaption
+                    .padding(.top, 16)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 20)
             }
         }
+        .sheet(item: $legalDocument) { document in
+            LegalDocumentView(document: document)
+        }
+    }
+
+    /// Plain-text sentence with two inline tap targets — matches
+    /// `AuthFooterLink`'s "underline the actionable part" language rather
+    /// than introducing a new link style just for this one line.
+    private var legalCaption: some View {
+        HStack(spacing: 4) {
+            Text("By continuing, you agree to our")
+                .foregroundColor(.appWhite88)
+            Text("Terms")
+                .foregroundColor(.white)
+                .underline()
+                .onTapGesture { legalDocument = .terms }
+            Text("and")
+                .foregroundColor(.appWhite88)
+            Text("Privacy Policy")
+                .foregroundColor(.white)
+                .underline()
+                .onTapGesture { legalDocument = .privacy }
+        }
+        .font(.system(size: 12))
+        .frame(maxWidth: .infinity)
+        .multilineTextAlignment(.center)
+    }
+}
+
+/// Which legal doc `LegalDocumentView` is showing — `Identifiable` so it
+/// can drive a `.sheet(item:)` directly instead of a separate Bool flag
+/// per document.
+enum LegalDocument: String, Identifiable {
+    case terms, privacy
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .terms: "Terms of Service"
+        case .privacy: "Privacy Policy"
+        }
+    }
+
+    /// Placeholder copy — enough to link to from the Welcome screen now
+    /// rather than shipping a dead link, but not a substitute for review
+    /// by an actual lawyer before this app is public.
+    var body: String {
+        switch self {
+        case .terms: """
+            Last updated: August 2026
+
+            Welcome to Podz. By creating an account or using the app, you agree to these Terms.
+
+            ACCOUNTS
+            You're responsible for the accuracy of the information you provide and for keeping your login credentials secure. You must be old enough to legally use social apps in your country.
+
+            YOUR CONTENT
+            You keep ownership of the photos, posts, and comments you share on Podz. By posting, you grant Podz a license to store and display that content within the app so other users (and, depending on your settings, their friends) can see it.
+
+            ACCEPTABLE USE
+            Don't use Podz to post illegal content, harass other users, or attempt to disrupt the service.
+
+            TERMINATION
+            We may suspend or terminate accounts that violate these Terms.
+
+            CHANGES
+            We may update these Terms as the app evolves. Continued use after an update means you accept the revised Terms.
+
+            CONTACT
+            Questions about these Terms can be sent to the app's support contact.
+            """
+        case .privacy: """
+            Last updated: August 2026
+
+            This Privacy Policy explains what Podz collects and how it's used.
+
+            INFORMATION WE COLLECT
+            Account info you provide (name, username, email), content you create (photos, posts, likes, comments), and basic usage data needed to run the app.
+
+            HOW WE USE IT
+            To operate your feed, show your posts to friends, power search and notifications, and keep the app secure.
+
+            SIGN IN WITH APPLE
+            If you sign in with Apple, we only receive what Apple shares per your chosen settings (name and email, or a private relay address).
+
+            SHARING
+            We don't sell your data. Content is stored with our backend infrastructure provider (Supabase) solely to run the app.
+
+            YOUR CHOICES
+            You can edit your profile, delete posts, or delete your account at any time from Settings.
+
+            CONTACT
+            Questions about this policy can be sent to the app's support contact.
+            """
+        }
+    }
+}
+
+/// Full-screen legal doc reader — same close-icon + bold title header as
+/// `PostsActivityView`, just with a long scrollable body instead of a list.
+struct LegalDocumentView: View {
+    let document: LegalDocument
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.appTextMuted)
+                        .frame(width: 31, height: 31)
+                        .background(Circle().fill(Color(white: 0.93)))
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+
+            Text(document.title)
+                .font(AppFont.pillLabel(20))
+                .fontWeight(.bold)
+                .foregroundColor(.black)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+
+            ScrollView {
+                Text(document.body)
+                    .font(AppFont.mediumLabel(14))
+                    .foregroundColor(.black.opacity(0.75))
+                    .lineSpacing(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 32)
+            }
+        }
+        .background(Color.appHomeBackground)
     }
 }
 
@@ -179,19 +334,22 @@ struct LoginView: View {
     var onGoToRegister: () -> Void
     
     @StateObject private var auth = AuthManager.shared
-    @State private var email = ""
+    /// Email or username — whichever the user types. `AuthManager.signIn`
+    /// resolves a username to its email server-side before ever calling
+    /// Supabase Auth, which only ever knows email/password.
+    @State private var identifier = ""
     @State private var password = ""
     @State private var nonce = ""
     @State private var showResetConfirmation = false
     @StateObject private var appleCoordinator = AppleSignInWrapper()
     @FocusState private var focusedField: AuthField?
-    @State private var emailError: String?
+    @State private var identifierError: String?
 
-    private var canSubmit: Bool { !email.isEmpty && !password.isEmpty }
+    private var canSubmit: Bool { !identifier.isEmpty && !password.isEmpty }
 
     private func submit() {
         focusedField = nil
-        Task { await auth.signIn(email: email, password: password) }
+        Task { await auth.signIn(identifier: identifier, password: password) }
     }
 
     var body: some View {
@@ -208,12 +366,21 @@ struct LoginView: View {
 
                 VStack(spacing: 12) {
                     AuthTextField(
-                        placeholder: "Enter your email", text: $email,
-                        keyboardType: .emailAddress, textContentType: .emailAddress,
+                        placeholder: "Email or username", text: $identifier,
+                        // .default, not .emailAddress — this field takes
+                        // either, and forcing the email keyboard layout
+                        // for a username entry isn't right. .username
+                        // (not .emailAddress) is also what lets iOS offer
+                        // the correct saved-credential autofill either way.
+                        keyboardType: .default, textContentType: .username,
                         field: .email, focusedField: $focusedField,
                         onSubmit: { focusedField = .password },
-                        validate: { isValidEmail($0) ? nil : "Enter a valid email address." },
-                        onValidationChange: { emailError = $0 }
+                        // Only flags something that looks like a *broken*
+                        // email attempt (has an "@" but isn't valid) — a
+                        // plain username never has "@", so it's never
+                        // held to email formatting at all.
+                        validate: { $0.contains("@") && !isValidEmail($0) ? "Enter a valid email address." : nil },
+                        onValidationChange: { identifierError = $0 }
                     )
                     AuthTextField(
                         placeholder: "Enter your password", text: $password, isSecure: true,
@@ -232,8 +399,8 @@ struct LoginView: View {
                     }
                 }
 
-                if let emailError {
-                    AuthErrorBanner(message: emailError)
+                if let identifierError {
+                    AuthErrorBanner(message: identifierError)
                         .padding(.top, 12)
                 }
 
@@ -256,12 +423,19 @@ struct LoginView: View {
                         }
                     }
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .disabled(auth.isLoading || !canSubmit)
-                .opacity(canSubmit ? 1 : 0.5)
-                .pillStyle(fill: .appAccentBlack, border: .appBorder)
+                // Fading the whole button (fill included) barely reads as
+                // "disabled" here — `appAccentBlack` is already near-black,
+                // so halving its opacity mostly just dims the white text
+                // while the fill itself stays close to invisible against
+                // this screen's own dark photo backdrop. A distinct gray
+                // fill instead of a faded black one is visible either way,
+                // and now that the fill itself is visible, fading it too
+                // reinforces "disabled" rather than erasing the button.
+                .pillStyle(fill: canSubmit ? .appAccentBlack : .appTextMuted, border: canSubmit ? .appBorder : .appTextMuted)
+                .opacity(canSubmit ? 1 : 0.6)
 
                 DividerOr()
                     .padding(.vertical, 24)
@@ -270,7 +444,7 @@ struct LoginView: View {
                     nonce = AppleNonce.random()
                     appleCoordinator.start(hashedNonce: AppleNonce.sha256(nonce))
                 }
-                .frame(height: 44)
+                .frame(height: 50)
 
                 Color.clear.frame(height: 32)
                 
@@ -285,7 +459,7 @@ struct LoginView: View {
             .contentShape(Rectangle())
             .onTapGesture { focusedField = nil }
             .animation(.easeOut(duration: 0.25), value: auth.lastError)
-            .animation(.easeOut(duration: 0.25), value: emailError)
+            .animation(.easeOut(duration: 0.25), value: identifierError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -297,17 +471,25 @@ struct LoginView: View {
         .alert("Check your email", isPresented: $showResetConfirmation) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("We sent a password reset link to \(email).")
+            Text("We sent a password reset link to \(identifier).")
         }
     }
 
+    /// Needs an actual email — unlike sign-in, there's no username lookup
+    /// for the reset link itself (Supabase's own reset-password call only
+    /// takes an email), so a username typed into this same field can't be
+    /// used here.
     private func handleForgotPassword() {
-        guard !email.isEmpty else {
+        guard !identifier.isEmpty else {
             auth.lastError = "Enter your email first."
             return
         }
+        guard isValidEmail(identifier) else {
+            auth.lastError = "Enter your email (not your username) to reset your password."
+            return
+        }
         Task {
-            if await auth.resetPassword(email: email) {
+            if await auth.resetPassword(email: identifier) {
                 showResetConfirmation = true
             }
         }
@@ -413,21 +595,20 @@ struct RegisterView: View {
                         }
                     }
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .disabled(auth.isLoading || !canSubmit)
-                .opacity(canSubmit ? 1 : 0.5)
-                .pillStyle(fill: .appAccentBlack, border: .appBorder)
-                
+                .pillStyle(fill: canSubmit ? .appAccentBlack : .appTextMuted, border: canSubmit ? .appBorder : .appTextMuted)
+                .opacity(canSubmit ? 1 : 0.6)
+
                 DividerOr()
                     .padding(.vertical, 24)
-                
+
                 SignInWithAppleButtonView(style: .register) {
                     nonce = AppleNonce.random()
                     appleCoordinator.start(hashedNonce: AppleNonce.sha256(nonce))
                 }
-                .frame(height: 44)
+                .frame(height: 50)
                 
                 Spacer(minLength: 32)
                 
