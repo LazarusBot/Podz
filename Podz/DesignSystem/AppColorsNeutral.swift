@@ -34,13 +34,6 @@ extension Color {
         dark: Color(white: 0.6)
     )
 
-    /// PodDetailView's "Find us quickly in the wild" section heading —
-    /// was `Color(white: 0.35)`.
-    static let appSectionHeadingMuted = Color(
-        light: Color(white: 0.35),
-        dark: Color(white: 0.75)
-    )
-
     /// LennyJourneyProgress's unresolved-stop icon/label — was
     /// `Color(white: 0.8)`.
     static let appJourneyUnresolvedIcon = Color(

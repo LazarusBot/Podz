@@ -94,20 +94,25 @@ struct PodDetailView: View {
     }
 
     var body: some View {
-        // Sections are separated by generous whitespace alone now, not a
-        // divider line after every one of them — that uniform-line-per-
-        // section treatment read as a flat list. Each section supplies its
-        // own top padding as the gap from whatever's above it, so the
-        // rhythm lives in one place per section instead of being split
-        // between a divider's padding and its neighbors'.
+        // Every section from Host down (Host included, right after the
+        // header) shares one `SectionLabel` eyebrow and gets a full-width
+        // `sectionDivider` between it and the next — see that property's
+        // own doc comment for why the gap lives entirely in the divider
+        // now, not split between it and each section's own top padding.
         ZStack(alignment: .top) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     heroImage
                     header
+                    sectionDivider
                     hostSection
+                    sectionDivider
+                    availabilitySection
+                    sectionDivider
                     pricesSection
+                    sectionDivider
                     cancellationSection
+                    sectionDivider
                     mapSection
                     // Extra clearance (not the old 80) — the floating
                     // reservation card now sits above the app's own
@@ -389,18 +394,28 @@ struct PodDetailView: View {
         .overlay(alignment: .bottom) {
             // Hand-built page dots — .indexViewStyle came for free with
             // TabView.page; a plain ScrollView has no equivalent, so this
-            // replaces it rather than just losing the indicator.
+            // replaces it rather than just losing the indicator. Figma
+            // node 4408:693 — a light frosted pill (white 50% fill,
+            // 0.5pt #E1E1E1 stroke, which is exactly `.appBorder`'s own
+            // light-mode value) with solid black dots, not the previous
+            // white-dots-on-dark-pill treatment. Plain black/white here,
+            // not adaptive tokens — this sits on top of the photo itself,
+            // same "photo overlay chrome" family as the map's address pill
+            // and PodRoomCard's price pill, both of which are also
+            // plain/non-adaptive for the same reason.
             if heroPhotoURLs.count > 1 {
-                HStack(spacing: 6) {
+                HStack(spacing: 10) {
                     ForEach(heroPhotoURLs.indices, id: \.self) { index in
                         Circle()
-                            .fill(Color.white.opacity(index == (heroPageIndex ?? 0) ? 1 : 0.4))
-                            .frame(width: 6, height: 6)
+                            .fill(Color.black.opacity(index == (heroPageIndex ?? 0) ? 1 : 0.2))
+                            .frame(width: 5, height: 5)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(Color.black.opacity(0.25)))
+                .padding(.horizontal, 15)
+                .padding(.vertical, 10)
+                .background(Capsule().fill(Color.white.opacity(0.5)))
+                .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .opacity(0.9)
                 .padding(.bottom, 12)
             }
         }
@@ -439,120 +454,233 @@ struct PodDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // pillLabel is already Darker Grotesque Black — the one text
-            // on this screen that's actually meant to be the heaviest
-            // weight, so no .fontWeight() needed (it'd be a no-op on a
-            // .custom font anyway; see the header/body fixes below).
-            Text(pod.name)
-                .font(AppFont.pillLabel(24))
-                .foregroundColor(.black)
+            // Altitude sits on the title row itself, right-aligned — not
+            // stacked below with the beds-available pill, which moved out
+            // to its own `availabilitySection` entirely. Plain text, no
+            // capsule — a badge here read as another interactive-looking
+            // chip competing with the title, when it's just a fact about
+            // the place, same tier as the region/country line below it.
+            // `.firstTextBaseline`, not `.top` — sits the smaller number
+            // on the title's actual baseline instead of its cap height.
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                // pillLabel is already Darker Grotesque Black — the one
+                // text on this screen that's actually meant to be the
+                // heaviest weight, so no .fontWeight() needed (it'd be a
+                // no-op on a .custom font anyway; see the header/body
+                // fixes below).
+                Text(pod.name)
+                    .font(AppFont.pillLabel(24))
+                    .foregroundColor(.appTextPrimary)
 
-            // 10, not matched to the outer VStack's 10 this time — the
-            // pill below is a visually distinct chip (its own capsule
-            // background), so it reads better with more separation from
-            // the plain region/country text above it, not the same gap.
-            // Combined with the pill's own 5pt top padding, that's a 15pt
-            // gap total.
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
-                    if let region = pod.region {
-                        Text(region)
-                            .font(AppFont.pillLabelMedium(20))
-                            .foregroundColor(Color.appTextSubtle)
-                        Circle().fill(Color.appTextSubtle).frame(width: 4, height: 4)
-                    }
-                    Text(pod.country)
-                        .font(AppFont.pillLabelMedium(20))
+                Spacer(minLength: 12)
+
+                if let altitude = pod.altitudeM {
+                    Text("\(altitude) m")
+                        .font(AppFont.pillLabelMedium(16))
                         .foregroundColor(Color.appTextSubtle)
                 }
+            }
 
-                // Two separate pills, not one shared capsule with a dot
-                // between them — altitude and bed availability are
-                // unrelated facts, not one combined stat.
-                if pod.altitudeM != nil || pod.bedsTotal != nil {
-                    HStack(spacing: 8) {
-                        if let altitude = pod.altitudeM {
-                            Text("\(altitude) m")
-                                .font(AppFont.pillLabelMedium(16))
-                                .foregroundColor(Color.appTextSubtle)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Capsule().fill(Color.appIconButtonBackground))
-                        }
-                        // Live count when it's loaded (see
-                        // `liveBedsAvailable`'s own doc comment) — falls
-                        // back to the static total while that's still
-                        // loading or if the RPC isn't reachable, so this
-                        // pill never just disappears.
-                        if let beds = liveBedsAvailable ?? pod.bedsTotal {
-                            // Red + "Fully booked" once there's nothing
-                            // left, instead of the green "available" pill
-                            // just reading "0 beds available" — that read
-                            // as a glitch more than a real status.
-                            let isFull = beds <= 0
-                            let tint = isFull ? Color.red : Color.appAvailableGreen
-                            Text(isFull ? "Fully booked" : "\(beds) beds available")
-                                .font(AppFont.pillLabelMedium(16))
-                                .foregroundColor(tint)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Capsule().fill(tint.opacity(0.12)))
-                                .overlay(alignment: .topTrailing) {
-                                    // Stroke matches the page background,
-                                    // not the pill's own — punches a clean
-                                    // halo around the dot so it reads as
-                                    // sitting on top of the pill's corner
-                                    // rather than blending into its edge.
-                                    Circle()
-                                        .fill(tint)
-                                        .frame(width: 12, height: 12)
-                                        .overlay(Circle().strokeBorder(Color.appHomeBackground, lineWidth: 2))
-                                        .offset(x: 2, y: -2)
-                                }
-                        }
-                    }
+            HStack(spacing: 10) {
+                if let region = pod.region {
+                    Text(region)
+                        .font(AppFont.pillLabelMedium(20))
+                        .foregroundColor(Color.appTextSubtle)
+                    Circle().fill(Color.appTextSubtle).frame(width: 4, height: 4)
                 }
+                Text(pod.country)
+                    .font(AppFont.pillLabelMedium(20))
+                    .foregroundColor(Color.appTextSubtle)
             }
         }
         .padding(.horizontal, 24)
         .padding(.top, 24)
+        // Matches `sectionBottomPadding` — without this, the gap to the
+        // first `sectionDivider` below was just that divider's own 4pt,
+        // since `header` isn't itself one of the sections that constant
+        // is shared between. Every other divider sits 24pt from the
+        // content on both sides; this one was sitting 4pt from the
+        // header above it and 24pt from Host below it.
+        .padding(.bottom, sectionBottomPadding)
     }
 
     // MARK: - Host
 
-    /// Title now matches `pricesSection`'s (24pt, full black) — the tier
-    /// distinction lives only in spacing now (tight 24pt gap from the
-    /// header vs. `pricesSection`'s bigger 36pt gap before it), not in
-    /// title size/color anymore.
+    /// Section title uses `SectionLabel` now — same quiet uppercase
+    /// eyebrow as Profile/Friends/MyReservations, and every other section
+    /// on this screen from here down. `SectionLabel` already carries its
+    /// own 24pt horizontal + 20pt top / 6pt bottom padding (it's designed
+    /// to sit directly in a full-bleed list, not nested inside another
+    /// padded container) — so unlike the old plain-`Text` titles, nothing
+    /// here wraps it in a matching `.padding(.horizontal, 24)`. That was
+    /// the actual bug behind the label reading as not-quite-left-aligned:
+    /// it was double-inset (its own 24 plus the section's own 24) while
+    /// the content below only had one. Only the content below gets its
+    /// own `.padding(.horizontal, 24)` now, so both line up on the same
+    /// left edge.
     private var hostSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Host")
-                .font(AppFont.pillLabelBold(24))
-                .foregroundColor(.black)
+        VStack(alignment: .leading, spacing: 16) {
+            SectionLabel(title: "Host")
 
             HStack(spacing: 14) {
                 AvatarView(imageName: nil, size: 52)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Hosted by \(hostName)")
                         .font(AppFont.pillLabelBold(17))
-                        .foregroundColor(.black)
+                        .foregroundColor(.appTextPrimary)
                     Text(hostBlurb)
                         .font(AppFont.mediumLabel(14))
                         .foregroundColor(.appTextMuted)
                 }
                 Spacer(minLength: 0)
             }
+            .padding(.horizontal, 24)
+            .padding(.bottom, sectionBottomPadding)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 24)
     }
 
-    /// Same source as the header's "beds available" pill — while
+    /// Every section below `SectionLabel` ends with this much bottom
+    /// padding on its content — matching `SectionLabel`'s own fixed 20pt
+    /// top padding (plus `sectionDivider`'s own share below), so a
+    /// section's gap to the divider *above* it and to the divider
+    /// *below* it read the same, instead of the label sitting much
+    /// further from the line above it than the content sits from the
+    /// line below it.
+    private let sectionBottomPadding: CGFloat = 20
+
+    /// Hairline separator between every section from Host down — full
+    /// width (no horizontal inset, unlike the sections themselves). Only
+    /// a small padding of its own now — see `sectionBottomPadding`'s doc
+    /// comment for where the rest of the section-to-section gap actually
+    /// lives; piling a big gap on both this *and* every section's own
+    /// padding is what made the two edges of a section uneven in the
+    /// first place. A plain `Divider()` renders in iOS's own system
+    /// separator color, which doesn't reliably match `.appBorder` — the
+    /// token every other stroke on this screen (topBar's button, the
+    /// reservation bar, room cards, the map) already uses. A `Rectangle`
+    /// gives direct, reliable control over that color instead.
+    private var sectionDivider: some View {
+        Rectangle()
+            .fill(Color.appBorder)
+            .frame(height: 0.5)
+            .padding(.vertical, 4)
+    }
+
+    // MARK: - Availability
+
+    /// Was a small pill next to the altitude chip in `header`; promoted
+    /// to its own section so it reads as real content, not a stat crammed
+    /// into the title row.
+    private var displayedBedsAvailable: Int? {
+        liveBedsAvailable ?? pod.bedsTotal
+    }
+
+    /// Every tier gets an honest caption and its own shade of the same
+    /// green — not just a "plenty" nudge that only ever shows up at the
+    /// top end and leaves every other level of availability with a bare
+    /// number and nothing else. Thresholds are against the pod's own
+    /// total capacity, not an absolute count, so a 6-bed hut and a
+    /// 60-bed refuge both read as "full" or "plenty" at the same
+    /// relative point. Still no fabricated claim anywhere in here — every
+    /// caption is a direct read of the same real count the number above
+    /// it already shows, same reasoning as the single "plenty" nudge this
+    /// replaced.
+    private enum AvailabilityTier {
+        case full, low, medium, high
+
+        var caption: String {
+            switch self {
+            case .full: "Check back for new openings."
+            case .low: "Filling up fast."
+            case .medium: "Good availability."
+            case .high: "Plenty of space right now."
+            }
+        }
+
+        /// One hue throughout (red stays reserved for `.full`) — just
+        /// fading as availability drops, not switching color family.
+        /// Full strength at `.high` only, so `appAvailableGreen`'s own
+        /// doc comment (verified to read on a dark background at full
+        /// opacity) still covers the one tier that actually uses it at
+        /// 100%.
+        var tint: Color {
+            switch self {
+            case .full: .red
+            case .low: .appAvailableGreen.opacity(0.6)
+            case .medium: .appAvailableGreen.opacity(0.8)
+            case .high: .appAvailableGreen
+            }
+        }
+    }
+
+    /// `nil` only when there's no beds data at all for this pod (see
+    /// `availabilitySection`'s own empty-state branch) — once `beds` is
+    /// known, every pod lands in exactly one tier, `.full` included.
+    /// Unknown total (old pods, pre-dates `bedsTotal` being required)
+    /// falls to `.medium` — not `.high`, which would overstate a number
+    /// we have no ratio to actually judge.
+    private var availabilityTier: AvailabilityTier? {
+        guard let beds = displayedBedsAvailable else { return nil }
+        guard beds > 0 else { return .full }
+        guard let total = pod.bedsTotal, total > 0 else { return .medium }
+        let ratio = Double(beds) / Double(total)
+        if ratio >= 0.5 { return .high }
+        if ratio >= 0.2 { return .medium }
+        return .low
+    }
+
+    private var availabilitySection: some View {
+        // 8, not the 16 every other section uses between its label and
+        // content — this section's own content is just two short lines
+        // (the count, the caption), not a photo/paragraph/avatar row, so
+        // the wider gap read as too loose for how little is actually
+        // there.
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(title: "Availability")
+
+            VStack(alignment: .leading, spacing: 8) {
+                if let beds = displayedBedsAvailable, let tier = availabilityTier {
+                    // SemiBold, not Medium — this is the single biggest
+                    // number on the screen; Medium at this size read as
+                    // bigger-but-weaker than the Bold/Black text
+                    // everywhere else something's meant to stand out,
+                    // inverting how weight tracks size on this page.
+                    // 24, not 28 — big enough to read as a callout next
+                    // to the 24pt pod name without out-sizing it.
+                    Text(tier == .full ? "Fully booked" : "\(beds) beds available")
+                        .font(AppFont.pillLabelSemiBold(24))
+                        .foregroundColor(tier.tint)
+
+                    // 13, not 16 — matches the caption/helper size used
+                    // elsewhere (ReservationSheet's "3 nights", FilterRow's
+                    // helper text), reading as a caption under the count
+                    // rather than a second line of equal weight.
+                    Text(tier.caption)
+                        .font(AppFont.mediumLabel(13))
+                        .foregroundColor(tier.tint.opacity(0.5))
+                } else {
+                    // Parity with `pricesSection`'s "No rooms listed yet"
+                    // — `pod.bedsTotal` is part of the initial `Pod`
+                    // value, not fetched async, so this isn't a loading
+                    // flash: it means no capacity data exists for this
+                    // pod at all. A blank gap under the label read as
+                    // broken, not empty.
+                    Text("Availability info not listed yet")
+                        .font(AppFont.mediumLabel(16))
+                        .foregroundColor(Color.appTextSubtle)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, sectionBottomPadding)
+        }
+    }
+
+    /// Same source as `availabilitySection`'s count — while
     /// `liveBedsAvailable` is still loading, falls back to the static
     /// total rather than blocking the button on a number that hasn't
     /// arrived yet.
     private var canReserve: Bool {
-        (liveBedsAvailable ?? pod.bedsTotal ?? 1) > 0
+        (displayedBedsAvailable ?? 1) > 0
     }
 
     /// `BottomTabBar` (MainTabView) sits with its bottom edge 24pt above
@@ -678,7 +806,7 @@ struct PodDetailView: View {
                     .pillStyle(fill: .appAccentBlack, border: .appBorder)
                 Text(pod.name)
                     .font(AppFont.pillLabelBold(17))
-                    .foregroundColor(.black)
+                    .foregroundColor(.appTextPrimary)
                     .lineLimit(1)
             }
 
@@ -744,55 +872,49 @@ struct PodDetailView: View {
 
     // MARK: - Prices and bedrooms
 
-    /// Primary section — the one that actually drives the booking
-    /// decision, so it gets the bigger/darker title (pillLabelBold 24,
-    /// full black) that the two supporting sections below step down from.
-    /// 36pt top gap (not 24, like Host got) — this is where the page
-    /// shifts from "introducing the place" to the actual booking content.
     private var pricesSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // pillLabelBold — not pillLabel(_).fontWeight(.bold), which
-            // silently no-ops on a .custom font and rendered this as Black,
-            // same weight as the pod name itself.
-            Text("Prices and bedrooms")
-                .font(AppFont.pillLabelBold(24))
-                .foregroundColor(.black)
+        // 16 — matches every other section's label-to-content gap now
+        // that they all share `SectionLabel`.
+        VStack(alignment: .leading, spacing: 16) {
+            SectionLabel(title: "Prices & bedrooms")
 
-            if isLoadingRooms {
-                ProgressView()
-                    .frame(maxWidth: .infinity, minHeight: 161)
-            } else if rooms.isEmpty {
-                // Same 161 as the loading spinner and a real PodRoomCard —
-                // otherwise the section visibly collapses the instant
-                // loading finishes and turns up empty.
-                Text("No rooms listed yet")
-                    .font(AppFont.mediumLabel(16))
-                    .foregroundColor(Color.appTextSubtle)
-                    .frame(maxWidth: .infinity, minHeight: 161)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 15) {
-                        ForEach(rooms) { room in
-                            PodRoomCard(room: room)
+            // Grouped so `.padding(.horizontal, 24)` below applies to
+            // whichever of these three is showing, without also wrapping
+            // (and re-indenting) `SectionLabel` above — see its own doc
+            // comment on why that padding has to stay off the label.
+            Group {
+                if isLoadingRooms {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 161)
+                } else if rooms.isEmpty {
+                    // Same 161 as the loading spinner and a real
+                    // PodRoomCard — otherwise the section visibly
+                    // collapses the instant loading finishes and turns up
+                    // empty.
+                    Text("No rooms listed yet")
+                        .font(AppFont.mediumLabel(16))
+                        .foregroundColor(Color.appTextSubtle)
+                        .frame(maxWidth: .infinity, minHeight: 161)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 15) {
+                            ForEach(rooms) { room in
+                                PodRoomCard(room: room)
+                            }
                         }
                     }
                 }
             }
+            .padding(.horizontal, 24)
+            .padding(.bottom, sectionBottomPadding)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 36)
     }
 
     // MARK: - Cancellation
 
-    /// Supporting section — one visual step down from `pricesSection`
-    /// (smaller title, dark gray instead of full black) since this is
-    /// reference info, not the thing driving the booking decision.
     private var cancellationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Cancel & reservation changes")
-                .font(AppFont.pillLabelBold(19))
-                .foregroundColor(.appTextSecondary)
+        VStack(alignment: .leading, spacing: 16) {
+            SectionLabel(title: "Cancel & reservation changes")
 
             // Inter (mediumLabel), not the Darker Grotesque pill-label
             // family — this is a real paragraph of body copy, not a pill
@@ -801,19 +923,16 @@ struct PodDetailView: View {
             Text(cancellationPolicy)
                 .font(AppFont.mediumLabel(16))
                 .foregroundColor(.appTextMuted)
+                .padding(.horizontal, 24)
+                .padding(.bottom, sectionBottomPadding)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 36)
     }
 
     // MARK: - Map
 
-    /// Supporting section, same demoted tier as `cancellationSection`.
     private var mapSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Find us quickly in the wild")
-                .font(AppFont.pillLabelBold(19))
-                .foregroundColor(Color.appSectionHeadingMuted)
+        VStack(alignment: .leading, spacing: 16) {
+            SectionLabel(title: "Find us quickly in the wild")
 
             ZStack(alignment: .top) {
                 if let lat = pod.latitude, let lng = pod.longitude {
@@ -834,12 +953,18 @@ struct PodDetailView: View {
                 }
 
                 if let address = pod.address {
+                    // Same frosted-glass treatment as `PodRoomCard`'s
+                    // price pill now — both are a caption floating on a
+                    // photo, the same UI role, so they shouldn't look
+                    // like two different components. Was a solid black
+                    // 88%-opacity pill with no stroke.
                     Text(address)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(AppFont.pillLabelSemiBold(11))
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.black.opacity(0.88)))
+                        .background(Capsule().fill(Color.white.opacity(0.33)))
+                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.75), lineWidth: 0.5))
                         .padding(.top, 12)
                         .allowsHitTesting(false)
                 }
@@ -847,10 +972,9 @@ struct PodDetailView: View {
             .frame(height: 283)
             .clipShape(RoundedRectangle(cornerRadius: AppRadius.r20))
             .overlay(RoundedRectangle(cornerRadius: AppRadius.r20).strokeBorder(Color.white, lineWidth: 1))
+            .padding(.horizontal, 24)
+            .padding(.bottom, sectionBottomPadding)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 36)
-        .padding(.bottom, 24)
     }
 
     private func openInMaps(lat: Double, lng: Double) {
@@ -916,7 +1040,10 @@ private struct PodRoomCard: View {
                 .overlay(Capsule().strokeBorder(Color.white.opacity(0.75), lineWidth: 0.5))
                 .padding(6)
         }
-        .frame(width: 241, height: 161)
+        // Square, not the old 241x161 landscape card — sized down to
+        // 161x161, so the loading spinner/empty-state's own 161 minHeight
+        // (pricesSection) still matches a real card exactly.
+        .frame(width: 161, height: 161)
         .clipShape(RoundedRectangle(cornerRadius: AppRadius.r10))
         .overlay(RoundedRectangle(cornerRadius: AppRadius.r10).strokeBorder(Color.white.opacity(0.75), lineWidth: 2))
     }
