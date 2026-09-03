@@ -109,7 +109,7 @@ private struct FriendRequestRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(profile?.displayName ?? "Someone")
                     .font(AppFont.pillLabelBold(15))
-                    .foregroundColor(.black)
+                    .foregroundColor(.appTextPrimary)
                 if let username = profile?.username {
                     Text("@\(username)")
                         .font(AppFont.mediumLabel(13))
@@ -122,15 +122,17 @@ private struct FriendRequestRow: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.appTextMuted)
                     .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color(white: 0.93)))
+                    .background(Circle().fill(Color.appIconButtonBackground))
             }
+            .accessibilityLabel("Decline")
             Button(action: onAccept) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.black))
+                    .background(Circle().fill(Color.appAccentBlack))
             }
+            .accessibilityLabel("Accept")
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 8)
@@ -218,7 +220,7 @@ private struct SwipeToDeleteRow<Content: View>: View {
                     offset = max(-revealWidth, min(0, base + translation))
                 }
                 .onEnded { _ in
-                    withAnimation(.easeOut(duration: 0.2)) {
+                    withAnimation(.easeOut(duration: AppMotion.snappy)) {
                         if offset < -revealWidth / 2 {
                             offset = -revealWidth
                             isRevealed = true
@@ -232,14 +234,14 @@ private struct SwipeToDeleteRow<Content: View>: View {
         .clipped()
         .alert("Remove this friend?", isPresented: $showConfirmation) {
             Button("Remove", role: .destructive) {
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.easeOut(duration: AppMotion.snappy)) {
                     offset = 0
                     isRevealed = false
                 }
                 onDelete()
             }
             Button("Cancel", role: .cancel) {
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.easeOut(duration: AppMotion.snappy)) {
                     offset = 0
                     isRevealed = false
                 }

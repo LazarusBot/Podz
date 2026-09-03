@@ -412,7 +412,7 @@ struct HomeSearchRow: View {
         // clean grow. Leading-anchored, only the trailing edge moves.
         VStack(alignment: .leading, spacing: 14) {
             FilterRow(title: "Hikers", helper: "Number of hikers with you.") {
-                StepperControl(value: $filters.hikers)
+                StepperControl(value: $filters.hikers, label: "hikers")
             }
 
             FilterRow(title: "Check-in", helper: "Date of arrival in your pod.") {
@@ -452,11 +452,11 @@ struct HomeSearchRow: View {
             }
 
             FilterRow(title: "Wifi", helper: "Location is wired or not.") {
-                ToggleCheckButton(isOn: $filters.wifi)
+                ToggleCheckButton(isOn: $filters.wifi, label: "Wifi")
             }
 
             FilterRow(title: "Pets", helper: "Pets are allowed in the pod or not.") {
-                ToggleCheckButton(isOn: $filters.pets)
+                ToggleCheckButton(isOn: $filters.pets, label: "Pets")
             }
 
             // Custom rather than PillButton — needs the Default → loading
@@ -610,6 +610,7 @@ struct HomeSearchRow: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.appTextMuted)
                     }
+                    .accessibilityLabel("Cancel search")
                 } else {
                     TextField("", text: textBinding, prompt: Text(placeholder).foregroundColor(.black.opacity(0.35)))
                         .font(AppFont.pillLabelMedium(17))
@@ -661,6 +662,7 @@ struct HomeSearchRow: View {
                             .foregroundColor(submitDisabled ? .appBorder.opacity(0.5) : .appAccentBlack)
                     }
                     .disabled(submitDisabled)
+                    .accessibilityLabel("Search")
                 }
                 .opacity(showControls ? 1 : 0)
 
@@ -680,10 +682,10 @@ struct HomeSearchRow: View {
             // shape once expanded) — keeping it constant means only the
             // height animates during the transition, not the radius too.
             if !isLennyBusy {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous)
                     .fill(Color.white)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous)
                             .strokeBorder(Color.appBorder, lineWidth: 0.5)
                     )
             }
@@ -694,7 +696,7 @@ struct HomeSearchRow: View {
         // sliding cleanly inside it. The shadow has to be applied after
         // this (not inside the background above) or the clip would cut
         // the shadow's blur off too.
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous))
         .shadow(color: isLennyBusy ? .clear : .black.opacity(0.08), radius: 3, y: 1)
         // Dead space inside the pill (a FilterRow's label, the gap
         // between it and its control, a DashedDivider...) has no
@@ -702,7 +704,7 @@ struct HomeSearchRow: View {
         // HomeView's tap-outside-to-dismiss catcher on the ScrollView
         // and closed the whole panel — tapping *inside* the pill
         // shouldn't dismiss anything, only genuinely outside it.
-        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.r24, style: .continuous))
         .onTapGesture {}
         .animation(.easeInOut(duration: AppMotion.standard), value: isFocused)
         .animation(.easeInOut(duration: AppMotion.quick), value: isLennyMode)
@@ -728,7 +730,7 @@ struct HomeSearchRow: View {
                 // Let the box finish growing before the controls fade in.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
                     guard isFocused else { return }
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.easeInOut(duration: AppMotion.snappy)) {
                         showControls = true
                     }
                 }
@@ -853,6 +855,7 @@ private struct DateConfirmButton: View {
         // actively fat-fingering, so a target this size was an easy miss.
         .frame(width: 44, height: 44)
         .contentShape(Rectangle())
+        .accessibilityLabel("Confirm date")
         .disabled(!hasChanged)
     }
 }

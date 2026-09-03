@@ -90,10 +90,7 @@ private struct SplashProgressiveBlurBackground: View {
                             )
                         )
                 } else {
-                    LinearGradient(
-                        colors: [Color(red: 0.1, green: 0.3, blue: 0.4), .black],
-                        startPoint: .top, endPoint: .bottom
-                    )
+                    LinearGradient.appAuthImageFallback
                 }
             }
         }
@@ -218,7 +215,7 @@ private struct OnboardingCarousel: View {
                 .padding(.horizontal, 32)
                 .padding(.bottom, 20)
             }
-            .animation(.easeInOut(duration: 0.25), value: step)
+            .animation(.easeInOut(duration: AppMotion.standard), value: step)
         }
     }
 
@@ -245,10 +242,7 @@ private struct OnboardingPhotoBackground: View {
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .clipped()
                 } else {
-                    LinearGradient(
-                        colors: [Color(red: 0.1, green: 0.3, blue: 0.4), .black],
-                        startPoint: .top, endPoint: .bottom
-                    )
+                    LinearGradient.appAuthImageFallback
                 }
 
                 if showGradient {

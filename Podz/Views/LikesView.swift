@@ -235,7 +235,8 @@ struct LikesView: View {
                 // list, not the native share sheet — "link" reads as
                 // "manage sharing access" instead of "export/send".
                 trailingIcon: "link",
-                onTrailingTap: { folderPendingShare = folder }
+                onTrailingTap: { folderPendingShare = folder },
+                trailingAccessibilityLabel: "Share folder"
             )
         }
         .sheet(item: $folderPendingShare) { folder in

@@ -40,6 +40,7 @@ struct AvatarPicker: View {
             }
         }
         .disabled(isUploading)
+        .accessibilityLabel("Change profile photo")
         .onChange(of: selectedItem) { _, newItem in
             guard let newItem else { return }
             Task { await upload(item: newItem) }

@@ -34,13 +34,7 @@ struct PostsActivityView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.appTextMuted)
-                        .frame(width: 31, height: 31)
-                        .background(Circle().fill(Color(white: 0.93)))
-                }
+                CloseButton(action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)

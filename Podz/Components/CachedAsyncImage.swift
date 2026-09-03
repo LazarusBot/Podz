@@ -212,7 +212,7 @@ struct CachedAsyncImage<Placeholder: View>: View {
             let downloaded = try await ImageLoader.load(urlString: url)
             ImageCache.shared.set(downloaded, for: url)
             guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.25)) {
+            withAnimation(.easeOut(duration: AppMotion.standard)) {
                 uiImage = downloaded
             }
         } catch ImageLoader.LoadError.badURL {

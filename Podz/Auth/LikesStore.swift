@@ -284,7 +284,7 @@ final class LikesStore: ObservableObject {
         recentLikeBadgeTask = Task {
             try? await Task.sleep(nanoseconds: 1_600_000_000)
             guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.25)) {
+            withAnimation(.easeOut(duration: AppMotion.standard)) {
                 showRecentLikeBadge = false
             }
         }

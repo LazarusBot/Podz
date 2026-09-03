@@ -366,6 +366,7 @@ struct HomeView: View {
                         .font(.system(size: 22))
                         .foregroundColor(.black)
                 }
+                .accessibilityLabel("New post")
             }
             .padding(.horizontal, 24)
 
@@ -444,16 +445,16 @@ struct HomeView: View {
     private var loadingState: some View {
         ForEach(0..<2, id: \.self) { _ in
             VStack(alignment: .leading, spacing: 10) {
-                SkeletonShape(cornerRadius: 5)
+                SkeletonShape(cornerRadius: AppRadius.r5)
                     .frame(width: 170, height: 18)
                     .padding(.leading, 24)
 
                 HStack(spacing: 12) {
                     ForEach(0..<2, id: \.self) { _ in
                         VStack(alignment: .leading, spacing: 6) {
-                            SkeletonShape(cornerRadius: 18)
+                            SkeletonShape(cornerRadius: AppRadius.r18)
                                 .frame(width: podCardSkeletonSize, height: podCardSkeletonSize)
-                            SkeletonShape(cornerRadius: 4)
+                            SkeletonShape(cornerRadius: AppRadius.r4)
                                 .frame(width: podCardSkeletonSize * 0.55, height: 14)
                                 .padding(.leading, 5)
                         }

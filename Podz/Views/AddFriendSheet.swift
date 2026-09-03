@@ -30,13 +30,7 @@ struct AddFriendSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.appTextMuted)
-                        .frame(width: 31, height: 31)
-                        .background(Circle().fill(Color(white: 0.93)))
-                }
+                CloseButton(action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -58,7 +52,7 @@ struct AddFriendSheet: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Capsule().fill(Color(white: 0.93)))
+            .background(Capsule().fill(Color.appIconButtonBackground))
             .padding(.horizontal, 20)
             // Debounced via .task(id:) — every keystroke cancels the
             // previous in-flight search and starts a fresh one after a

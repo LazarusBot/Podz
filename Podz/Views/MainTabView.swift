@@ -74,10 +74,10 @@ struct MainTabView: View {
                 }
             }
         }
-        .animation(.easeOut(duration: 0.2), value: lenny.phase)
-        .animation(.easeOut(duration: 0.2), value: homeSearch.isExpanded)
-        .animation(.easeOut(duration: 0.2), value: scrollState.isScrollingDown)
-        .animation(.easeOut(duration: 0.2), value: tabBarVisibility.isHidden)
+        .animation(.easeOut(duration: AppMotion.snappy), value: lenny.phase)
+        .animation(.easeOut(duration: AppMotion.snappy), value: homeSearch.isExpanded)
+        .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)
+        .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())
         .task {
             await messagesStore.fetchAll()

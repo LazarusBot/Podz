@@ -8,14 +8,30 @@
 import SwiftUI
 
 /// Book a stay at this pod — no payment collected (see SQL/reservations.sql).
-/// Presented as a sheet from PodDetailView, same lightweight-overlay
-/// pattern as PostComposerView/ShareFolderSheet rather than a pushed
-/// screen, since this is a short, self-contained form.
+/// Grows in place inside PodDetailView's `reservationBar` (same pattern as
+/// CategoryScroller's `filtersPanel` growing inside HomeSearchRow) rather
+/// than presenting as a separate sheet — no header of its own since the
+/// bar's own pod-name row already establishes context above it.
 struct ReservationSheet: View {
     let pod: Pod
+    /// Same `beds_available_now` RPC result PodDetailView's header pill
+    /// and Reserve button already use (see its own doc comment there) —
+    /// passed through so the guest stepper's ceiling matches what the
+    /// server will actually accept instead of the pod's static total.
+    /// The capacity-enforcing trigger in SQL/reservations.sql is the
+    /// real backstop either way (it rejects overbooking server-side,
+    /// race conditions included) — this just means a doomed guest count
+    /// gets caught by the stepper's own bound instead of surfacing only
+    /// after a round trip and a failed insert. `nil` (e.g. while it's
+    /// still loading) falls back to the static total, same as elsewhere.
+    var liveBedsAvailable: Int? = nil
+    /// Collapses the bar back down — either PodDetailView's own toggle
+    /// button fires this directly, or (from `submit()`) a successful
+    /// reservation auto-collapses it after the confirmation state has
+    /// shown for a moment.
+    var onDismiss: () -> Void = {}
 
     @StateObject private var reservationsStore = ReservationsStore.shared
-    @Environment(\.dismiss) private var dismiss
 
     @State private var checkIn = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
     @State private var checkOut = Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date()
@@ -23,9 +39,14 @@ struct ReservationSheet: View {
     @State private var isSubmitting = false
     @State private var didSucceed = false
 
-    /// Falls back to a sensible cap when the pod has no recorded bed
-    /// count — StepperControl needs a real upper bound regardless.
-    private var maxGuests: Int { max(pod.bedsTotal ?? 8, 1) }
+    /// The tighter of the pod's static total and its live availability —
+    /// falls back to a sensible cap when neither is known, since
+    /// StepperControl needs a real upper bound regardless.
+    private var maxGuests: Int {
+        let staticCapacity = pod.bedsTotal ?? 8
+        guard let liveBedsAvailable else { return max(staticCapacity, 1) }
+        return max(min(staticCapacity, liveBedsAvailable), 1)
+    }
 
     private var nights: Int {
         max(Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 0, 0)
@@ -33,129 +54,114 @@ struct ReservationSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.appTextMuted)
-                        .frame(width: 31, height: 31)
-                        .background(Circle().fill(Color(white: 0.93)))
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-
-            Text("Reserve your stay")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
-                .foregroundColor(.black)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-
-            Text(pod.name)
-                .font(AppFont.mediumLabel(14))
-                .foregroundColor(.appTextMuted)
-                .padding(.bottom, 16)
-
+            dragIndicator
             if didSucceed {
                 confirmationState
             } else {
                 formState
             }
         }
-        .background(Color.appHomeBackground)
+    }
+
+    /// Same grabber a real `.sheet(presentationDragIndicator: .visible)`
+    /// would draw — signals this panel can be swiped down to dismiss,
+    /// which isn't otherwise obvious now that it's plain inline content
+    /// instead of an actual sheet presentation.
+    private var dragIndicator: some View {
+        Capsule()
+            .fill(Color.appBorder)
+            .frame(width: 36, height: 4)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
     }
 
     private var formState: some View {
-        ScrollView {
-            VStack(spacing: 14) {
-                FilterRow(title: "Check-in", helper: "Date of arrival at \(pod.name).") {
-                    DatePicker("", selection: $checkIn, in: Date()..., displayedComponents: .date)
-                        .labelsHidden()
-                        .tint(.appAccentBlack)
-                        .onChange(of: checkIn) { _, new in
-                            // Checkout can't precede check-in — nudge it
-                            // forward instead of letting the form sit in
-                            // an invalid state the "in:" bound below would
-                            // otherwise just silently clamp on next open.
-                            if checkOut <= new {
-                                checkOut = Calendar.current.date(byAdding: .day, value: 1, to: new) ?? new
-                            }
-                        }
-                }
-
-                FilterRow(title: "Checkout", helper: "Date of leaving \(pod.name).") {
-                    DatePicker("", selection: $checkOut, in: checkIn..., displayedComponents: .date)
-                        .labelsHidden()
-                        .tint(.appAccentBlack)
-                }
-
-                FilterRow(title: "Guests", helper: "Number of beds to reserve.") {
-                    StepperControl(value: $guests, range: 1...maxGuests, showsValueBackground: false)
-                }
-
-                if nights > 0 {
-                    Text("\(nights) night\(nights == 1 ? "" : "s")")
-                        .font(AppFont.mediumLabel(13))
-                        .foregroundColor(.appTextMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 4)
-                }
-
-                if let error = reservationsStore.lastError {
-                    AuthErrorBanner(message: error)
-                }
-
-                Button(action: submit) {
-                    HStack(spacing: 10) {
-                        if isSubmitting {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("Reserve")
-                                .font(.system(size: 15, weight: .semibold))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
+        VStack(spacing: 14) {
+            FilterRow(title: "Check-in", helper: "Date of arrival at \(pod.name).") {
+                DatePicker("", selection: $checkIn, in: Date()..., displayedComponents: .date)
+                    .labelsHidden()
+                    .tint(.appAccentBlack)
+                    .onChange(of: checkIn) { _, new in
+                        // Checkout can't precede check-in — nudge it
+                        // forward instead of letting the form sit in
+                        // an invalid state the "in:" bound below would
+                        // otherwise just silently clamp on next open.
+                        if checkOut <= new {
+                            checkOut = Calendar.current.date(byAdding: .day, value: 1, to: new) ?? new
                         }
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .disabled(isSubmitting || nights <= 0)
-                .pillStyle(fill: .appAccentBlack, border: .appBorder)
-                .padding(.top, 8)
-
-                // No payment collected — set expectations up front rather
-                // than leaving "what happens after I tap Reserve" implicit.
-                Text("No payment is taken now — you'll settle up at the shelter.")
-                    .font(.system(size: 11))
-                    .foregroundColor(.appTextMuted)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 4)
-                    .padding(.bottom, 20)
             }
-            .padding(.horizontal, 20)
-            .animation(.easeOut(duration: 0.2), value: reservationsStore.lastError)
+
+            FilterRow(title: "Checkout", helper: "Date of leaving \(pod.name).") {
+                DatePicker("", selection: $checkOut, in: checkIn..., displayedComponents: .date)
+                    .labelsHidden()
+                    .tint(.appAccentBlack)
+            }
+
+            FilterRow(title: "Guests", helper: "Number of beds to reserve.") {
+                StepperControl(value: $guests, range: 1...maxGuests, showsValueBackground: false, label: "guests")
+            }
+
+            if nights > 0 {
+                Text("\(nights) night\(nights == 1 ? "" : "s")")
+                    .font(AppFont.mediumLabel(13))
+                    .foregroundColor(.appTextMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
+            }
+
+            if let error = reservationsStore.lastError {
+                AuthErrorBanner(message: error)
+            }
+
+            Button(action: submit) {
+                HStack(spacing: 10) {
+                    if isSubmitting {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Confirm reservation")
+                            .font(.system(size: 15, weight: .semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .disabled(isSubmitting || nights <= 0)
+            .pillStyle(fill: .appAccentBlack, border: .appBorder)
+            .padding(.top, 8)
+
+            // No payment collected — set expectations up front rather
+            // than leaving "what happens after I tap Reserve" implicit.
+            Text("No payment is taken now — you'll settle up at the shelter.")
+                .font(.system(size: 11))
+                .foregroundColor(.appTextMuted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 16)
+        .animation(.easeOut(duration: AppMotion.snappy), value: reservationsStore.lastError)
     }
 
     private var confirmationState: some View {
-        VStack(spacing: 12) {
-            Spacer()
+        VStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 44))
+                .font(.system(size: 36))
                 .foregroundColor(.appAvailableGreen)
             Text("Reservation confirmed")
-                .font(AppFont.pillLabelBold(18))
-                .foregroundColor(.black)
+                .font(AppFont.pillLabelBold(16))
+                .foregroundColor(.appTextPrimary)
             Text("\(nights) night\(nights == 1 ? "" : "s") · \(guests) guest\(guests == 1 ? "" : "s")")
-                .font(AppFont.mediumLabel(14))
+                .font(AppFont.mediumLabel(13))
                 .foregroundColor(.appTextMuted)
-            Spacer()
         }
         .frame(maxWidth: .infinity)
-        .padding(.bottom, 40)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 24)
     }
 
     private func submit() {
@@ -164,11 +170,11 @@ struct ReservationSheet: View {
             let success = await reservationsStore.create(podId: pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests)
             isSubmitting = false
             if success {
-                withAnimation(.easeOut(duration: 0.25)) {
+                withAnimation(.easeOut(duration: AppMotion.standard)) {
                     didSucceed = true
                 }
                 try? await Task.sleep(nanoseconds: 1_400_000_000)
-                dismiss()
+                onDismiss()
             }
         }
     }

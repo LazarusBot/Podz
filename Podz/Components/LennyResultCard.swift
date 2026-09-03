@@ -73,6 +73,7 @@ struct LennyResultCard: View {
                         }
                 }
                 .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
+                .accessibilityLabel(isSelected ? "Deselect \(pod.name)" : "Select \(pod.name)")
             }
             .padding(.horizontal, 5)
         }

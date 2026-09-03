@@ -100,7 +100,7 @@ struct ConversationView: View {
             // Deliberately faster than the system's own keyboard timing
             // (~0.25s) — matching it made the composer feel like it was
             // trailing the keyboard up rather than rising with it.
-            withAnimation(.easeOut(duration: 0.15)) {
+            withAnimation(.easeOut(duration: AppMotion.quick)) {
                 keyboardHeight = visibleHeight
             }
         }
@@ -114,7 +114,7 @@ struct ConversationView: View {
     private func scrollToLast(_ proxy: ScrollViewProxy, animated: Bool = true) {
         guard let lastId = thread.last?.id else { return }
         if animated {
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 proxy.scrollTo(lastId, anchor: .bottom)
             }
         } else {
@@ -132,6 +132,7 @@ struct ConversationView: View {
             }
             .background(Circle().fill(Color.white))
             .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+            .accessibilityLabel("Back")
 
             Spacer()
 
@@ -196,6 +197,7 @@ struct ConversationView: View {
                     .frame(width: 50, height: 50)
                     .background(Circle().fill(canSend ? Color.black : Color.appBorder))
             }
+            .accessibilityLabel("Send message")
             .disabled(!canSend)
             .accessibilityLabel("Send")
         }
@@ -210,6 +212,7 @@ struct ConversationView: View {
             Image(systemName: "arrowshape.turn.up.left.fill")
                 .font(.system(size: 12))
                 .foregroundColor(.appMessageBlue)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Replying to \(message.senderId == currentUserId ? "yourself" : (friendProfile?.displayName ?? "them"))")
@@ -228,6 +231,7 @@ struct ConversationView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.appTextMuted)
             }
+            .accessibilityLabel("Cancel reply")
         }
     }
 
@@ -279,6 +283,7 @@ private struct MessageBubble: View {
                     .foregroundColor(.appTextMuted)
                     .opacity(Double(dragOffset / maxSwipe))
                     .offset(x: -28)
+                    .accessibilityHidden(true)
 
                 Text(message.body)
                     .font(AppFont.mediumLabel(14))
@@ -286,10 +291,10 @@ private struct MessageBubble: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 11)
                     .background(
-                        RoundedRectangle(cornerRadius: 18)
+                        RoundedRectangle(cornerRadius: AppRadius.r18)
                             .fill(isMine ? Color.appMessageBlue : Color.appMessageReceivedBg)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 18)
+                                RoundedRectangle(cornerRadius: AppRadius.r18)
                                     .strokeBorder(isMine ? Color.appMessageBlue.opacity(0.3) : Color.appBorder, lineWidth: 0.5)
                             )
                     )

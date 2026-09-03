@@ -46,20 +46,20 @@ private struct LaunchLoadingView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    SkeletonShape(cornerRadius: 4).frame(width: 90, height: 12)
-                    SkeletonShape(cornerRadius: 5).frame(width: 130, height: 20)
+                    SkeletonShape(cornerRadius: AppRadius.r4).frame(width: 90, height: 12)
+                    SkeletonShape(cornerRadius: AppRadius.r5).frame(width: 130, height: 20)
                 }
                 Spacer()
-                SkeletonShape(cornerRadius: 21).frame(width: 42, height: 42)
+                SkeletonShape(cornerRadius: AppRadius.r21).frame(width: 42, height: 42)
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
 
-            SkeletonShape(cornerRadius: 26)
+            SkeletonShape(cornerRadius: AppRadius.r26)
                 .frame(height: 52)
                 .padding(.horizontal, 24)
 
-            SkeletonShape(cornerRadius: 5)
+            SkeletonShape(cornerRadius: AppRadius.r5)
                 .frame(width: 170, height: 18)
                 .padding(.leading, 24)
                 .padding(.top, 28)
@@ -68,8 +68,8 @@ private struct LaunchLoadingView: View {
             HStack(spacing: 12) {
                 ForEach(0..<2, id: \.self) { _ in
                     VStack(alignment: .leading, spacing: 6) {
-                        SkeletonShape(cornerRadius: 18).frame(width: cardSize, height: cardSize)
-                        SkeletonShape(cornerRadius: 4).frame(width: cardSize * 0.55, height: 14)
+                        SkeletonShape(cornerRadius: AppRadius.r18).frame(width: cardSize, height: cardSize)
+                        SkeletonShape(cornerRadius: AppRadius.r4).frame(width: cardSize * 0.55, height: 14)
                             .padding(.leading, 5)
                     }
                 }
@@ -121,7 +121,7 @@ struct AuthFlow: View {
                 .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: route)
+        .animation(.easeInOut(duration: AppMotion.snappy), value: route)
     }
 }
 
@@ -294,13 +294,7 @@ struct LegalDocumentView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.appTextMuted)
-                        .frame(width: 31, height: 31)
-                        .background(Circle().fill(Color(white: 0.93)))
-                }
+                CloseButton(action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -458,8 +452,8 @@ struct LoginView: View {
             .padding(.horizontal, 32)
             .contentShape(Rectangle())
             .onTapGesture { focusedField = nil }
-            .animation(.easeOut(duration: 0.25), value: auth.lastError)
-            .animation(.easeOut(duration: 0.25), value: identifierError)
+            .animation(.easeOut(duration: AppMotion.standard), value: auth.lastError)
+            .animation(.easeOut(duration: AppMotion.standard), value: identifierError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -622,9 +616,9 @@ struct RegisterView: View {
             .padding(.horizontal, 32)
             .contentShape(Rectangle())
             .onTapGesture { focusedField = nil }
-            .animation(.easeOut(duration: 0.25), value: auth.lastError)
-            .animation(.easeOut(duration: 0.25), value: emailError)
-            .animation(.easeOut(duration: 0.25), value: passwordError)
+            .animation(.easeOut(duration: AppMotion.standard), value: auth.lastError)
+            .animation(.easeOut(duration: AppMotion.standard), value: emailError)
+            .animation(.easeOut(duration: AppMotion.standard), value: passwordError)
         }
         .onAppear {
             appleCoordinator.onSuccess = { credential in
@@ -660,6 +654,7 @@ struct AuthBackground<Content: View>: View {
                             .background(Circle().fill(Color.white.opacity(0.12)))
                             .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5))
                     }
+                    .accessibilityLabel("Back")
                 }
                 Spacer()
             }
@@ -688,10 +683,7 @@ struct AuthBackground<Content: View>: View {
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .clipped()
                     } else {
-                        LinearGradient(
-                            colors: [Color(red: 0.1, green: 0.3, blue: 0.4), .black],
-                            startPoint: .top, endPoint: .bottom
-                        )
+                        LinearGradient.appAuthImageFallback
                     }
                     
                     if showGradient {
@@ -800,6 +792,7 @@ struct AuthTextField: View {
                     Image(systemName: isRevealed ? "eye.slash" : "eye")
                         .font(.system(size: 14))
                         .foregroundColor(.appPlaceholder)
+                        .accessibilityLabel(isRevealed ? "Hide password" : "Show password")
                 }
                 .buttonStyle(.plain)
             }
@@ -807,15 +800,15 @@ struct AuthTextField: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 20)
         .background(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
+            RoundedRectangle(cornerRadius: AppRadius.r15, style: .continuous)
                 .fill(Color.appFieldBg)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppRadius.r15, style: .continuous)
                         .strokeBorder(isFocused ? Color.appAccentBlack : Color.appBorder, lineWidth: isFocused ? 1.5 : 0.5)
                 )
                 .shadow(color: Color.black.opacity(isFocused ? 0.18 : 0.12), radius: isFocused ? 6 : 4, x: 1, y: 3)
         )
-        .animation(.easeOut(duration: 0.15), value: isFocused)
+        .animation(.easeOut(duration: AppMotion.quick), value: isFocused)
         .onChange(of: validationMessage) { _, new in
             onValidationChange(new)
         }
@@ -859,6 +852,7 @@ struct AuthErrorBanner: View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.circle.fill")
                 .font(.system(size: 13))
+                .accessibilityHidden(true)
             Text(friendlyMessage)
                 .font(.system(size: 13, weight: .medium))
                 .fixedSize(horizontal: false, vertical: true)
@@ -868,10 +862,10 @@ struct AuthErrorBanner: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppRadius.r12)
                 .fill(Color.red.opacity(0.25))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: AppRadius.r12)
                         .strokeBorder(Color.red.opacity(0.5), lineWidth: 1)
                 )
         )
@@ -975,14 +969,6 @@ final class AppleSignInWrapper: ObservableObject {
     }
     
     func start(hashedNonce: String) { coordinator.start(hashedNonce: hashedNonce) }
-}
-
-// MARK: - Small color tokens used by auth UI
-extension Color {
-    static let appPlaceholder = Color.black.opacity(0.25)
-    static let appLinkGreen = Color(red: 0xC4/255, green: 0xFF/255, blue: 0xC9/255)
-    static let appWhite88 = Color.white.opacity(0.88)
-    static let appFieldBg = Color.white.opacity(0.99)
 }
 
 // Previews

@@ -58,8 +58,9 @@ struct PostComposerView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.appTextMuted)
                         .frame(width: 31, height: 31)
-                        .background(Circle().fill(Color(white: 0.93)))
+                        .background(Circle().fill(Color.appIconButtonBackground))
                 }
+                .accessibilityLabel(showingPodPicker ? "Back" : "Close")
                 Spacer()
                 if !showingPodPicker {
                     Button(action: post) {
@@ -219,8 +220,8 @@ struct PostComposerView: View {
                     }
                     .foregroundColor(.appTextMuted)
                     .frame(width: photoTileSize, height: photoTileSize)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.white))
-                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.appBorder, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                    .background(RoundedRectangle(cornerRadius: AppRadius.r14).fill(Color.white))
+                    .overlay(RoundedRectangle(cornerRadius: AppRadius.r14).strokeBorder(Color.appBorder, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
                 }
 
                 ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
@@ -229,7 +230,7 @@ struct PostComposerView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: photoTileSize, height: photoTileSize)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .clipShape(RoundedRectangle(cornerRadius: AppRadius.r14))
 
                         Button {
                             selectedImages.remove(at: index)
@@ -241,6 +242,7 @@ struct PostComposerView: View {
                                 .background(Circle().fill(Color.black.opacity(0.5)))
                         }
                         .offset(x: 6, y: -6)
+                        .accessibilityLabel("Remove photo")
                     }
                 }
             }
@@ -273,7 +275,7 @@ struct PostComposerView: View {
                             HStack(spacing: 12) {
                                 PodPhoto(url: podsStore.primaryPhotoByPodId[pod.id])
                                     .frame(width: 44, height: 44)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.r10))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(pod.name)
                                         .font(AppFont.pillLabelSemiBold(15))

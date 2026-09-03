@@ -72,6 +72,7 @@ struct MyPostsView: View {
                         onBack: onBack,
                         trailingIcon: "bell",
                         onTrailingTap: { showActivity = true },
+                        trailingAccessibilityLabel: "Activity",
                         trailingBadge: hasNewActivity
                     )
 

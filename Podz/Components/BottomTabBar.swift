@@ -332,7 +332,7 @@ struct BottomTabBar: View {
                     // `markRead`/realtime inserts/`send`) isn't wrapped
                     // in one anywhere, so without this it would just
                     // pop in/out instead of transitioning.
-                    .animation(.easeOut(duration: 0.2), value: messagesStore.unreadCount)
+                    .animation(.easeOut(duration: AppMotion.snappy), value: messagesStore.unreadCount)
             }
         }
         // Paired with the row's own 13pt vertical padding, lands the bar
@@ -439,7 +439,7 @@ struct BottomTabBar: View {
             // modifier above, which takes precedence over this for that
             // specific value — this easeOut is what actually animates
             // MainTabView's screen swap (Feed/Likes/Profile/...).
-            withAnimation(.easeOut(duration: 0.15)) {
+            withAnimation(.easeOut(duration: AppMotion.quick)) {
                 selected = tab
             }
         }

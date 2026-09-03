@@ -24,13 +24,7 @@ struct LikeFolderPickerSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: cancelAndDismiss) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.appTextMuted)
-                        .frame(width: 31, height: 31)
-                        .background(Circle().fill(Color(white: 0.93)))
-                }
+                CloseButton(action: cancelAndDismiss)
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -116,7 +110,7 @@ struct LikeFolderPickerSheet: View {
     /// Dashed-outline empty folder tile — tap to start creating.
     private var newFolderTile: some View {
         Button {
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 isCreatingFolder = true
                 newFolderName = ""
             }
@@ -135,7 +129,7 @@ struct LikeFolderPickerSheet: View {
                 // 0.74x-tall back panel inside its square.
                 GeometryReader { proxy in
                     let side = min(proxy.size.width, proxy.size.height)
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: AppRadius.r20)
                         .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                         .foregroundColor(.appTextMuted.opacity(0.5))
                         .overlay(
@@ -162,7 +156,7 @@ struct LikeFolderPickerSheet: View {
         let trimmed = newFolderName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             // Empty name on submit — cancel, back to the normal grid.
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 isCreatingFolder = false
             }
             return
@@ -208,7 +202,7 @@ struct LikeFolderPickerSheet: View {
         // same reason HomeSearchRow's showControls fade-in waits a beat
         // after isFocused before animating in).
         DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: 0.2)) {
+            withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 dropStage = .midArc
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -220,7 +214,7 @@ struct LikeFolderPickerSheet: View {
                     dropStage = .landed
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                    withAnimation(.easeIn(duration: 0.15)) {
+                    withAnimation(.easeIn(duration: AppMotion.quick)) {
                         dropStage = .vanished
                     }
                     // The actual data update — and with it, the real
