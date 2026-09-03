@@ -74,6 +74,14 @@ struct ProfilePromoCard: View {
                 .frame(maxWidth: 266, alignment: .leading)
             }
         }
+        // Plain Button here defaulted to the system's automatic press
+        // state, which dims custom content toward black — reads as a
+        // dark layer flashing over the whole card on tap. A custom style
+        // replaces it with a deliberate scale-down + a light haptic,
+        // rather than just killing the dimming and leaving no feedback
+        // at all (same reasoning as LikesFolderCard's own NoFadeButtonStyle,
+        // which only solves the first half of that).
+        .buttonStyle(TapScaleButtonStyle())
         .frame(height: 124)
         .background(
             RoundedRectangle(cornerRadius: AppRadius.r15)
