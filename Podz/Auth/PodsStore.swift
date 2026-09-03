@@ -8,7 +8,9 @@
 import Foundation
 import Combine
 import Supabase
+import Storage
 import CoreLocation
+import UIKit
 
 @MainActor
 final class PodsStore: ObservableObject {
@@ -128,6 +130,111 @@ final class PodsStore: ObservableObject {
         }
     }
     
+    /// Creates a pod owned by the current host — requires `is_host` on
+    /// their profile (see SQL/host_accounts.sql's insert policy; a
+    /// non-host's insert is rejected server-side, not just hidden client-
+    /// side). Inserts the pod row first, then uploads each photo to
+    /// Storage and inserts the resulting `pod_photos` rows — same
+    /// JPEG-compression + per-user/per-item path pattern as
+    /// `PostsStore.createPost`. A photo upload failing partway through
+    /// doesn't fail the whole call — the pod itself is already real at
+    /// that point, so this returns it regardless and just logs
+    /// `lastError` for whichever photo didn't make it, rather than
+    /// leaving the host with no pod at all over a flaky photo. Returns
+    /// the inserted pod on success and appends it to `pods` locally, same
+    /// shape as `ReservationsStore.create`.
+    ///
+    /// Needs a public `pod-photos` Storage bucket to exist already — same
+    /// as `avatars`/`post-photos`, neither of which has a tracked SQL
+    /// migration either (both created directly in the Supabase dashboard),
+    /// so this one needs the same one-time manual setup.
+    @discardableResult
+    func createPod(_ insert: PodInsert, images: [UIImage] = []) async -> Pod? {
+        lastError = nil
+        do {
+            let inserted: Pod = try await supabase
+                .from("pods")
+                .insert(insert)
+                .select()
+                .single()
+                .execute()
+                .value
+            pods.append(inserted)
+
+            for (index, image) in images.enumerated() {
+                guard let jpegData = image.jpegData(compressionQuality: 0.8) else { continue }
+                let path = "\(insert.hostId.uuidString.lowercased())/\(inserted.id.uuidString.lowercased())/\(index).jpg"
+                do {
+                    try await supabase.storage
+                        .from("pod-photos")
+                        .upload(path, data: jpegData, options: FileOptions(contentType: "image/jpeg", upsert: true))
+                    let publicURL = try supabase.storage.from("pod-photos").getPublicURL(path: path)
+                    try await supabase
+                        .from("pod_photos")
+                        .insert(PodPhotoInsert(podId: inserted.id, url: publicURL.absoluteString, position: index))
+                        .execute()
+                    if index == 0 {
+                        primaryPhotoByPodId[inserted.id] = publicURL.absoluteString
+                    }
+                } catch {
+                    lastError = error.localizedDescription
+                }
+            }
+
+            return inserted
+        } catch {
+            lastError = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Deletes one of *your own* pods (optimistic) — requires
+    /// `pod.hostId` to match the current user both here and, redundantly
+    /// but not just for show, server-side via the `.eq("host_id", ...)`
+    /// on the delete itself (an insert policy alone in
+    /// SQL/host_accounts.sql doesn't cover delete; RLS defaults to deny,
+    /// so this is already blocked there regardless of what this client
+    /// sends, but scoping the query too keeps the intent explicit). Rooms
+    /// and reservations aren't declared with `on delete cascade` anywhere
+    /// this repo tracks (`pods`/`pod_rooms` predate SQL/ entirely), so
+    /// this deletes `pod_photos`/`pod_rooms`/`reservations` for the pod
+    /// first, then the pod row itself — same ordering a cascade would
+    /// give you, just explicit. Storage files are cleaned up afterward,
+    /// best-effort (listing whatever's actually in
+    /// `<hostId>/<podId>/`, not a locally-tracked count) — same reasoning
+    /// as `PostsStore.deletePost`: the DB delete is what actually makes
+    /// the pod gone, so a Storage cleanup failure just leaves orphaned
+    /// files rather than a stuck or incorrectly-restored pod.
+    func deletePod(_ pod: Pod) async {
+        guard let userId = AuthManager.shared.session?.user.id, pod.hostId == userId else { return }
+        let previousPods = pods
+        let previousPhoto = primaryPhotoByPodId[pod.id]
+
+        pods.removeAll { $0.id == pod.id }
+        primaryPhotoByPodId.removeValue(forKey: pod.id)
+
+        do {
+            try await supabase.from("pod_photos").delete().eq("pod_id", value: pod.id).execute()
+            try await supabase.from("pod_rooms").delete().eq("pod_id", value: pod.id).execute()
+            try await supabase.from("reservations").delete().eq("pod_id", value: pod.id).execute()
+            try await supabase
+                .from("pods")
+                .delete()
+                .eq("id", value: pod.id)
+                .eq("host_id", value: userId)
+                .execute()
+
+            let prefix = "\(userId.uuidString.lowercased())/\(pod.id.uuidString.lowercased())"
+            if let files = try? await supabase.storage.from("pod-photos").list(path: prefix), !files.isEmpty {
+                try? await supabase.storage.from("pod-photos").remove(paths: files.map { "\(prefix)/\($0.name)" })
+            }
+        } catch {
+            pods = previousPods
+            if let previousPhoto { primaryPhotoByPodId[pod.id] = previousPhoto }
+            lastError = error.localizedDescription
+        }
+    }
+
     /// Simple client-side proximity search — fine at this data scale.
     /// Move to a PostGIS query server-side once the pods table grows large.
     func pods(near coordinates: [CLLocationCoordinate2D], radiusKm: Double) -> [Pod] {

@@ -22,6 +22,8 @@ struct ProfileView: View {
     @State private var showLoginSecurity = false
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
+    @State private var showAddPod = false
+    @State private var showMyPods = false
     /// contentOffset.y — 0 at rest, grows positive scrolling down. Same
     /// `onScrollGeometryChange` approach PodDetailView uses for its own
     /// persistent top bar.
@@ -41,6 +43,8 @@ struct ProfileView: View {
                 LoginSecurityView(onBack: { showLoginSecurity = false })
             } else if showAccessibility {
                 AccessibilityView(onBack: { showAccessibility = false })
+            } else if showMyPods {
+                MyPodsView(onBack: { showMyPods = false })
             } else {
                 ZStack(alignment: .top) {
                     ScrollView {
@@ -60,7 +64,16 @@ struct ProfileView: View {
                                 showEditProfile = true
                             }
 
-                            ProfilePromoCard()
+                            // Tapping this both makes the current user a
+                            // host (is_host, see SQL/host_accounts.sql)
+                            // and takes them straight into the pod form —
+                            // no separate "you're now a host!" step, since
+                            // becoming one only actually matters once
+                            // there's a pod behind it.
+                            ProfilePromoCard {
+                                Task { await AuthManager.shared.becomeHost() }
+                                showAddPod = true
+                            }
 
                             SectionLabel(title: "Social", trailing: "Kangchenjunga · 8,586m")
                             VStack(spacing: 0) {
@@ -72,6 +85,26 @@ struct ProfileView: View {
                                 }
                                 ProfileMenuRow(icon: "calendar", title: "Reservations") {
                                     showReservations = true
+                                }
+                            }
+
+                            // Hosts only — a plain title, no mountain-
+                            // height trailing label like the sections
+                            // around it (see SectionLabel's own doc
+                            // comment: nil is the pattern everywhere else
+                            // that gag doesn't fit, e.g. Requests/Accepted
+                            // friends in FriendsView). Inserting a 4th
+                            // section here would've broken that gag's
+                            // ordering anyway — Kangchenjunga/K2/Everest
+                            // are literally the top 3 peaks in ascending
+                            // order, with nothing real between K2 and
+                            // Everest to slot a 4th section into.
+                            if auth.profile?.isHost == true {
+                                SectionLabel(title: "Hosting")
+                                VStack(spacing: 0) {
+                                    ProfileMenuRow(icon: "house", title: "My pods") {
+                                        showMyPods = true
+                                    }
                                 }
                             }
 
@@ -121,6 +154,15 @@ struct ProfileView: View {
             }
         }
         .background(Color.appHomeBackground.ignoresSafeArea())
+        // A sheet, not another full-screen push like every other row here
+        // — this is a multi-step form (see AddPodView's own `step`), and
+        // a sheet reads as "a focused task on top of Profile" the way a
+        // full-screen swap (meant for "another whole screen of Profile")
+        // doesn't. Same presentation FriendsView already uses for
+        // AddFriendSheet.
+        .sheet(isPresented: $showAddPod) {
+            AddPodView()
+        }
     }
 
     // MARK: - Persistent top bar

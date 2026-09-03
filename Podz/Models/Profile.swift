@@ -8,6 +8,12 @@ struct Profile: Codable, Equatable {
     var username: String?
     var fullName: String?
     var avatarURL: String?
+    /// Whether this user can create/manage pods — see SQL/host_accounts.sql.
+    /// Not optional: the column is `not null default false`, so every row
+    /// always has a value once that migration's been run (same assumption
+    /// every other non-optional field here already makes about its own
+    /// column).
+    var isHost: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -16,6 +22,7 @@ struct Profile: Codable, Equatable {
         case avatarURL = "avatar_url"
         case age
         case location
+        case isHost = "is_host"
     }
 
     /// Falls back gracefully when Apple sign-in hasn't provided a name yet.

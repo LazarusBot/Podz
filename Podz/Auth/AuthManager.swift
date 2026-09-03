@@ -136,6 +136,30 @@ final class AuthManager: ObservableObject {
         }
     }
     
+    /// Flips the current user into a host — see SQL/host_accounts.sql for
+    /// the column this writes and the policy that then lets them insert
+    /// pods. Idempotent: calling it again once already a host just
+    /// re-confirms the same state, nothing special-cased either way.
+    @discardableResult
+    func becomeHost() async -> Bool {
+        guard let userId = session?.user.id else {
+            lastError = "No active session — can't become a host."
+            return false
+        }
+        do {
+            try await supabase
+                .from("profiles")
+                .update(["is_host": AnyJSON.bool(true)])
+                .eq("id", value: userId)
+                .execute()
+            await fetchProfile()
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
     // MARK: - Email / password
     
     func signUp(name: String, username: String, email: String, password: String) async {
