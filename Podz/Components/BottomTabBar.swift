@@ -24,6 +24,20 @@ enum HomeTab: String, CaseIterable {
         iconName.isEmpty ? "" : "\(iconName)-active"
     }
 
+    /// SF Symbol fallback for `TabBarIcon` if the custom asset above is
+    /// ever missing — in practice never hit, since every hiker tab's
+    /// asset ships with the app, but `TabBarIcon` is shared with
+    /// `HostTabBar` now, whose own Tasks/Guests tabs rely on exactly
+    /// this fallback path having a real icon behind it.
+    var systemFallback: String {
+        switch self {
+        case .feed: "safari"
+        case .likes: "heart"
+        case .pods: "house"
+        case .mailbox: "envelope"
+        case .profile: ""
+        }
+    }
 }
 
 /// Floating pill tab bar (node 4172:377). Sits absolutely over the
@@ -41,22 +55,20 @@ enum HomeTab: String, CaseIterable {
 /// for a floating tab bar (landed around 64pt), with real gaps between
 /// tabs instead of edge-to-edge columns.
 ///
-/// Second attempt at the drag-across-tabs gesture. The first attempt
-/// computed each segment's rect by dividing the measured row width by 5
-/// and subtracting the outer padding by hand — that math had a bug
-/// somewhere (never isolated) that pinned the touch resolution to index
-/// 0, so the whole bar looked dead. This version never computes a
-/// segment's rect — each tab's `Button` reports its own real frame via
-/// `.onGeometryChange`, in a shared named coordinate space, into
-/// `tabFrames`; hit-testing is then just "which measured rect contains
-/// this point," with a nearest-center fallback so an edge/rounding miss
-/// can never fail to resolve to *some* tab. Less arithmetic to get wrong.
+/// Tab selection is a plain tap now, not the old press-and-drag-across
+/// gesture — that mechanic (per-tab frame measurement, hold thresholds,
+/// settle timers) existed only to let a finger slide between tabs
+/// without lifting, which turned out to be more machinery than the
+/// interaction was worth. The one gesture worth keeping the extra
+/// complexity for is the Profile tab's own long-press, which reveals
+/// `ModeSwitchPill` — see `profileModeSwitch` below.
 struct BottomTabBar: View {
     @Binding var selected: HomeTab
     var profileImageName: String? = nil
     @ObservedObject private var likesStore = LikesStore.shared
     @ObservedObject private var messagesStore = MessagesStore.shared
     @ObservedObject private var postsStore = PostsStore.shared
+    @ObservedObject private var appMode = AppModeStore.shared
     /// New (unseen) likes/comments on your own posts — same source
     /// PostsActivityView itself reads, just reduced to a plain presence
     /// check for the dot.
@@ -64,32 +76,42 @@ struct BottomTabBar: View {
         guard let userId = AuthManager.shared.session?.user.id else { return false }
         return postsStore.newActivityCount(onPostsAuthoredBy: userId) > 0
     }
-    /// Each tab's own on-screen frame, in the "tabRow" named coordinate
-    /// space — populated by every tab's `.onGeometryChange` as soon as
-    /// layout settles, read by the drag gesture to resolve a touch point
-    /// to a tab, and by the pill to size/position itself.
+    /// Each tab's own on-screen frame — sizing/positioning the sliding
+    /// selection pill only needs this now (no more hit-testing a drag
+    /// against it, since selection is a plain tap per tab).
     @State private var tabFrames: [HomeTab: CGRect] = [:]
-    /// The tab currently under the finger while a touch is down, OR
-    /// still settling into its post-release position — nil only once
-    /// both the finger is up *and* the settle animation has finished, at
-    /// which point the pill falls back to `selected`. Drives *position*
-    /// only now — growth/glass are gated on `isHolding` instead (see
-    /// below), so a plain tap doesn't pop/shrink at all, just slides.
-    @State private var draggedTab: HomeTab?
-    /// True once the current touch has been down past `holdThreshold`
-    /// without releasing — a genuine press or drag, as opposed to a
-    /// quick tap. Only this drives the pill's grow/glass look.
-    @State private var isHolding = false
-    /// Starts on touch-down, fires `isHolding = true` after
-    /// `holdThreshold` — cancelled on release, so a tap shorter than the
-    /// threshold never sets it at all.
-    @State private var holdTask: Task<Void, Never>?
-    /// Clears `draggedTab`/`isHolding` after the settle animation's own
-    /// duration — cancelled and restarted on every new touch so a fast
-    /// second tap doesn't let a stale timer null them out mid-drag.
-    @State private var settleTask: Task<Void, Never>?
-
-    private var displayedTab: HomeTab { draggedTab ?? selected }
+    /// True while `ModeSwitchPill` is up, revealed by a long press on
+    /// the Profile tab — see `profileModeSwitch`.
+    @State private var isModeSwitchRevealed = false
+    /// 0...1 drag progress of the pill's handle, owned here so it can be
+    /// reset the instant the switch commits (closing the pill mid-way
+    /// through its own commit action would otherwise show the handle
+    /// snapping back before the fade-out even starts).
+    @State private var modeSwitchProgress: CGFloat = 0
+    /// True for the instant between the Profile tab's long press firing
+    /// (revealing the pill, finger still down) and that same touch's
+    /// release — swallows the plain-tap `.onTapGesture` that release
+    /// would otherwise also fire (they're `.simultaneousGesture`, not
+    /// exclusive, specifically so the long press doesn't block a normal
+    /// short tap — see `ProfileLongPress`). Safe to set/check without a
+    /// race: `LongPressGesture.onEnded` always fires at the duration
+    /// threshold, strictly before the release that fires `onTapGesture`.
+    @State private var suppressNextProfileTap = false
+    /// First-time tip pointing at the Profile tab's own long-press —
+    /// same idea as HomeView's Lenny coachmark (see `CoachmarkBubble`),
+    /// shown once to hosts who haven't discovered the gesture yet.
+    @State private var showModeSwitchCoachmark = false
+    /// Measured so the bubble can be right-aligned to the Profile tab's
+    /// own trailing edge (it sits at the far right of the row, so a
+    /// left-aligned bubble — the Lenny coachmark's own approach — would
+    /// run off the right edge of the screen instead). Seeded with a
+    /// reasonable guess, not `.zero`, so the very first frame (before
+    /// `onGeometryChange` reports the real size) still lands close to
+    /// right instead of visibly jumping into place a frame later.
+    @State private var modeSwitchCoachmarkBubbleSize = CGSize(width: 300, height: 90)
+    /// Persisted so this only ever shows once, not once per session —
+    /// same reasoning as HomeView's own `hasSeenLennyCoachmark`.
+    @AppStorage("podz.hasSeenModeSwitchCoachmark") private var hasSeenModeSwitchCoachmark = false
 
     var body: some View {
         Group {
@@ -113,6 +135,112 @@ struct BottomTabBar: View {
             Capsule()
                 .strokeBorder(Color.appBorder, lineWidth: 0.5)
         )
+        .overlay(alignment: .top) {
+            if isModeSwitchRevealed {
+                ModeSwitchPill(
+                    label: appMode.mode == .host ? "Switch to hiker mode ?" : "Switch to hosting mode ?",
+                    progress: $modeSwitchProgress,
+                    onCommit: commitModeSwitch,
+                    // Instant, not the animated spring — a below-
+                    // threshold release reads as "changed their mind,"
+                    // same as a tap outside the pill, so it gets the
+                    // same immediate dismiss rather than a fade/spring
+                    // that makes an already-abandoned gesture linger.
+                    onCancel: dismissModeSwitchInstantly
+                )
+                .offset(y: -60)
+                // `.background`, not a `ZStack` sibling — a sibling's
+                // huge 2000x2000 frame would make the *whole stack* size
+                // to it, which shifts where "center" is and throws off
+                // this pill's own `.offset(y: -60)` (it landed hundreds
+                // of points off-screen the first time). `.background`
+                // doesn't propose its own size upward — the reported
+                // layout size stays the pill's own small footprint, with
+                // the catcher just painted (and hit-testable) behind it
+                // without disturbing that.
+                .background(ModeSwitchDismissCatcher(onDismiss: dismissModeSwitchInstantly))
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .zIndex(1)
+            }
+        }
+        .overlay(alignment: .top) {
+            if showModeSwitchCoachmark, let profileRect = tabFrames[.profile] {
+                // `tabFrames` is measured in the "tabRow" named space
+                // (`tabRow`'s own pre-padding origin — see its own
+                // `.coordinateSpace`), but this overlay sits on the
+                // outer `Group`, *after* `tabRow`'s own 24/13 padding —
+                // converting into that space is what makes this rect
+                // line up with the real, on-screen Profile tab instead
+                // of landing 24pt left and 13pt above it.
+                let rect = profileRect.offsetBy(dx: 24, dy: tabRowVerticalPadding)
+                GeometryReader { geo in
+                    ZStack(alignment: .topLeading) {
+                        CoachmarkSpotlightScrim(onDismiss: dismissModeSwitchCoachmark)
+
+                        // A floating clone of the real avatar, positioned
+                        // exactly over the Profile tab — same "align by
+                        // construction" reasoning as HomeView's own Lenny
+                        // chip clone (see its own comment for why a
+                        // literal cutout mask isn't used instead).
+                        AvatarView(imageName: profileImageName, size: 26)
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
+                            .shadow(color: .black.opacity(0.35), radius: 10)
+                            .position(x: rect.midX, y: rect.midY)
+                            .contentShape(Circle())
+                            .onTapGesture(perform: dismissModeSwitchCoachmark)
+
+                        // Right-aligned to the tab's own trailing edge,
+                        // pointing down — the Profile tab sits at the far
+                        // right of the row and near the bottom of the
+                        // screen, the opposite corner from Lenny's chip,
+                        // so both the bubble's own alignment and its
+                        // tail direction flip relative to that coachmark.
+                        CoachmarkBubble(
+                            message: "Long-press and swipe right on your profile to switch into hosting mode.",
+                            tailCenterOffset: rect.midX - (rect.maxX - modeSwitchCoachmarkBubbleSize.width),
+                            pointsDown: true,
+                            onDismiss: dismissModeSwitchCoachmark
+                        )
+                        .onGeometryChange(for: CGSize.self) { $0.size } action: { modeSwitchCoachmarkBubbleSize = $0 }
+                        .offset(
+                            x: rect.maxX - modeSwitchCoachmarkBubbleSize.width,
+                            y: rect.minY - 4 - modeSwitchCoachmarkBubbleSize.height
+                        )
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                }
+                .zIndex(2)
+            }
+        }
+        .task {
+            // Only hosts actually have anything to switch to — showing
+            // this to a plain hiker account would point at a gesture
+            // that, per OnboardingView's own routing, does nothing for
+            // them. `.mode == .hiker` guards against re-showing this to
+            // someone who already found their way into host mode some
+            // other way (the Profile menu, before this existed) without
+            // ever triggering this specific gesture.
+            guard
+                AuthManager.shared.profile?.isHost == true,
+                appMode.mode == .hiker,
+                !hasSeenModeSwitchCoachmark
+            else { return }
+            // Same reasoning as HomeView's own Lenny coachmark: let
+            // whatever brought this bar on screen finish its own
+            // entrance first, so the coachmark doesn't appear pointing
+            // at a tab bar still mid-transition.
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard AuthManager.shared.profile?.isHost == true, appMode.mode == .hiker else { return }
+            hasSeenModeSwitchCoachmark = true
+            withAnimation(.easeOut(duration: AppMotion.standard)) {
+                showModeSwitchCoachmark = true
+            }
+        }
+        .onChange(of: isModeSwitchRevealed) { _, revealed in
+            // Once they've actually triggered the real gesture themselves
+            // there's nothing left to teach them.
+            if revealed { dismissModeSwitchCoachmark() }
+        }
     }
 
     private var tabRow: some View {
@@ -132,126 +260,30 @@ struct BottomTabBar: View {
                     } action: { frame in
                         tabFrames[tab] = frame
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { handleTap(tab) }
+                    .modifier(ProfileLongPress(isActive: tab == .profile, onLongPress: revealModeSwitch))
             }
         }
-        // Named directly on the HStack, before anything else touches it
-        // — every button's measured frame and the pill's placement below
-        // both need to agree on the exact same origin (this view's own
-        // pre-padding top-left corner), or they drift apart by whatever
-        // padding sits between them.
         .coordinateSpace(name: "tabRow")
-        // `.background`, not a ZStack/outer-layer sibling — living
-        // nested here means the pill inherits `.glassEffect(_, in:
-        // .capsule)`'s clip to the bar's own outline, which reads better
-        // than a pill popping out past the bar's edges while pressed.
-        .background(alignment: .topLeading) {
-            pillOverlay
-        }
+        .background(alignment: .topLeading) { pillOverlay }
         .padding(.horizontal, 24)
         .padding(.vertical, tabRowVerticalPadding)
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 0, coordinateSpace: .named("tabRow"))
-                .onChanged { value in
-                    settleTask?.cancel()
-                    // `holdTask == nil` is what identifies this as the
-                    // first `onChanged` of a fresh touch (it's cleared
-                    // in `onEnded` below) — start the hold-threshold
-                    // timer exactly once per touch, not on every update
-                    // as a drag moves across tabs.
-                    if holdTask == nil {
-                        holdTask = Task {
-                            try? await Task.sleep(nanoseconds: 130_000_000)
-                            guard !Task.isCancelled else { return }
-                            isHolding = true
-                        }
-                    }
-                    draggedTab = tab(at: resolvedLocation(for: value))
-                }
-                .onEnded { value in
-                    // Cancelling here (not letting it run out) is what
-                    // makes a quick tap never grow at all — released
-                    // before `holdThreshold`, so `isHolding` never
-                    // flips true, and the tap plays as a plain slide.
-                    holdTask?.cancel()
-                    holdTask = nil
-                    if let tab = tab(at: resolvedLocation(for: value)) {
-                        commitSelection(tab)
-                    }
-                    // Don't clear `draggedTab`/`isHolding` immediately —
-                    // for a genuine press/drag, that made the post-
-                    // release settle slide play with the flat resting
-                    // fill instead of glass, since by the time the
-                    // pill's own position animation started, `isHolding`
-                    // was already false. Hold both through the settle
-                    // animation instead, then clear them. Matches
-                    // `pillGrowthSpring`'s own settle time (0.5s
-                    // response, 0.9 damping — settles in roughly
-                    // 1.3-1.4x that), the slower of the two pill
-                    // springs — clearing any sooner flips `isHolding`
-                    // back to false (shrinking the pill) before growth
-                    // even finishes expanding it, which looked like the
-                    // growth reversing mid-motion. Harmless no-op for a
-                    // plain tap, where `isHolding` was never true.
-                    settleTask?.cancel()
-                    settleTask = Task {
-                        try? await Task.sleep(nanoseconds: 680_000_000)
-                        guard !Task.isCancelled else { return }
-                        draggedTab = nil
-                        isHolding = false
-                    }
-                }
-        )
     }
 
-    /// Sized to the active tab's own measured frame, grown by an explicit
-    /// width/height *added to the frame itself* (asymmetric — much more
-    /// on X than Y, which is what actually makes it read as a wide,
-    /// short pill rather than a tall rounded rectangle). Reverted from a
-    /// brief detour into insetting from the bar's full height instead —
-    /// that filled almost the entire bar vertically and stopped looking
-    /// like a pill at all, which wasn't the ask; "take more place" meant
-    /// bigger, not a different shape. Not `.scaleEffect(x: y:)` either —
-    /// that was an earlier, separate bug: scaling a `Capsule()`'s two
-    /// axes by different factors stretches its round ends into ellipses
-    /// instead of keeping them circular. Growing the frame directly lets
-    /// `Capsule()` compute its own correct rounding for whatever
-    /// width/height it's actually given.
     @ViewBuilder
     private var pillOverlay: some View {
-        if let frame = tabFrames[displayedTab] {
-            let growthX = isHolding ? pillPressedGrowthX : pillRestingGrowthX
-            let growthY = isHolding ? pillPressedGrowthY : pillRestingGrowthY
-            let pillWidth = frame.width + growthX * 2
-            let pillHeight = frame.height + growthY * 2
+        if let frame = tabFrames[selected] {
             pill
-                .frame(width: pillWidth, height: pillHeight)
-                // Scoped to the frame specifically, watching only
-                // `isHolding` — a plain tap never sets `isHolding` at
-                // all now (see the gesture above), so it just slides;
-                // for a genuine press/drag, the growth is a small pixel
-                // delta next to a potentially full-bar-width position
-                // change, so under a matched spring the growth visually
-                // finished long before the travel did. `pillGrowthSpring`
-                // is deliberately slower so it stays visibly in motion
-                // for close to as long as a full slide takes, instead of
-                // racing ahead of it.
-                .animation(pillGrowthSpring, value: isHolding)
-                // `.offset`, not `.position` — `.position` made this view
-                // (and its old ZStack parent) report a greedy, unbounded
-                // ideal size upward, which is why the whole bar once
-                // ballooned to fill the screen. `.offset` translates
-                // without touching layout sizing at all, so with
-                // `.topLeading` alignment the top-left-corner math below
-                // lands the pill's *center* at the tab's own center.
-                .offset(x: frame.midX - pillWidth / 2, y: frame.midY - pillHeight / 2)
-                .animation(pillSpring, value: displayedTab)
+                .frame(width: frame.width + pillGrowthX * 2, height: frame.height + pillGrowthY * 2)
+                .offset(x: frame.midX - (frame.width + pillGrowthX * 2) / 2, y: frame.midY - (frame.height + pillGrowthY * 2) / 2)
+                .animation(pillSpring, value: selected)
         }
     }
 
     @ViewBuilder
     private func tabContent(_ tab: HomeTab) -> some View {
-        let isHighlighted = tab == displayedTab
+        let isHighlighted = tab == selected
 
         // Icon-only now — no label underneath (see the sizing note
         // below) — so this is just a single-child container rather than
@@ -276,7 +308,12 @@ struct BottomTabBar: View {
                         }
                     }
             } else {
-                TabIcon(tab: tab, isActive: isHighlighted)
+                TabBarIcon(
+                    assetName: tab.iconName,
+                    activeAssetName: tab.iconNameActive,
+                    systemFallback: tab.systemFallback,
+                    isActive: isHighlighted
+                )
                     // Anchored to the icon's own bounds, not the tab's
                     // full flexible-width column — that column spans a
                     // fifth of the bar's width, so .topTrailing on it
@@ -340,10 +377,6 @@ struct BottomTabBar: View {
         // Apple's ~56pt floating-tab-bar reference on request, rather
         // than landing exactly on it.
         .padding(.vertical, 6)
-        // The row's own gesture drives selection now (there's no Button
-        // per tab any more, so it can track a finger sliding across
-        // segments) — this keeps each tab a real accessibility element
-        // with a working activate action for VoiceOver.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.rawValue)
         .accessibilityAddTraits(isHighlighted ? [.isButton, .isSelected] : .isButton)
@@ -353,77 +386,22 @@ struct BottomTabBar: View {
     /// The single gray pill — sized/positioned by `pillOverlay` off the
     /// active tab's own measured frame, styled here.
     private var pill: some View {
-        Group {
-            if isHolding, #available(iOS 26, *) {
-                // Glass only while genuinely held/dragging (not a plain
-                // tap — see `isHolding`), as a "grabbed" cue — sitting
-                // still behind an icon/label the rest of the time,
-                // full-time glass read as too heavy. Deliberately NOT
-                // `.interactive()` — that variant installs its own touch
-                // handling, which is what broke this row's own drag
-                // gesture the first time around.
-                Color.clear
-                    .glassEffect(.regular.tint(Color.gray.opacity(0.1)), in: .capsule)
-            } else {
-                // Resting (or pre-iOS 26, which never gets glass): a
-                // plain translucent gray fill.
-                Capsule()
-                    .fill(Color.gray.opacity(isHolding ? 0.2 : 0.16))
-            }
-        }
+        Capsule().fill(Color.gray.opacity(0.16))
     }
 
     /// Drives the pill's slide between tabs.
     private let pillSpring: Animation = .spring(response: 0.28, dampingFraction: 0.85)
-    /// Drives the pill's press-triggered growth — deliberately slower
-    /// than `pillSpring` (see `pillOverlay`) to compensate for growth
-    /// being a much smaller pixel delta than a cross-bar slide, which
-    /// otherwise finishes animating well before the slide does even
-    /// under an identical curve.
-    private let pillGrowthSpring: Animation = .spring(response: 0.5, dampingFraction: 0.9)
 
     /// `tabRow`'s own vertical padding — named so it's one number
     /// instead of a repeated literal.
     private let tabRowVerticalPadding: CGFloat = 13
 
-    /// Resting growth, added to each side of the tab's own measured
-    /// width/height — asymmetric on purpose (X well past Y) so it reads
-    /// as an actual wide pill rather than a squarish blob hugging the
-    /// icon or a tall rounded rectangle. Sized up from 14/4 on request —
-    /// same shape, more presence.
-    private let pillRestingGrowthX: CGFloat = 18
-    private let pillRestingGrowthY: CGFloat = 6
-    /// Pressed growth — a further step up, same proportions.
-    private let pillPressedGrowthX: CGFloat = 22
-    private let pillPressedGrowthY: CGFloat = 9
-
-    /// Below `tapMovementTolerance` of total travel, resolve against
-    /// where the finger went *down* — natural tremor during a tap can
-    /// carry a finger a few points sideways with zero intent to drag,
-    /// and with a `minimumDistance: 0` gesture, that tremor alone could
-    /// previously cross a tab boundary and select the neighboring tab
-    /// on release. This is a real precision issue, not a cosmetic one:
-    /// a raw drag gesture has no built-in tap/drag distinction the way
-    /// `Button` did, so this dead zone reintroduces one — small movement
-    /// still reads as "the tab I put my finger on," and only travel that
-    /// clearly exceeds ordinary tremor counts as an intentional slide,
-    /// at which point it tracks the live finger position instead.
-    private func resolvedLocation(for value: DragGesture.Value) -> CGPoint {
-        let movement = hypot(value.translation.width, value.translation.height)
-        return movement < tapMovementTolerance ? value.startLocation : value.location
-    }
-    private let tapMovementTolerance: CGFloat = 12
-
-    /// Which measured tab frame `point` falls in — falls back to the tab
-    /// whose horizontal center is closest, so a touch landing exactly on
-    /// a boundary (or a stale/rounding-off frame) always resolves to
-    /// *some* tab instead of silently doing nothing.
-    private func tab(at point: CGPoint) -> HomeTab? {
-        if let hit = tabFrames.first(where: { $0.value.contains(point) })?.key {
-            return hit
-        }
-        return tabFrames.min { abs($0.value.midX - point.x) < abs($1.value.midX - point.x) }?.key
-    }
+    /// Added to each side of the active tab's own measured width/height
+    /// — asymmetric on purpose (X well past Y) so it reads as an actual
+    /// wide pill rather than a squarish blob hugging the icon or a tall
+    /// rounded rectangle.
+    private let pillGrowthX: CGFloat = 18
+    private let pillGrowthY: CGFloat = 6
 
     private func commitSelection(_ tab: HomeTab) {
         if tab == selected {
@@ -435,39 +413,121 @@ struct BottomTabBar: View {
                 HomeSearchState.shared.feedReselected += 1
             }
         } else {
-            // The pill's own position has its own snappier `.animation`
-            // modifier above, which takes precedence over this for that
-            // specific value — this easeOut is what actually animates
-            // MainTabView's screen swap (Feed/Likes/Profile/...).
             withAnimation(.easeOut(duration: AppMotion.quick)) {
                 selected = tab
             }
         }
     }
+
+    private func handleTap(_ tab: HomeTab) {
+        if tab == .profile && suppressNextProfileTap {
+            suppressNextProfileTap = false
+            return
+        }
+        commitSelection(tab)
+    }
+
+    private func revealModeSwitch() {
+        suppressNextProfileTap = true
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isModeSwitchRevealed = true
+        }
+    }
+
+    private func dismissModeSwitch() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            isModeSwitchRevealed = false
+            modeSwitchProgress = 0
+        }
+    }
+
+    /// A tap genuinely outside the pill (`ModeSwitchDismissCatcher`)
+    /// closes it right away — no spring, no fade — unlike a below-
+    /// threshold drag release, which still gets `dismissModeSwitch`'s
+    /// animated snap-back above.
+    private func dismissModeSwitchInstantly() {
+        isModeSwitchRevealed = false
+        modeSwitchProgress = 0
+    }
+
+    private func commitModeSwitch() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        appMode.mode = appMode.mode == .host ? .hiker : .host
+        dismissModeSwitch()
+    }
+
+    private func dismissModeSwitchCoachmark() {
+        withAnimation(.easeIn(duration: AppMotion.quick)) {
+            showModeSwitchCoachmark = false
+        }
+    }
+}
+
+/// Attaches a long-press-only gesture to one tab's content — kept as its
+/// own modifier rather than an inline `.onLongPressGesture` in
+/// `tabContent` so the same "which tab, which callback" shape can be
+/// reused verbatim by `HostTabBar`.
+struct ProfileLongPress: ViewModifier {
+    let isActive: Bool
+    let onLongPress: () -> Void
+
+    func body(content: Content) -> some View {
+        if isActive {
+            // `.simultaneousGesture`, not `.gesture`/`.onLongPressGesture`
+            // — those compete exclusively with the tab's own
+            // `.onTapGesture` already attached above (SwiftUI gives the
+            // last-attached gesture precedence), which risks swallowing
+            // plain taps on Profile entirely. Simultaneous recognition is
+            // the documented way to add a long press alongside an
+            // existing tap without either blocking the other.
+            content.simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.4).onEnded { _ in onLongPress() }
+            )
+        } else {
+            content
+        }
+    }
 }
 
 /// Picks the right icon for the current state: custom "active" asset if
-/// active + present, custom base asset if present, else SF Symbol fallback.
-private struct TabIcon: View {
-    let tab: HomeTab
+/// active + present, custom base asset if present, else an SF Symbol
+/// fallback — shared with `HostTabBar` (not `private` here on purpose)
+/// so a host tab that reuses one of the hiker shell's own icons
+/// (Mailbox, My Pods) renders the exact same glyph instead of falling
+/// back to a different, generic system one. `assetName`/`activeAssetName`
+/// are `nil` for a tab with no export of its own yet (Tasks, Guests),
+/// which just goes straight to `systemFallback`.
+struct TabBarIcon: View {
+    var assetName: String? = nil
+    var activeAssetName: String? = nil
+    let systemFallback: String
     let isActive: Bool
 
-    var body: some View {
-        let assetName = isActive ? tab.iconNameActive : tab.iconName
+    private var resolvedAsset: String? {
+        let preferred = isActive ? (activeAssetName ?? assetName) : assetName
+        if let preferred, UIImage(named: preferred) != nil {
+            return preferred
+        }
+        // Active variant not exported yet — keep the base look but with
+        // the active color/weight, rather than falling all the way back
+        // to the system glyph.
+        if let assetName, UIImage(named: assetName) != nil {
+            return assetName
+        }
+        return nil
+    }
 
+    var body: some View {
         Group {
-            if UIImage(named: assetName) != nil {
-                Image(assetName)
+            if let resolvedAsset {
+                Image(resolvedAsset)
                     .resizable()
                     .renderingMode(.template)
                     .aspectRatio(contentMode: .fit)
-            } else if UIImage(named: tab.iconName) != nil {
-                // Active variant not exported yet — keep the base look but
-                // with the active color/weight, rather than nothing.
-                Image(tab.iconName)
-                    .resizable()
-                    .renderingMode(.template)
-                    .aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: systemFallback)
+                    .font(.system(size: 20, weight: .semibold))
             }
         }
         // 26, not 24 — icon-only now that the label's gone, so the icon

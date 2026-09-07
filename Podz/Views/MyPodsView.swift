@@ -8,13 +8,14 @@
 import SwiftUI
 internal import Auth
 
-/// A host's own pods — reached from ProfileView's "Hosting" section
-/// (shown only when `auth.profile?.isHost` is true). Same manual
-/// @State push/pop pattern as FriendsView/MyPostsView/MyReservationsView,
-/// not NavigationStack — this app doesn't use one anywhere. The trailing
-/// "+" opens the same `AddPodView` sheet the Profile promo card does.
+/// A host's own pods — the "Pods" tab inside `HostTabView`, the host
+/// dashboard shell. `onBack` stays optional (nil there, same duality
+/// `ProfileView`/`ProfileTopBar` already use to work both as a root tab
+/// with no back button and as a pushed sub-screen) — kept usable as a
+/// pushed screen too rather than only ever a tab. The trailing "+" opens
+/// the same `AddPodView` sheet the Profile promo card does.
 struct MyPodsView: View {
-    var onBack: () -> Void
+    var onBack: (() -> Void)? = nil
 
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var auth = AuthManager.shared
@@ -50,7 +51,7 @@ struct MyPodsView: View {
                         .font(.system(size: 32))
                         .foregroundColor(.appTextMuted)
                     Text("No pods listed yet — tap + to add your first one.")
-                        .font(AppFont.mediumLabel(14))
+                        .font(AppFont.regularLabel(14))
                         .foregroundColor(.appTextMuted)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
@@ -113,11 +114,11 @@ private struct MyPodRow: View {
                     .font(AppFont.pillLabelBold(15))
                     .foregroundColor(.appTextPrimary)
                 Text(locationLine)
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.regularLabel(13))
                     .foregroundColor(.appTextMuted)
                 if let beds = pod.bedsTotal {
                     Text("\(beds) bed\(beds == 1 ? "" : "s")")
-                        .font(AppFont.mediumLabel(12))
+                        .font(AppFont.regularLabel(12))
                         .foregroundColor(.appTextMuted)
                 }
             }
@@ -139,5 +140,5 @@ private struct MyPodRow: View {
 }
 
 #Preview {
-    MyPodsView(onBack: {})
+    MyPodsView()
 }
