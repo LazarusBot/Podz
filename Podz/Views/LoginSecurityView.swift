@@ -66,7 +66,7 @@ private struct InfoRow: View {
                 .font(AppFont.pillLabelSemiBold(16))
                 .foregroundColor(.black)
             Text(label)
-                .font(AppFont.mediumLabel(11))
+                .font(AppFont.regularLabel(11))
                 .foregroundColor(.appTextMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -10,7 +10,7 @@ struct HomeHeader: View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(greeting)
-                    .font(AppFont.mediumLabel())
+                    .font(AppFont.regularLabel())
                     .foregroundColor(.appTextMuted)
                 Text("@\(username)")
                     .font(AppFont.pillLabel(24))

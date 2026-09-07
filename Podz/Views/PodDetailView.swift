@@ -529,7 +529,7 @@ struct PodDetailView: View {
                         .font(AppFont.pillLabelBold(17))
                         .foregroundColor(.appTextPrimary)
                     Text(hostBlurb)
-                        .font(AppFont.mediumLabel(14))
+                        .font(AppFont.regularLabel(14))
                         .foregroundColor(.appTextMuted)
                 }
                 Spacer(minLength: 0)
@@ -921,7 +921,7 @@ struct PodDetailView: View {
             // label or a large number, the two things Darker Grotesque is
             // meant for per AppFont's own doc comment.
             Text(cancellationPolicy)
-                .font(AppFont.mediumLabel(16))
+                .font(AppFont.regularLabel(16))
                 .foregroundColor(.appTextMuted)
                 .padding(.horizontal, 24)
                 .padding(.bottom, sectionBottomPadding)

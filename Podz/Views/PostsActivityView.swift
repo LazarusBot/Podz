@@ -54,7 +54,7 @@ struct PostsActivityView: View {
                         .font(.system(size: 32))
                         .foregroundColor(.appTextMuted)
                     Text("No likes or comments on your posts yet.")
-                        .font(AppFont.mediumLabel(14))
+                        .font(AppFont.regularLabel(14))
                         .foregroundColor(.appTextMuted)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
@@ -119,12 +119,12 @@ private struct ActivityRow: View {
                     Text(actorProfile?.displayName ?? "Someone").fontWeight(.semibold)
                         + Text(" \(actionText)")
                 )
-                .font(AppFont.mediumLabel(14))
+                .font(AppFont.regularLabel(14))
                 .foregroundColor(isSeen ? .appTextMuted : .black)
 
                 if case .comment(let body) = item.kind {
                     Text("\u{201C}\(body)\u{201D}")
-                        .font(AppFont.mediumLabel(13))
+                        .font(AppFont.regularLabel(13))
                         .foregroundColor(.appTextMuted)
                         .lineLimit(2)
                 }
@@ -136,7 +136,7 @@ private struct ActivityRow: View {
                     }
                     Text(Self.relativeTime(item.createdAt))
                 }
-                .font(AppFont.mediumLabel(11))
+                .font(AppFont.regularLabel(11))
                 .foregroundColor(.appTextMuted)
             }
 

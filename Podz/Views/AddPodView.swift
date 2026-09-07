@@ -119,7 +119,7 @@ struct AddPodView: View {
             // different per-step caption on top of both would be one
             // signal too many.
             Text("Step \(step + 1)/\(stepCount)")
-                .font(AppFont.itemTitle(16))
+                .font(AppFont.regularLabel(16))
                 .foregroundColor(.appTextMuted)
                 .padding(.top, 12)
 
@@ -160,7 +160,7 @@ struct AddPodView: View {
             ProgressView()
                 .scaleEffect(1.3)
             Text("Creating your pod…")
-                .font(AppFont.mediumLabel(15))
+                .font(AppFont.regularLabel(15))
                 .foregroundColor(.appTextMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -175,7 +175,7 @@ struct AddPodView: View {
                 .font(AppFont.pillLabelBold(16))
                 .foregroundColor(.appTextPrimary)
             Text(name)
-                .font(AppFont.mediumLabel(13))
+                .font(AppFont.regularLabel(13))
                 .foregroundColor(.appTextMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -212,7 +212,7 @@ struct AddPodView: View {
                 // doc comment for why it's inlined here rather than using
                 // that type directly.
                 Text("Beds total".uppercased())
-                    .font(AppFont.itemTitle(12))
+                    .font(AppFont.regularLabel(12))
                     .tracking(0.5)
                     .foregroundColor(.appTextMuted)
                 StepperControl(value: $bedsTotal, range: 1...200, label: "beds")
@@ -220,7 +220,7 @@ struct AddPodView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("Description".uppercased())
-                    .font(AppFont.itemTitle(12))
+                    .font(AppFont.regularLabel(12))
                     .tracking(0.5)
                     .foregroundColor(.appTextMuted)
                 TextField("What makes this place worth the hike?", text: $description, axis: .vertical)
@@ -249,7 +249,7 @@ struct AddPodView: View {
             VStack(spacing: 8) {
                 AvatarPicker(currentImageURL: auth.profile?.avatarURL, size: 80)
                 Text("Your host photo".uppercased())
-                    .font(AppFont.itemTitle(12))
+                    .font(AppFont.regularLabel(12))
                     .tracking(0.5)
                     .foregroundColor(.appTextMuted)
             }
@@ -257,7 +257,7 @@ struct AddPodView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("Photos of your pod".uppercased())
-                    .font(AppFont.itemTitle(12))
+                    .font(AppFont.regularLabel(12))
                     .tracking(0.5)
                     .foregroundColor(.appTextMuted)
                 podPhotoPicker
@@ -458,7 +458,7 @@ private struct FormField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text((isRequired ? label : "\(label) (optional)").uppercased())
-                .font(AppFont.itemTitle(12))
+                .font(AppFont.regularLabel(12))
                 .tracking(0.5)
                 .foregroundColor(.appTextMuted)
             // 20, not the old 15 — two fields is all a step holds now,

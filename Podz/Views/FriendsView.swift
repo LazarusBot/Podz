@@ -45,7 +45,7 @@ struct FriendsView: View {
 
                         if friendsStore.friends.isEmpty {
                             Text("No friends yet — tap + to add someone.")
-                                .font(AppFont.mediumLabel(14))
+                                .font(AppFont.regularLabel(14))
                                 .foregroundColor(.appTextMuted)
                                 .padding(.horizontal, 24)
                                 .padding(.vertical, 8)
@@ -112,7 +112,12 @@ private struct FriendRequestRow: View {
                     .foregroundColor(.appTextPrimary)
                 if let username = profile?.username {
                     Text("@\(username)")
-                        .font(AppFont.mediumLabel(13))
+                        // Darker Grotesque (the name above, `pillLabelBold`)
+                        // renders noticeably smaller per point than Inter
+                        // — 13pt Inter next to 15pt Darker Grotesque read
+                        // as nearly the same size. Same name:subtitle
+                        // ratio `ProfileAccountRow` uses (16:11).
+                        .font(AppFont.regularLabel(11))
                         .foregroundColor(.appTextMuted)
                 }
             }
@@ -151,7 +156,9 @@ private struct FriendRow: View {
                     .foregroundColor(.black)
                 if let username = profile?.username {
                     Text("@\(username)")
-                        .font(AppFont.mediumLabel(15))
+                        // Same Darker-Grotesque-vs-Inter size mismatch as
+                        // `FriendRequestRow`'s own username — see there.
+                        .font(AppFont.regularLabel(13))
                         .foregroundColor(.appTextMuted)
                 }
             }

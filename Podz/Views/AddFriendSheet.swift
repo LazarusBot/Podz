@@ -87,7 +87,9 @@ struct AddFriendSheet: View {
                     .foregroundColor(.black)
                 if let username = profile.username {
                     Text("@\(username)")
-                        .font(AppFont.mediumLabel(13))
+                        // Same Darker-Grotesque-vs-Inter size mismatch as
+                        // FriendsView's `FriendRequestRow` — see there.
+                        .font(AppFont.regularLabel(11))
                         .foregroundColor(.appTextMuted)
                 }
             }
@@ -105,19 +107,19 @@ struct AddFriendSheet: View {
         switch existing?.status {
         case .accepted:
             Text("Friends")
-                .font(AppFont.mediumLabel(13))
+                .font(AppFont.regularLabel(13))
                 .foregroundColor(.appTextMuted)
         case .pending:
             if existing?.requesterId == auth.session?.user.id {
                 Text("Requested")
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.regularLabel(13))
                     .foregroundColor(.appTextMuted)
                     .padding(.trailing, 8)
             } else {
                 // They already sent *you* one — nudge to respond from
                 // FriendsView rather than duplicating Accept/Decline here.
                 Text("Respond in Friends")
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.regularLabel(13))
                     .foregroundColor(.appTextMuted)
             }
         case .declined, nil:

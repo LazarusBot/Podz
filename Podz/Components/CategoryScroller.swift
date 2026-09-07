@@ -808,7 +808,7 @@ struct FilterRow<Control: View>: View {
                         .font(AppFont.itemTitle(16))
                         .foregroundColor(.appTextPrimary)
                     Text(helper)
-                        .font(AppFont.itemHelper(13))
+                        .font(AppFont.regularLabel(13))
                         .foregroundColor(.appTextSecondary)
                 }
                 // Matches the Save button's own text inset (its

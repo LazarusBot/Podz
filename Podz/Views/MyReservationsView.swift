@@ -36,7 +36,7 @@ struct MyReservationsView: View {
                         .font(.system(size: 32))
                         .foregroundColor(.appTextMuted)
                     Text("No reservations yet.")
-                        .font(AppFont.mediumLabel(14))
+                        .font(AppFont.regularLabel(14))
                         .foregroundColor(.appTextMuted)
                 }
                 Spacer()
@@ -124,10 +124,10 @@ private struct ReservationRow: View {
                     .font(AppFont.pillLabelBold(15))
                     .foregroundColor(.black)
                 Text(dateRange)
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.regularLabel(13))
                     .foregroundColor(.appTextMuted)
                 Text("\(reservation.guests) guest\(reservation.guests == 1 ? "" : "s")" + (reservation.status == "cancelled" ? " · Cancelled" : ""))
-                    .font(AppFont.mediumLabel(12))
+                    .font(AppFont.regularLabel(12))
                     .foregroundColor(reservation.status == "cancelled" ? .red : .appTextMuted)
             }
 
