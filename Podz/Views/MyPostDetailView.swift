@@ -51,7 +51,7 @@ struct MyPostDetailView: View {
 
                     if let body = post.body, !body.isEmpty {
                         Text(body)
-                            .font(AppFont.mediumLabel(15))
+                            .font(AppFont.mediumLabel(14))
                             .foregroundColor(.black)
                             .padding(.horizontal, 24)
                     }
@@ -65,24 +65,41 @@ struct MyPostDetailView: View {
                         Text(Self.relativeTime(post.createdAt))
                             .foregroundColor(.appTextMuted)
                     }
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.mediumLabel(11))
                     .padding(.horizontal, 24)
 
                     if !comments.isEmpty {
                         Divider().padding(.horizontal, 24)
 
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(comments) { comment in
+                            ForEach(Array(comments.enumerated()), id: \.element.id) { index, comment in
                                 HStack(alignment: .top, spacing: 8) {
                                     AvatarView(imageName: postsStore.profile(for: comment.authorId)?.avatarURL, size: 24)
-                                    VStack(alignment: .leading, spacing: 1) {
+                                    VStack(alignment: .leading, spacing: 2) {
                                         Text(postsStore.profile(for: comment.authorId)?.displayName ?? "Someone")
-                                            .font(AppFont.pillLabelBold(13))
+                                            // Same fix as PostCard's own
+                                            // comment row — see its
+                                            // comment for why this isn't
+                                            // `pillLabelBold` (Darker
+                                            // Grotesque) mixed with the
+                                            // body's Inter, and why this
+                                            // is 12pt (matching the body),
+                                            // not smaller, and SemiBold
+                                            // rather than Medium.
+                                            .font(AppFont.semiBoldLabel(12))
                                             .foregroundColor(.black)
                                         Text(comment.body)
-                                            .font(AppFont.mediumLabel(13))
+                                            .font(AppFont.regularLabel(12))
                                             .foregroundColor(.black)
                                     }
+                                }
+
+                                // Between comments only — same exact
+                                // construction as PostCard's own
+                                // inter-comment divider (see its comment
+                                // for why this isn't a plain `Divider()`).
+                                if index < comments.count - 1 {
+                                    Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
                                 }
                             }
                         }
