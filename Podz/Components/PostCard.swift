@@ -30,6 +30,13 @@ struct PostCard: View {
     /// toggle below — off in the feed (comments there open via the
     /// comment button, same as always) and on inside `PostDetailView`.
     var showComments: Bool = false
+    /// Caps how many comments actually render — `nil` (the default,
+    /// every other caller) shows the whole thread. `PostDetailView` sets
+    /// this to 1: that screen's own comment count already says there's a
+    /// thread, and showing all of it inline pushed the "Add a comment"
+    /// row (and everything else below the thread) arbitrarily far down
+    /// the scroll.
+    var maxVisibleComments: Int? = nil
 
     @ObservedObject private var postsStore = PostsStore.shared
     @ObservedObject private var podsStore = PodsStore.shared
@@ -39,6 +46,21 @@ struct PostCard: View {
     /// The comment button's own inline expand/collapse — independent of
     /// `showComments`, which only ever forces it *open* (never closed).
     @State private var isCommentsExpanded = false
+    /// Set by tapping "Open" on the "+N comments" row — lifts
+    /// `maxVisibleComments`'s cap for the rest of this card instance's
+    /// lifetime. Local, not threaded back up to the caller: nothing else
+    /// on screen needs to know the thread got expanded.
+    @State private var showAllComments = false
+    /// A comment's own name+body text block, measured — sizes that
+    /// comment's avatar to match (instead of a flat 22pt sitting shorter
+    /// than the two-line block beside it) and sizes the "+N comments"
+    /// row below to match too, instead of both collapsing to their own
+    /// shorter natural heights. Measured rather than guessed as a
+    /// constant, same reasoning as `ModeSwitchPill`'s own
+    /// `trackWidth`/`labelWidth`: real height here depends on live font
+    /// metrics (two lines: name + body), not a number that's safe to
+    /// hardcode.
+    @State private var commentRowHeight: CGFloat = 0
 
     /// Backed by `PostsStore` rather than local `@State` — the feed's
     /// inline card and `PostDetailView`'s pushed one are two separate
@@ -77,7 +99,7 @@ struct PostCard: View {
 
             if let body = post.body, !body.isEmpty {
                 Text(body)
-                    .font(AppFont.mediumLabel(14))
+                    .font(AppFont.mediumLabel(13))
                     .foregroundColor(.black)
             }
 
@@ -106,19 +128,19 @@ struct PostCard: View {
             AvatarView(imageName: author?.avatarURL, size: 32)
             VStack(alignment: .leading, spacing: 2) {
                 Text(author?.displayName ?? "Someone")
-                    .font(AppFont.pillLabelBold(15))
+                    .font(AppFont.pillLabelBold(17))
                     .foregroundColor(.black)
                 HStack(spacing: 4) {
                     if let pod {
                         Text(pod.name)
-                            .font(AppFont.mediumLabel(12))
+                            .font(AppFont.regularLabel(10))
                             .foregroundColor(.appTextMuted)
                         Text("·")
-                            .font(AppFont.mediumLabel(12))
+                            .font(AppFont.regularLabel(10))
                             .foregroundColor(.appTextMuted)
                     }
                     Text(Self.relativeTime(post.createdAt))
-                        .font(AppFont.mediumLabel(12))
+                        .font(AppFont.regularLabel(10))
                         .foregroundColor(.appTextMuted)
                 }
             }
@@ -254,7 +276,7 @@ struct PostCard: View {
                         .foregroundColor(postsStore.isLiked(post) ? .red : .black)
                     if postsStore.likeCount(for: post.id) > 0 {
                         Text("\(postsStore.likeCount(for: post.id))")
-                            .font(AppFont.mediumLabel(13))
+                            .font(AppFont.regularLabel(13))
                             .foregroundColor(.appTextMuted)
                     }
                 }
@@ -269,7 +291,7 @@ struct PostCard: View {
                         .foregroundColor(.black)
                     if !comments.isEmpty {
                         Text("\(comments.count)")
-                            .font(AppFont.mediumLabel(13))
+                            .font(AppFont.regularLabel(13))
                             .foregroundColor(.appTextMuted)
                     }
                 }
@@ -282,27 +304,125 @@ struct PostCard: View {
         .buttonStyle(.plain)
     }
 
+    /// `comments`, capped to `maxVisibleComments` when set — lifted once
+    /// "Open" (see `hiddenCommentsCount`'s own row) has been tapped.
+    private var visibleComments: [PostComment] {
+        guard !showAllComments, let maxVisibleComments else { return comments }
+        // `comments` is oldest-first (`fetchCommentsIfNeeded`'s own
+        // `.order("created_at")`, ascending) — `.suffix`, not `.prefix`,
+        // is what actually keeps the most recently posted comment(s)
+        // visible instead of the oldest.
+        return Array(comments.suffix(maxVisibleComments))
+    }
+
+    /// How many comments the cap is currently hiding — 0 once expanded,
+    /// so the "+N comments" row's own `if` below just disappears rather
+    /// than needing a separate condition to hide it.
+    private var hiddenCommentsCount: Int {
+        comments.count - visibleComments.count
+    }
+
     private var commentsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Divider().background(Color.appBorder)
 
-            ForEach(comments) { comment in
-                HStack(alignment: .top, spacing: 8) {
-                    AvatarView(imageName: postsStore.profile(for: comment.authorId)?.avatarURL, size: 22)
-                    VStack(alignment: .leading, spacing: 1) {
+            if hiddenCommentsCount > 0 {
+                Button {
+                    withAnimation(.easeOut(duration: AppMotion.snappy)) {
+                        showAllComments = true
+                    }
+                } label: {
+                    HStack {
+                        Text("+ \(hiddenCommentsCount) comment\(hiddenCommentsCount == 1 ? "" : "s")")
+                            .font(AppFont.regularLabel(12))
+                            .foregroundColor(.appTextMuted)
+                        Spacer()
+                        Text("Open")
+                            .font(AppFont.mediumLabel(12))
+                            .foregroundColor(.appTextMuted)
+                            .underline()
+                    }
+                    // Matches a real comment row's own height instead of
+                    // collapsing to this row's shorter single line — see
+                    // `commentRowHeight`'s own comment.
+                    .frame(height: commentRowHeight > 0 ? commentRowHeight : nil)
+                }
+                .buttonStyle(.plain)
+
+                // Same hairline as between two comments — keeps this row
+                // reading as part of the same list rhythm instead of
+                // sitting apart from it.
+                Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
+            }
+
+            ForEach(Array(visibleComments.enumerated()), id: \.element.id) { index, comment in
+                HStack(alignment: .center, spacing: 8) {
+                    // Sized to the text block's own measured height (see
+                    // below), not a fixed 22 — a flat 22pt avatar sat
+                    // noticeably shorter than the two-line name+body
+                    // block beside it, leaving `.top` alignment reading
+                    // as "avatar floating at the top" rather than
+                    // "avatar and text filling the same row."
+                    AvatarView(imageName: postsStore.profile(for: comment.authorId)?.avatarURL, size: commentRowHeight > 0 ? commentRowHeight : 22)
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(postsStore.profile(for: comment.authorId)?.displayName ?? "Someone")
-                            .font(AppFont.pillLabelBold(12))
+                            // Real Inter (Medium, not Darker Grotesque
+                            // Bold) — the name and body were mixing two
+                            // different font families in the same small
+                            // block, which is what read as misaligned/
+                            // "fonts off": Darker Grotesque and Inter
+                            // have different line-height and apparent
+                            // size at the same point value (Darker
+                            // Grotesque runs visually smaller — same
+                            // reason FriendsView's own name/username
+                            // pairing needed rebalancing earlier). One
+                            // family, two weights, is what actually
+                            // reads as one coherent row.
+                            //
+                            // Same 12pt as the body below, not smaller —
+                            // a name reading *smaller* than its own
+                            // comment had the hierarchy backwards; weight
+                            // (SemiBold vs Regular) is what should tell
+                            // them apart, not size.
+                            .font(AppFont.semiBoldLabel(12))
                             .foregroundColor(.black)
                         Text(comment.body)
-                            .font(AppFont.mediumLabel(13))
+                            // Real Inter Regular, not Medium — matches
+                            // every other subtitle-role text fixed
+                            // elsewhere (see `ProfileRows.swift`'s
+                            // `ProfileAccountRow`), sized down with it.
+                            .font(AppFont.regularLabel(12))
                             .foregroundColor(.black)
                     }
+                    // Measures just this text block's own height (not
+                    // the whole row, which would create a feedback loop
+                    // once the avatar's size is driven by it too) —
+                    // that's what `commentRowHeight` actually names.
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { commentRowHeight = $0 }
+                }
+
+                // Between comments only, not after the last one (that'd
+                // just crowd the input row right below it). Same exact
+                // construction as `ProfileAccountRow`/`ProfileMenuRow`'s
+                // own bottom hairline (a plain `Divider()` doesn't share
+                // its thickness — that one defaults to SwiftUI's own
+                // ~1pt line, not this app's 0.5pt one).
+                if index < visibleComments.count - 1 {
+                    Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
                 }
             }
 
+            // Same hairline as every other divider in this section — a
+            // plain `Divider()` here was a leftover from before those
+            // got tuned to match `ProfileAccountRow`/`ProfileMenuRow`'s
+            // own hairline; this one just never got updated with them.
+            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
+
             HStack(spacing: 8) {
                 TextField("Add a comment...", text: commentDraft)
-                    .font(AppFont.mediumLabel(13))
+                    // Real Inter Regular, not Medium — same fix/reasoning
+                    // as the comment body just above.
+                    .font(AppFont.regularLabel(12))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Capsule().fill(Color.white))
