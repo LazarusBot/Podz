@@ -237,7 +237,7 @@ struct HomeView: View {
                         // alignment, a fresh chip is floated on top,
                         // below, positioned from the same anchor —
                         // alignment by construction, not by luck.
-                        LennySpotlightScrim(onDismiss: dismissLennyCoachmark)
+                        CoachmarkSpotlightScrim(onDismiss: dismissLennyCoachmark)
 
                         // Actually tappable, not just decorative — a
                         // coachmark that highlights a control and then
@@ -260,8 +260,12 @@ struct HomeView: View {
                         // edge just needs to land exactly on the chip's,
                         // which .offset gives for free relative to this
                         // ZStack's (0, 0) topLeading origin.
-                        LennyCoachmark(tailCenterOffset: rect.width / 2, onDismiss: dismissLennyCoachmark)
-                            .offset(x: rect.minX, y: rect.maxY + 4)
+                        CoachmarkBubble(
+                            message: "Switch to Lenny and describe your route — e.g. \"Chamonix to Zermatt in 5 days\" — and Lenny suggests pods along the way for you to compare and select.",
+                            tailCenterOffset: rect.width / 2,
+                            onDismiss: dismissLennyCoachmark
+                        )
+                        .offset(x: rect.minX, y: rect.maxY + 4)
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
@@ -576,119 +580,6 @@ private struct HomeFeedToggle: View {
 
             Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
         }
-    }
-}
-
-/// Dims and softly blurs the whole screen uniformly while the coachmark
-/// is up, so the floating chip clone + bubble above it read as the one
-/// thing in focus without a literal cutout to keep pixel-aligned against
-/// (see the call site for why that approach got dropped). Both layers
-/// are deliberately light — .ultraThinMaterial is already the softest
-/// blur Material offers, and scaling it down further via .opacity keeps
-/// this a gentle focus cue rather than a heavy-handed dimming.
-private struct LennySpotlightScrim: View {
-    var onDismiss: () -> Void
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.14)
-            Rectangle().fill(.ultraThinMaterial).opacity(0.5)
-        }
-        .ignoresSafeArea()
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onDismiss)
-        .transition(.opacity)
-    }
-}
-
-/// First-time tip pointing at the search pill's "Lenny" chip — shown once
-/// (see `hasSeenLennyCoachmark`) the first time someone opens the search
-/// pill, so they know it's not just a plain location search. A single
-/// custom outline (`CoachmarkBubbleShape`) rather than a rounded rect
-/// plus a separate triangle glued underneath it — fill and stroke both
-/// trace the tail and body as one continuous edge, so there's no seam
-/// where a two-shape version would show a visible stroke line across the
-/// tail's base.
-private struct LennyCoachmark: View {
-    /// Tail center's distance from the bubble's leading edge. The bubble
-    /// itself stays left-aligned to the chip (see the call site's
-    /// `.offset`), but the tail is passed the chip's own width so it can
-    /// point at the chip's actual midpoint instead of just wherever
-    /// happens to be near the bubble's leading edge.
-    var tailCenterOffset: CGFloat
-    var onDismiss: () -> Void
-
-    private let tailWidth: CGFloat = 16
-    private let tailHeight: CGFloat = 9
-    private let cornerRadius: CGFloat = 16
-
-    private var shape: CoachmarkBubbleShape {
-        CoachmarkBubbleShape(cornerRadius: cornerRadius, tailWidth: tailWidth, tailHeight: tailHeight, tailInset: tailCenterOffset)
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            // A plain info glyph, not a feature icon — this is explaining
-            // what the control is, not illustrating the hike itself.
-            Image(systemName: "questionmark.circle.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white)
-            // mediumLabel (Inter), not pillLabelMedium (Darker Grotesque)
-            // — Darker Grotesque is the display face used for big chip
-            // labels/numbers and reads thin at paragraph size even at its
-            // own Medium weight; Inter Medium is the app's actual body
-            // font elsewhere in this screen (Lenny's status text, error
-            // messages) and carries more visual weight here.
-            Text("Switch to Lenny and describe your route — e.g. \"Chamonix to Zermatt in 5 days\" — and Lenny suggests pods along the way for you to compare and select.")
-                .font(AppFont.mediumLabel(15))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(width: 260, alignment: .leading)
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, tailHeight + 14)
-        .padding(.bottom, 14)
-        .background(shape.fill(Color.appAccentBlack))
-        .overlay(shape.stroke(Color.white.opacity(0.14), lineWidth: 1))
-        .compositingGroup()
-        .shadow(color: .black.opacity(0.4), radius: 18, y: 10)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onDismiss)
-        .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .topLeading)))
-    }
-}
-
-/// Rounded rect with a speech-bubble tail on its top edge, traced as one
-/// outline via tangent-based corners (`addArc(tangent1End:tangent2End:)`)
-/// rather than angle-based arcs — direction-agnostic, so there's no risk
-/// of the usual clockwise/flipped-Y sign mistakes that angle math invites.
-private struct CoachmarkBubbleShape: Shape {
-    var cornerRadius: CGFloat
-    var tailWidth: CGFloat
-    var tailHeight: CGFloat
-    var tailInset: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        let body = CGRect(x: rect.minX, y: rect.minY + tailHeight, width: rect.width, height: rect.height - tailHeight)
-        let r = min(cornerRadius, body.width / 2, body.height / 2)
-        let tailCenterX = min(max(rect.minX + tailInset, body.minX + r + tailWidth / 2), body.maxX - r - tailWidth / 2)
-
-        var path = Path()
-        path.move(to: CGPoint(x: body.minX + r, y: body.minY))
-        path.addLine(to: CGPoint(x: tailCenterX - tailWidth / 2, y: body.minY))
-        path.addLine(to: CGPoint(x: tailCenterX, y: rect.minY))
-        path.addLine(to: CGPoint(x: tailCenterX + tailWidth / 2, y: body.minY))
-        path.addLine(to: CGPoint(x: body.maxX - r, y: body.minY))
-        path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.minY), tangent2End: CGPoint(x: body.maxX, y: body.minY + r), radius: r)
-        path.addLine(to: CGPoint(x: body.maxX, y: body.maxY - r))
-        path.addArc(tangent1End: CGPoint(x: body.maxX, y: body.maxY), tangent2End: CGPoint(x: body.maxX - r, y: body.maxY), radius: r)
-        path.addLine(to: CGPoint(x: body.minX + r, y: body.maxY))
-        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY), tangent2End: CGPoint(x: body.minX, y: body.maxY - r), radius: r)
-        path.addLine(to: CGPoint(x: body.minX, y: body.minY + r))
-        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.minY), tangent2End: CGPoint(x: body.minX + r, y: body.minY), radius: r)
-        path.closeSubpath()
-        return path
     }
 }
 

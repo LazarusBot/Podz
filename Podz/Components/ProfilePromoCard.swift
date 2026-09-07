@@ -66,13 +66,43 @@ struct ProfilePromoCard: View {
                         Text("Set up easily and start earning from your home.")
                         Text("It's free.")
                     }
-                    .font(AppFont.itemHelper(11))
+                    // Real Inter, Regular weight — see
+                    // `ProfileRows.swift`'s `ProfileAccountRow` for why
+                    // this isn't `AppFont.itemHelper`.
+                    .font(AppFont.regularLabel(11))
                     .foregroundColor(.black)
                 }
                 .padding(.horizontal, 18)
                 .padding(.vertical, 24)
                 .frame(maxWidth: 266, alignment: .leading)
             }
+            .frame(height: 124)
+            // Background/clip/border live inside the button's label now,
+            // not after `.buttonStyle()` — `TapScaleButtonStyle`'s
+            // `.scaleEffect` only wraps `configuration.label` (everything
+            // in this closure), so anything applied *after* `.buttonStyle`
+            // sits outside that scope and never actually scales. With the
+            // card's own background/clip/border out there, only the raw
+            // content (image/gradient/text) was shrinking on press while
+            // the card's own frame stayed put — moving them in here means
+            // the whole card scales as one piece.
+            .background(
+                RoundedRectangle(cornerRadius: AppRadius.r15)
+                    .fill(Color.appHomeBackground)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.r15))
+            .overlay(RoundedRectangle(cornerRadius: AppRadius.r15).strokeBorder(Color.appBorder, lineWidth: 0.5))
+            // Pins the tappable region to exactly the visible 124pt-tall
+            // card — without this, `Button`'s default hit-testing was
+            // extending down into its own `.padding(.vertical, 31)`
+            // below (applied outside, after this closure), which sits
+            // directly against `SectionLabel`/the first `ProfileMenuRow`
+            // right underneath — a tap meant for the top of that row
+            // could land on this card instead. Same fix as
+            // `ProfileAccountRow`/`ProfileMenuRow`, opposite direction
+            // (their bug was a dead zone *inside* the button; this one
+            // was the button's own area reaching *outside* itself).
+            .contentShape(Rectangle())
         }
         // Plain Button here defaulted to the system's automatic press
         // state, which dims custom content toward black — reads as a
@@ -82,13 +112,6 @@ struct ProfilePromoCard: View {
         // at all (same reasoning as LikesFolderCard's own NoFadeButtonStyle,
         // which only solves the first half of that).
         .buttonStyle(TapScaleButtonStyle())
-        .frame(height: 124)
-        .background(
-            RoundedRectangle(cornerRadius: AppRadius.r15)
-                .fill(Color.appHomeBackground)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: AppRadius.r15))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.r15).strokeBorder(Color.appBorder, lineWidth: 0.5))
         .padding(.horizontal, 24)
         .padding(.vertical, 31)
     }

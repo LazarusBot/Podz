@@ -11,8 +11,24 @@ import UIKit
 /// A one-time 4-step onboarding (see PostRegisterOnboardingView.swift)
 /// is inserted between a successful register and MainTabView, gated by
 /// `AuthManager.justRegistered` — logging in skips straight to the app.
+///
+/// This is also the single point that decides hiker shell vs. host
+/// shell — `HostTabView` shows only when both `Profile.isHost` (the
+/// account actually has hosting unlocked) and `AppModeStore`'s `mode`
+/// (which side they last switched to, flippable anytime from either
+/// shell's own Profile tab — see ProfileView's "Hosting" section) agree.
+/// A non-host always lands in `MainTabView` regardless of what `mode`
+/// holds, so a stale/leftover `.host` value from a previous account
+/// can't strand a plain hiker account on a shell they have no access to.
+///
+/// The hiker↔host swap itself is a plain instant cut, deliberately — an
+/// earlier version covered it with a full-screen curtain (`ModeSwitchPill`'s
+/// long-press-and-slide gesture in the tab bar is already its own "moment"
+/// for the switch, and Airbnb's own hosting/traveling toggle treats the
+/// swap itself as plumbing, not something worth a second flourish on top).
 struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
+    @StateObject private var appMode = AppModeStore.shared
 
     var body: some View {
         if auth.isInitializing {
@@ -20,6 +36,8 @@ struct OnboardingView: View {
         } else if auth.isAuthenticated {
             if auth.justRegistered {
                 PostRegisterOnboardingView(onFinished: auth.finishPostRegisterOnboarding)
+            } else if auth.profile?.isHost == true && appMode.mode == .host {
+                HostTabView()
             } else {
                 MainTabView()
             }

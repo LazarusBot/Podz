@@ -261,6 +261,10 @@ final class AuthManager: ObservableObject {
     func signOut() async {
         do {
             try await supabase.auth.signOut()
+            // Whoever signs in next (possibly a different account)
+            // starts in hiker mode, not whatever this session had
+            // switched to — see AppModeStore's own doc comment.
+            AppModeStore.shared.reset()
         } catch {
             lastError = error.localizedDescription
         }

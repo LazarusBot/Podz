@@ -23,7 +23,6 @@ struct ProfileView: View {
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
     @State private var showAddPod = false
-    @State private var showMyPods = false
     /// contentOffset.y — 0 at rest, grows positive scrolling down. Same
     /// `onScrollGeometryChange` approach PodDetailView uses for its own
     /// persistent top bar.
@@ -43,8 +42,6 @@ struct ProfileView: View {
                 LoginSecurityView(onBack: { showLoginSecurity = false })
             } else if showAccessibility {
                 AccessibilityView(onBack: { showAccessibility = false })
-            } else if showMyPods {
-                MyPodsView(onBack: { showMyPods = false })
             } else {
                 ZStack(alignment: .top) {
                     ScrollView {
@@ -85,26 +82,6 @@ struct ProfileView: View {
                                 }
                                 ProfileMenuRow(icon: "calendar", title: "Reservations") {
                                     showReservations = true
-                                }
-                            }
-
-                            // Hosts only — a plain title, no mountain-
-                            // height trailing label like the sections
-                            // around it (see SectionLabel's own doc
-                            // comment: nil is the pattern everywhere else
-                            // that gag doesn't fit, e.g. Requests/Accepted
-                            // friends in FriendsView). Inserting a 4th
-                            // section here would've broken that gag's
-                            // ordering anyway — Kangchenjunga/K2/Everest
-                            // are literally the top 3 peaks in ascending
-                            // order, with nothing real between K2 and
-                            // Everest to slot a 4th section into.
-                            if auth.profile?.isHost == true {
-                                SectionLabel(title: "Hosting")
-                                VStack(spacing: 0) {
-                                    ProfileMenuRow(icon: "house", title: "My pods") {
-                                        showMyPods = true
-                                    }
                                 }
                             }
 
