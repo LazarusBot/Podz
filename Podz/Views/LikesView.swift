@@ -126,7 +126,7 @@ struct LikesView: View {
                                 )
                                 if let owner = friendsStore.profilesById[folder.ownerId] {
                                     Text("by \(owner.displayName)")
-                                        .font(AppFont.mediumLabel(12))
+                                        .font(AppFont.regularLabel(12))
                                         .foregroundColor(.appTextMuted)
                                 }
                             }

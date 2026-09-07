@@ -137,7 +137,7 @@ struct MailboxView: View {
                 .font(.system(size: 32))
                 .foregroundColor(.appTextMuted)
             Text("Add friends to start chatting.")
-                .font(AppFont.mediumLabel(14))
+                .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
         }
         .padding(.top, 120)
@@ -158,7 +158,7 @@ private struct ConversationRow: View {
                     .font(AppFont.pillLabelBold(16))
                     .foregroundColor(.black)
                 Text(conversation.lastMessage?.body ?? "Say hi \u{1F44B}")
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.regularLabel(13))
                     .foregroundColor(.appTextMuted)
                     .lineLimit(1)
             }
@@ -168,7 +168,7 @@ private struct ConversationRow: View {
             VStack(alignment: .trailing, spacing: 6) {
                 if let lastMessage = conversation.lastMessage {
                     Text(Self.relativeTime(lastMessage.createdAt))
-                        .font(AppFont.mediumLabel(11))
+                        .font(AppFont.regularLabel(11))
                         .foregroundColor(.appTextMuted)
                 }
                 if conversation.unreadCount > 0 {

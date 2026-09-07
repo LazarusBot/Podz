@@ -125,7 +125,7 @@ struct PostComposerView: View {
             ZStack(alignment: .topLeading) {
                 if bodyText.isEmpty {
                     Text("Write something about this pod...")
-                        .font(AppFont.mediumLabel(15))
+                        .font(AppFont.regularLabel(15))
                         .foregroundColor(.appTextMuted)
                         .padding(.top, 8)
                         .padding(.leading, 5)
@@ -156,7 +156,7 @@ struct PostComposerView: View {
                     Spacer()
                     Image(systemName: "chevron.right")
                 }
-                .font(AppFont.mediumLabel(15))
+                .font(AppFont.regularLabel(15))
                 .foregroundColor(.appTextMuted)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
@@ -281,7 +281,7 @@ struct PostComposerView: View {
                                         .font(AppFont.pillLabelSemiBold(15))
                                         .foregroundColor(.black)
                                     Text(pod.country)
-                                        .font(AppFont.mediumLabel(12))
+                                        .font(AppFont.regularLabel(12))
                                         .foregroundColor(.appTextMuted)
                                 }
                                 Spacer()

@@ -104,7 +104,7 @@ struct ReservationSheet: View {
 
             if nights > 0 {
                 Text("\(nights) night\(nights == 1 ? "" : "s")")
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.regularLabel(13))
                     .foregroundColor(.appTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 4)
@@ -156,7 +156,7 @@ struct ReservationSheet: View {
                 .font(AppFont.pillLabelBold(16))
                 .foregroundColor(.appTextPrimary)
             Text("\(nights) night\(nights == 1 ? "" : "s") · \(guests) guest\(guests == 1 ? "" : "s")")
-                .font(AppFont.mediumLabel(13))
+                .font(AppFont.regularLabel(13))
                 .foregroundColor(.appTextMuted)
         }
         .frame(maxWidth: .infinity)

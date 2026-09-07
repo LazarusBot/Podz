@@ -35,7 +35,7 @@ struct ShareFolderSheet: View {
                     .fontWeight(.bold)
                     .foregroundColor(.black)
                 Text("Friends you turn on can view this folder, read-only.")
-                    .font(AppFont.mediumLabel(13))
+                    .font(AppFont.regularLabel(13))
                     .foregroundColor(.appTextMuted)
                     .multilineTextAlignment(.center)
             }
@@ -45,7 +45,7 @@ struct ShareFolderSheet: View {
 
             if friendsStore.friends.isEmpty {
                 Text("Add some friends first — nobody to share with yet.")
-                    .font(AppFont.mediumLabel(14))
+                    .font(AppFont.regularLabel(14))
                     .foregroundColor(.appTextMuted)
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
@@ -86,7 +86,7 @@ struct ShareFolderSheet: View {
                     .foregroundColor(.black)
                 if let username = profile?.username {
                     Text("@\(username)")
-                        .font(AppFont.mediumLabel(13))
+                        .font(AppFont.regularLabel(13))
                         .foregroundColor(.appTextMuted)
                 }
             }

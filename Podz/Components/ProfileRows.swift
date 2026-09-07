@@ -20,7 +20,14 @@ struct ProfileAccountRow<AvatarContent: View>: View {
                         .font(AppFont.pillLabelSemiBold(16))
                         .foregroundColor(.black)
                     Text(subtitle)
-                        .font(AppFont.mediumLabel(11))
+                        // Real Inter, Regular weight — not
+                        // `AppFont.mediumLabel` (fixed elsewhere to
+                        // unbreak `ModeSwitchPill`'s label, which
+                        // genuinely needed distinct weights; Inter
+                        // Medium reads heavier than this row wants) and
+                        // not the system font either. See
+                        // `AppFont.regularLabel`.
+                        .font(AppFont.regularLabel(11))
                         .foregroundColor(.appTextMuted)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -32,6 +39,12 @@ struct ProfileAccountRow<AvatarContent: View>: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.black)
             }
+            // Without this, `Button` only registers taps on the HStack's
+            // actual rendered content (avatar, text, chevron) — the
+            // `Spacer()`'s own empty space in between reports no hit
+            // area by default, so tapping the middle of the row (where
+            // there's nothing drawn) silently did nothing.
+            .contentShape(Rectangle())
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 31)
@@ -95,7 +108,9 @@ struct ProfileMenuRow: View {
                     .frame(width: 17)
 
                 Text(title)
-                    .font(AppFont.mediumLabel(14))
+                    // Real Inter, Regular weight — see
+                    // `ProfileAccountRow`'s own subtitle for why.
+                    .font(AppFont.regularLabel(14))
                     .foregroundColor(tint)
 
                 Spacer()
@@ -119,6 +134,9 @@ struct ProfileMenuRow: View {
                         .foregroundColor(.black)
                 }
             }
+            // Same missing-hit-area issue as `ProfileAccountRow` — see
+            // its own comment.
+            .contentShape(Rectangle())
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 18)
@@ -145,14 +163,19 @@ struct SectionLabel: View {
     var body: some View {
         HStack {
             Text(title.uppercased())
-                .font(AppFont.itemTitle(12))
+                // Real Inter, Regular weight — see `ProfileAccountRow`'s
+                // own subtitle for why this isn't `AppFont.itemTitle`
+                // (Bold read heavier than this quiet section label
+                // wants; the uppercase + tracking already gives it
+                // enough presence).
+                .font(AppFont.regularLabel(12))
                 .tracking(0.5)
                 .foregroundColor(.appTextMuted)
 
             if let trailing {
                 Spacer()
                 Text(trailing)
-                    .font(AppFont.itemTitle(12))
+                    .font(AppFont.regularLabel(12))
                     .tracking(0.5)
                     .foregroundColor(.appTextMuted)
             }

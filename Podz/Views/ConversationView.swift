@@ -42,7 +42,7 @@ struct ConversationView: View {
                         ForEach(Array(thread.enumerated()), id: \.element.id) { index, message in
                             if showsDayDivider(before: index) {
                                 Text(Self.dayLabel(message.createdAt))
-                                    .font(AppFont.mediumLabel(10))
+                                    .font(AppFont.regularLabel(10))
                                     .foregroundColor(.appTextMuted)
                                     .padding(.top, 18)
                                     .padding(.bottom, 6)
@@ -219,7 +219,7 @@ struct ConversationView: View {
                     .font(AppFont.pillLabelBold(14))
                     .foregroundColor(.black)
                 Text(message.body)
-                    .font(AppFont.mediumLabel(12))
+                    .font(AppFont.regularLabel(12))
                     .foregroundColor(.appTextMuted)
                     .lineLimit(1)
             }
