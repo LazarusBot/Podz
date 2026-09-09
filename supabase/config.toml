@@ -1,0 +1,5 @@
+# Only what `supabase functions deploy` needs — this project has no
+# local dev stack (see SQL/'s own note: no migration tooling, changes
+# are pasted into the Supabase SQL editor by hand), just this one Edge
+# Function for signing trip passes.
+project_id = "podz"

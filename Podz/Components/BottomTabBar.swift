@@ -68,6 +68,7 @@ struct BottomTabBar: View {
     @ObservedObject private var likesStore = LikesStore.shared
     @ObservedObject private var messagesStore = MessagesStore.shared
     @ObservedObject private var postsStore = PostsStore.shared
+    @ObservedObject private var reservationsStore = ReservationsStore.shared
     @ObservedObject private var appMode = AppModeStore.shared
     /// New (unseen) likes/comments on your own posts — same source
     /// PostsActivityView itself reads, just reduced to a plain presence
@@ -328,6 +329,20 @@ struct BottomTabBar: View {
                         if tab == .likes && likesStore.showRecentLikeBadge {
                             // White text on an .appTextMuted fill — same
                             // gray family as the inactive tabs.
+                            Text("+1")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.appTextMuted))
+                                .offset(x: 12, y: -6)
+                                .transition(.scale(scale: 0.3).combined(with: .opacity))
+                        } else if tab == .pods && reservationsStore.showRecentReservationBadge {
+                            // Identical treatment to the likes "+1" above
+                            // — same transient "that just happened"
+                            // confirmation, just for a reservation made
+                            // elsewhere (ReservationSheet) instead of a
+                            // like.
                             Text("+1")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.white)

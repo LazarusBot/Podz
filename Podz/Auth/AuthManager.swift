@@ -47,18 +47,31 @@ final class AuthManager: ObservableObject {
                 // screen for the split second before the refreshed session
                 // landed — the "login page appears and disappears" flash.
                 // Instead, stay on the launch skeleton and wait for that
-                // resolved event. A failed refresh (offline, revoked
-                // token) is swallowed silently by the SDK with no
-                // follow-up event, so fall back to signed-out after a
-                // short timeout rather than hanging on the skeleton forever.
+                // resolved event, with a short timeout rather than hanging
+                // on the skeleton forever if the SDK's own background
+                // refresh never resolves.
                 if isInitializing, let session, session.isExpired {
                     expiredSessionFallbackTask?.cancel()
                     expiredSessionFallbackTask = Task {
                         try? await Task.sleep(for: .seconds(6))
                         guard !Task.isCancelled else { return }
-                        self.session = nil
-                        self.profile = nil
+                        // A refresh that never resolves within the timeout
+                        // is most often just "no network right now," not
+                        // "this token is actually invalid" — the SDK
+                        // swallows both cases identically, with no way to
+                        // tell them apart from here. Signing out on that
+                        // ambiguity would strand anyone offline (exactly
+                        // the case this app's own offline trip pass exists
+                        // for — see TripPassView/TripPassStore) on a login
+                        // screen they also can't get past with no signal.
+                        // Keep the stale session and let them in instead;
+                        // any live Supabase call this expired token can't
+                        // cover just fails the same way every other
+                        // network failure already does in this app
+                        // (lastError set, cached data left alone).
+                        self.session = session
                         self.isInitializing = false
+                        await self.fetchProfile()
                     }
                     continue
                 }

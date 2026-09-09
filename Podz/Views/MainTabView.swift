@@ -35,7 +35,7 @@ struct MainTabView: View {
                     case .mailbox:
                         MailboxView()
                     case .pods:
-                        ComingSoonView(tab: selectedTab)
+                        PodsView()
                     }
                 }
                 .ignoresSafeArea(edges: .bottom)
@@ -84,27 +84,6 @@ struct MainTabView: View {
             messagesStore.startRealtimeIfNeeded()
         }
         .task { await postsStore.fetchFeed() }
-    }
-}
-
-/// Placeholder for tabs whose screens haven't been built from Figma yet.
-private struct ComingSoonView: View {
-    let tab: HomeTab
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: tab.iconName.isEmpty ? "sparkles" : tab.iconName)
-                .font(.system(size: 32))
-                .foregroundColor(.appTextMuted)
-            Text("\(tab.rawValue) — coming soon")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.appTextMuted)
-            Spacer()
-            Color.clear.frame(height: 100)
-        }
-        .frame(maxWidth: .infinity)
-        .background(Color.appHomeBackground)
     }
 }
 

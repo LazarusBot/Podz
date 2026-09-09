@@ -29,7 +29,12 @@ final class PodsStore: ObservableObject {
     
     private init() {}
     
-    func fetchPods() async {
+    /// Returns whether it succeeded — same reasoning as
+    /// `ReservationsStore.fetchMine`'s own boolean return: `TripPassStore`
+    /// needs to tell a real fetch failure apart from a genuinely empty
+    /// result before it overwrites its own disk cache.
+    @discardableResult
+    func fetchPods() async -> Bool {
         isLoading = true
         defer { isLoading = false }
         do {
@@ -40,8 +45,10 @@ final class PodsStore: ObservableObject {
                 .execute()
                 .value
             await fetchPrimaryPhotos()
+            return true
         } catch {
             lastError = error.localizedDescription
+            return false
         }
     }
     
