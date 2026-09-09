@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// Generic "not built yet" placeholder for a tab — same idea as
-/// `MainTabView`'s own private `ComingSoonView` (that one's tied
-/// specifically to `HomeTab`, so a different name here rather than
-/// risking confusion with it), used by `HostTabView`'s Guests/Data tabs
-/// until those have real screens behind them.
+/// Generic "not built yet" placeholder for a tab, used by `HostTabView`'s
+/// Guests/Data tabs until those have real screens behind them.
 struct FeaturePlaceholderView: View {
     let title: String
     let systemImage: String

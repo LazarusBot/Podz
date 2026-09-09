@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 import Supabase
 
 /// Your own reservations — see SQL/reservations.sql for the table and its
@@ -30,11 +31,22 @@ final class ReservationsStore: ObservableObject {
     /// batch-fetch-only-what's-missing pattern as `PostsStore.profilesById`.
     @Published private(set) var profilesById: [UUID: Profile] = [:]
     @Published var lastError: String?
+    /// Transient "+1" badge on the Pods tab — same self-clearing
+    /// confirmation `LikesStore.showRecentLikeBadge` uses, not a
+    /// persistent unread-style count, since there's nothing ongoing to
+    /// track here (just "a reservation was made, go look").
+    @Published private(set) var showRecentReservationBadge = false
+    private var recentReservationBadgeTask: Task<Void, Never>?
 
     private init() {}
 
-    func fetchMine() async {
-        guard let userId = AuthManager.shared.session?.user.id else { return }
+    /// Returns whether it succeeded — `TripPassStore` uses this to tell a
+    /// real fetch failure (leaves `reservations` untouched, same as
+    /// always) apart from a genuinely empty result, so it doesn't wipe
+    /// its own disk cache with nothing just because this ran offline.
+    @discardableResult
+    func fetchMine() async -> Bool {
+        guard let userId = AuthManager.shared.session?.user.id else { return false }
         do {
             reservations = try await supabase
                 .from("reservations")
@@ -43,8 +55,10 @@ final class ReservationsStore: ObservableObject {
                 .order("check_in")
                 .execute()
                 .value
+            return true
         } catch {
             lastError = error.localizedDescription
+            return false
         }
     }
 
@@ -124,6 +138,32 @@ final class ReservationsStore: ObservableObject {
         } catch {
             lastError = error.localizedDescription
             return false
+        }
+    }
+
+    /// Kicks off the transient "+1" badge on the Pods tab — same visual
+    /// treatment as `LikesStore.flashRecentLikeBadge`. Unlike that one,
+    /// `ReservationSheet` never actually covers the tab bar (it grows in
+    /// place inside `PodDetailView`, which doesn't hide it), so the call
+    /// site (`ReservationSheet.submit()`) fires this once its own
+    /// "Reservation confirmed" state has already shown and is collapsing
+    /// away, not the moment `create()` resolves — reads as one
+    /// confirmation handing off to the next rather than both firing at
+    /// once.
+    func flashRecentReservationBadge() {
+        recentReservationBadgeTask?.cancel()
+        // Low damping fraction on purpose — lets the spring overshoot
+        // past its resting scale before settling, which reads as an
+        // actual "pop" rather than a plain fade/grow-in.
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.45)) {
+            showRecentReservationBadge = true
+        }
+        recentReservationBadgeTask = Task {
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: AppMotion.standard)) {
+                showRecentReservationBadge = false
+            }
         }
     }
 

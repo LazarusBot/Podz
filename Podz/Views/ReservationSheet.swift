@@ -32,12 +32,17 @@ struct ReservationSheet: View {
     var onDismiss: () -> Void = {}
 
     @StateObject private var reservationsStore = ReservationsStore.shared
+    @StateObject private var podsStore = PodsStore.shared
 
     @State private var checkIn = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
     @State private var checkOut = Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date()
     @State private var guests = 1
     @State private var isSubmitting = false
     @State private var didSucceed = false
+    /// Drives `confirmationState`'s own two-beat entrance — the pod photo
+    /// springs in first, the checkmark badge lands on top a moment later.
+    @State private var showConfirmationPhoto = false
+    @State private var showConfirmationBadge = false
 
     /// The tighter of the pod's static total and its live availability —
     /// falls back to a sensible cap when neither is known, since
@@ -148,10 +153,46 @@ struct ReservationSheet: View {
     }
 
     private var confirmationState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 36))
-                .foregroundColor(.appAvailableGreen)
+        VStack(spacing: 14) {
+            // A full-width photo with the pod's own name on it, not a
+            // small circular avatar — the same photo+name-overlay
+            // treatment PodsView's own hero trip card uses. A tiny
+            // circle read as decorative; this reads as "here's the
+            // actual place," which is the point.
+            ZStack(alignment: .bottomLeading) {
+                PodPhoto(url: podsStore.primaryPhotoByPodId[pod.id])
+                    .frame(height: 150)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+
+                // Bottom-anchored gradient, not a flat scrim — keeps the
+                // top of the photo visible while still giving the name
+                // below enough contrast to read against whatever's there.
+                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .center, endPoint: .bottom)
+
+                Text(pod.name)
+                    .font(AppFont.pillLabelBold(18))
+                    .foregroundColor(.white)
+                    .padding(14)
+            }
+            .frame(height: 150)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.r15, style: .continuous))
+            .overlay(alignment: .topTrailing) {
+                // The checkmark still shows, just as a stamp in the
+                // corner of the photo, arriving a beat after the photo
+                // itself has already sprung in.
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.appAvailableGreen)
+                    .background(Circle().fill(Color.white).frame(width: 22, height: 22))
+                    .padding(10)
+                    .scaleEffect(showConfirmationBadge ? 1 : 0.2)
+                    .opacity(showConfirmationBadge ? 1 : 0)
+            }
+            .scaleEffect(showConfirmationPhoto ? 1 : 0.9)
+            .opacity(showConfirmationPhoto ? 1 : 0)
+            .offset(y: showConfirmationPhoto ? 0 : 8)
+
             Text("Reservation confirmed")
                 .font(AppFont.pillLabelBold(16))
                 .foregroundColor(.appTextPrimary)
@@ -162,6 +203,19 @@ struct ReservationSheet: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
         .padding(.vertical, 24)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) {
+                showConfirmationPhoto = true
+            }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.5).delay(0.2)) {
+                showConfirmationBadge = true
+            }
+            // Right as the badge lands — matches ModeSwitchPill/HostTabBar's
+            // own convention of a tick on the moment something "commits."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            }
+        }
     }
 
     private func submit() {
@@ -174,6 +228,9 @@ struct ReservationSheet: View {
                     didSucceed = true
                 }
                 try? await Task.sleep(nanoseconds: 1_400_000_000)
+                // Fired here, not right after `create()` resolves — see
+                // `flashRecentReservationBadge`'s own doc comment.
+                reservationsStore.flashRecentReservationBadge()
                 onDismiss()
             }
         }
