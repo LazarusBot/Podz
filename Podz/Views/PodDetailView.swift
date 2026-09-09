@@ -948,6 +948,8 @@ struct PodDetailView: View {
                     .onTapGesture { openInMaps(lat: lat, lng: lng) }
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel("Open \(pod.name) location in Maps")
+
+                    TrailDrawInOverlay()
                 } else {
                     Rectangle().fill(Color.gray.opacity(0.2))
                 }
