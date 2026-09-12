@@ -45,7 +45,7 @@ struct PodDetailView: View {
     @State private var heroPhotoURLs: [String]
     /// Optional — required by `.scrollPosition(id:)`'s binding type.
     @State private var heroPageIndex: Int? = 0
-    @State private var cameraPosition: MapCameraPosition = .automatic
+    @StateObject private var trailRoute = TrailRouteLoader()
     @ObservedObject private var likesStore = LikesStore.shared
     @State private var showFolderPicker = false
     /// Drives the reservation bar growing in place to show the booking
@@ -176,20 +176,9 @@ struct PodDetailView: View {
             let renderer = ImageRenderer(content: PodShareCard(pod: pod, photo: photo))
             renderer.scale = UIScreen.main.scale
             shareCardImage = renderer.uiImage
-            if let lat = pod.latitude, let lng = pod.longitude {
-                // A tilted `.camera` instead of a flat top-down `.region`
-                // — realistic elevation (below) only actually reads as 3D
-                // terrain relief from an angled viewpoint; straight down,
-                // it looks the same as the flat style.
-                cameraPosition = .camera(
-                    MapCamera(
-                        centerCoordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-                        distance: 350,
-                        heading: 0,
-                        pitch: 60
-                    )
-                )
-            }
+            // The map's own resting shot and flyover are set from
+            // `mapSection`'s own `.task` instead (see `TrailRouteLoader`) —
+            // this task doesn't otherwise touch the map.
         }
     }
 
@@ -943,11 +932,40 @@ struct PodDetailView: View {
                     // No Marker/Annotation — this close in, at this pitch,
                     // the shelter itself is already visible in the 3D
                     // terrain, so a pin pointing at it is redundant.
-                    Map(position: $cameraPosition, interactionModes: [])
+                    Map(position: $trailRoute.cameraPosition, interactionModes: []) {
+                        // Grows point-by-point as TrailRouteLoader reveals
+                        // it — see that type's own doc comment for why a
+                        // real MapPolyline can't be `.trim()`-animated the
+                        // way a Shape can.
+                        if trailRoute.revealedCoordinates.count > 1 {
+                            MapPolyline(coordinates: trailRoute.revealedCoordinates)
+                                .stroke(Color.appAccentBlack, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                        }
+                    }
                     .mapStyle(.standard(elevation: .realistic))
                     .onTapGesture { openInMaps(lat: lat, lng: lng) }
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel("Open \(pod.name) location in Maps")
+                    .onAppear {
+                        // Just the resting shot — cheap, and means the map
+                        // is already framed correctly the moment it
+                        // scrolls into view, rather than sitting on
+                        // MapKit's own default `.automatic` region for a
+                        // beat first.
+                        trailRoute.showShelter(CLLocationCoordinate2D(latitude: lat, longitude: lng))
+                    }
+                    // The flyover itself waits for mapSection to actually
+                    // be on screen — this view sits inside an eager
+                    // (non-lazy) VStack, so without this gate the two
+                    // network lookups and the flyover would fire the
+                    // moment PodDetailView loads, for a section near the
+                    // bottom of a long scroll that may never be seen.
+                    .onScrollVisibilityChange(threshold: 0.3) { isVisible in
+                        guard isVisible else { return }
+                        Task {
+                            await trailRoute.startFlyover(to: CLLocationCoordinate2D(latitude: lat, longitude: lng))
+                        }
+                    }
                 } else {
                     Rectangle().fill(Color.gray.opacity(0.2))
                 }
