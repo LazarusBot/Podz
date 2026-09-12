@@ -26,12 +26,6 @@ struct PodsView: View {
     // bar's scroll-down shrink (MainTabView).
     @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedPass: TripPass?
-    /// Drives `emptyState`'s rolling face, together with
-    /// `rollingFaceOffsetX` — animated together so `repeatForever(autoreverses:
-    /// true)` plays both in lockstep, rolling right then back left rather
-    /// than spinning in place.
-    @State private var rollingFaceRotation: Double = 0
-    @State private var rollingFaceOffsetX: CGFloat = 0
 
     var body: some View {
         if let pass = selectedPass {
@@ -109,34 +103,7 @@ struct PodsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 32) {
-            // Same sad face as before, rolling back and forth along the
-            // ground rather than spinning in place — rotation and X
-            // offset animate together in one `withAnimation`, so
-            // `autoreverses` plays both forward (roll right, one full
-            // turn) and then in reverse (roll back left, un-turning) in
-            // lockstep, the way an actual ball rolling on a track would.
-            Image("RollingFaceIllustration")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 100, height: 100)
-                .rotationEffect(.degrees(rollingFaceRotation))
-                .offset(x: rollingFaceOffsetX)
-                .onAppear {
-                    // Half the screen width, minus half the face's own
-                    // 100pt, lands its own edge exactly on the screen's
-                    // edge at each extreme. Set as the *starting* offset
-                    // first (an unanimated jump to the left edge) rather
-                    // than only ever giving `withAnimation` a target —
-                    // that earlier version only had a target of
-                    // +amplitude, so it oscillated between center and the
-                    // right edge and never actually reached the left one.
-                    let amplitude = (UIScreen.main.bounds.width - 100) / 2
-                    rollingFaceOffsetX = -amplitude
-                    withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: true)) {
-                        rollingFaceRotation = 360
-                        rollingFaceOffsetX = amplitude
-                    }
-                }
+            PodsEmptyStateIllustration()
 
             Text("No upcoming trips yet — reserve a pod to see it here.")
                 .font(AppFont.regularLabel(14))
@@ -146,6 +113,79 @@ struct PodsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
+    }
+}
+
+/// The three-piece illustration (Hexi + Podzi, both with their own sad
+/// face, plus Roundi separately) — matches the original static composition,
+/// now idling with each piece's own `WobblingImage` rotation/bounce
+/// exactly as Figma's own `get_motion_context` specified it (see that
+/// type's own doc comment). Positions/sizes are Figma's own frame
+/// coordinates for node 4490:784 verbatim, laid out at native scale and
+/// then scaled down together via one `.scaleEffect` — that keeps the
+/// rotation (degrees, scale-independent) and bounce (points, meant to
+/// stay proportional to the piece's own displayed size) both correct
+/// without re-deriving each amplitude for whatever `displayWidth` this
+/// screen wants.
+private struct PodsEmptyStateIllustration: View {
+    private let canvasSize = CGSize(width: 418, height: 202.455)
+    private let displayWidth: CGFloat = 280
+
+    private var scale: CGFloat { displayWidth / canvasSize.width }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            WobblingImage(
+                imageName: "HexiIllustration",
+                size: CGSize(width: 203.057, height: 148.435),
+                rotationAmplitude: 7,
+                rotationLegCount: 13,
+                rotationLegSeconds: 0.2,
+                rotationLeadInSeconds: 0.2,
+                rotationTrailOutSeconds: 0.2,
+                bounceAmplitude: 5,
+                bounceLegCount: 11,
+                bounceLegSeconds: 0.25,
+                bounceLeadInSeconds: 0.2,
+                bounceTrailOutSeconds: 0.05
+            )
+            .offset(x: 0, y: 54.02)
+
+            WobblingImage(
+                imageName: "PodziIllustration",
+                size: CGSize(width: 151, height: 151.024),
+                rotationAmplitude: 8,
+                rotationLegCount: 11,
+                rotationLegSeconds: 0.25,
+                rotationLeadInSeconds: 0,
+                rotationTrailOutSeconds: 0.25,
+                bounceAmplitude: 6,
+                bounceLegCount: 10,
+                bounceLegSeconds: 0.27,
+                bounceLeadInSeconds: 0.05,
+                bounceTrailOutSeconds: 0.25
+            )
+            .offset(x: 140.4, y: 0)
+
+            WobblingImage(
+                imageName: "RollingFaceIllustration",
+                size: CGSize(width: 165, height: 165),
+                rotationAmplitude: 10,
+                rotationLegCount: 12,
+                rotationLegSeconds: 0.225,
+                rotationLeadInSeconds: 0.1,
+                rotationTrailOutSeconds: 0.2,
+                bounceAmplitude: 8,
+                bounceLegCount: 10,
+                bounceLegSeconds: 0.275,
+                bounceLeadInSeconds: 0.15,
+                bounceTrailOutSeconds: 0.1
+            )
+            .offset(x: 253, y: 35.02)
+        }
+        .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
+        .scaleEffect(scale, anchor: .topLeading)
+        .frame(width: displayWidth, height: canvasSize.height * scale)
     }
 }
 
