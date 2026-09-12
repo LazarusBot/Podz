@@ -36,59 +36,68 @@ struct PodsView: View {
     }
 
     private var listContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                header
+        // Wraps the ScrollView (not nested inside its own scrolling
+        // content, which is the flakier GeometryReader pattern) purely to
+        // read the available height once, so emptyState can center
+        // itself in the remaining space below the header instead of
+        // just sitting top-padded near the top of an otherwise-empty
+        // screen.
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
 
-                if tripPassStore.passes.isEmpty {
-                    emptyState
-                } else {
-                    HeroTripCard(pass: tripPassStore.passes[0]) {
-                        selectedPass = tripPassStore.passes[0]
-                    }
-                    .padding(.horizontal, 24)
+                    if tripPassStore.passes.isEmpty {
+                        emptyState
+                            .frame(minHeight: geometry.size.height - 200, alignment: .center)
+                    } else {
+                        HeroTripCard(pass: tripPassStore.passes[0]) {
+                            selectedPass = tripPassStore.passes[0]
+                        }
+                        .padding(.horizontal, 24)
 
-                    if tripPassStore.passes.count > 1 {
-                        SectionLabel(title: "Later")
-                            .padding(.top, 24)
+                        if tripPassStore.passes.count > 1 {
+                            SectionLabel(title: "Later")
+                                .padding(.top, 24)
 
-                        VStack(spacing: 0) {
-                            ForEach(tripPassStore.passes.dropFirst()) { pass in
-                                TripRow(pass: pass, onTap: { selectedPass = pass })
+                            VStack(spacing: 0) {
+                                ForEach(tripPassStore.passes.dropFirst()) { pass in
+                                    TripRow(pass: pass, onTap: { selectedPass = pass })
 
-                                Divider()
-                                    .background(Color.appBorder.opacity(0.4))
-                                    .padding(.leading, 24 + 56 + 12)
+                                    Divider()
+                                        .background(Color.appBorder.opacity(0.4))
+                                        .padding(.leading, 24 + 56 + 12)
+                                }
                             }
                         }
                     }
-                }
 
-                // Room so the last row doesn't hide behind the floating tab bar.
-                Color.clear.frame(height: 120)
+                    // Room so the last row doesn't hide behind the floating tab bar.
+                    Color.clear.frame(height: 120)
+                }
             }
-        }
-        .onScrollGeometryChange(for: CGFloat.self) { geometry in
-            geometry.contentOffset.y
-        } action: { _, newValue in
-            scrollState.updateOffset(newValue)
-        }
-        .background(Color.appHomeBackground)
-        .task {
-            // TripPassStore's own disk cache only gets overwritten once
-            // both fetches actually succeed — see its `refresh` doc
-            // comment for why an offline failure here must never wipe it.
-            async let reservationsOK = reservationsStore.fetchMine()
-            async let podsOK = podsStore.fetchPods()
-            if await reservationsOK, await podsOK {
-                tripPassStore.refresh(
-                    reservations: reservationsStore.reservations,
-                    pods: podsStore.pods,
-                    photosByPodId: podsStore.primaryPhotoByPodId
-                )
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.y
+            } action: { _, newValue in
+                scrollState.updateOffset(newValue)
             }
+            .background(Color.appHomeBackground)
+            .task {
+                // TripPassStore's own disk cache only gets overwritten once
+                // both fetches actually succeed — see its `refresh` doc
+                // comment for why an offline failure here must never wipe it.
+                async let reservationsOK = reservationsStore.fetchMine()
+                async let podsOK = podsStore.fetchPods()
+                if await reservationsOK, await podsOK {
+                    tripPassStore.refresh(
+                        reservations: reservationsStore.reservations,
+                        pods: podsStore.pods,
+                        photosByPodId: podsStore.primaryPhotoByPodId
+                    )
+                }
+            }
+            .onAppear { scrollState.reset() }
         }
-        .onAppear { scrollState.reset() }
     }
 
     private var header: some View {
@@ -102,6 +111,9 @@ struct PodsView: View {
     }
 
     private var emptyState: some View {
+        // No top padding — centered vertically by listContent's own
+        // `.frame(minHeight:alignment: .center)` in the space below the
+        // header instead, rather than just sitting pinned near the top.
         VStack(spacing: 32) {
             PodsEmptyStateIllustration()
 
@@ -112,7 +124,6 @@ struct PodsView: View {
                 .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 60)
     }
 }
 
