@@ -26,6 +26,12 @@ struct PodsView: View {
     // bar's scroll-down shrink (MainTabView).
     @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedPass: TripPass?
+    /// Drives `emptyState`'s rolling face, together with
+    /// `rollingFaceOffsetX` — animated together so `repeatForever(autoreverses:
+    /// true)` plays both in lockstep, rolling right then back left rather
+    /// than spinning in place.
+    @State private var rollingFaceRotation: Double = 0
+    @State private var rollingFaceOffsetX: CGFloat = 0
 
     var body: some View {
         if let pass = selectedPass {
@@ -102,18 +108,44 @@ struct PodsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "mountain.2")
-                .font(.system(size: 32))
-                .foregroundColor(.appTextMuted)
+        VStack(spacing: 32) {
+            // Same sad face as before, rolling back and forth along the
+            // ground rather than spinning in place — rotation and X
+            // offset animate together in one `withAnimation`, so
+            // `autoreverses` plays both forward (roll right, one full
+            // turn) and then in reverse (roll back left, un-turning) in
+            // lockstep, the way an actual ball rolling on a track would.
+            Image("RollingFaceIllustration")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 100, height: 100)
+                .rotationEffect(.degrees(rollingFaceRotation))
+                .offset(x: rollingFaceOffsetX)
+                .onAppear {
+                    // Half the screen width, minus half the face's own
+                    // 100pt, lands its own edge exactly on the screen's
+                    // edge at each extreme. Set as the *starting* offset
+                    // first (an unanimated jump to the left edge) rather
+                    // than only ever giving `withAnimation` a target —
+                    // that earlier version only had a target of
+                    // +amplitude, so it oscillated between center and the
+                    // right edge and never actually reached the left one.
+                    let amplitude = (UIScreen.main.bounds.width - 100) / 2
+                    rollingFaceOffsetX = -amplitude
+                    withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: true)) {
+                        rollingFaceRotation = 360
+                        rollingFaceOffsetX = amplitude
+                    }
+                }
+
             Text("No upcoming trips yet — reserve a pod to see it here.")
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
-        .padding(.horizontal, 40)
     }
 }
 
