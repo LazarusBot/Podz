@@ -36,8 +36,9 @@ struct ModeSwitchPill: View {
     /// Fixed gap between the handle's resting position and the label —
     /// the label sits at `handleWidth + labelLeadingGap` from the left
     /// edge, not centered across the whole pill, so it reads as "next to
-    /// the handle" rather than floating independently in the bar.
-    private let labelLeadingGap: CGFloat = 20
+    /// the handle" rather than floating independently in the bar. 25,
+    /// matching Figma node 4418:1395's own `gap-[25px]` exactly.
+    private let labelLeadingGap: CGFloat = 25
     @State private var trackWidth: CGFloat = 0
     @State private var labelWidth: CGFloat = 0
 
@@ -88,16 +89,15 @@ struct ModeSwitchPill: View {
                 // same-size button.
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.white)
-                // A real icon frame first — same 20-ish "standalone icon"
-                // sizing the app already uses elsewhere (tab bar icons at
-                // 26, Reserve's checkmark badge at 26) — THEN generous
-                // horizontal padding around that (18, well past the 8
-                // vertical) so it actually reads as a wide pill rather
-                // than padding just barely clearing a square.
-                .frame(width: 20, height: 20)
-                .padding(.leading, 18)
-                .padding(.trailing, 18)
-                .padding(.vertical, 8)
+                // Icon frame + padding matched to Figma node 4418:1395's
+                // own "Next Button" measurements exactly: a 16x16 icon
+                // container, `pl-[24px] pr-[20px] py-[12px]` (asymmetric
+                // leading/trailing, not the symmetric 18/18/8 this used
+                // to be).
+                .frame(width: 16, height: 16)
+                .padding(.leading, 24)
+                .padding(.trailing, 20)
+                .padding(.vertical, 12)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { handleWidth = $0 }
                 .pillStyle(
                     fill: Color.appAccentBlack,
