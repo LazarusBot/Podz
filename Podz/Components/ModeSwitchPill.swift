@@ -74,11 +74,15 @@ struct ModeSwitchPill: View {
                 // into the reported size, so `labelWidth` stays the
                 // text's real width for `labelOpacity`'s own math.
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { labelWidth = $0 }
-                // 0.5 max, not 1 — the label rests at half-opacity even
-                // before the handle starts covering it, same fade curve
-                // (`labelOpacity`) just scaled down rather than starting
-                // fully opaque.
-                .opacity(labelOpacity * 0.5)
+                // Full opacity at rest now, not a 0.5 cap — that was
+                // tuned back when this label was solid black, which
+                // still read fine at half-strength against this pill's
+                // light glass. The white-to-appTextMuted gradient it
+                // uses now washes out badly at 50% over that same
+                // near-white background, so this fades only once the
+                // handle actually approaches/covers it (still via
+                // `labelOpacity`), not before.
+                .opacity(labelOpacity)
                 .offset(x: handleWidth + labelLeadingGap)
 
             Image(systemName: "chevron.right")
