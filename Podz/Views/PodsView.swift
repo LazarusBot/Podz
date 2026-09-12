@@ -102,7 +102,7 @@ struct PodsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 32) {
             Image("NoTripsIllustration")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
