@@ -299,14 +299,19 @@ struct LikesView: View {
         VStack(spacing: 24) {
             LikesEmptyStateIllustration()
 
+            // Same font/color/padding shape as PodsView's own empty-state
+            // caption (AppFont.regularLabel(14), padding on the text
+            // itself, not the whole VStack) — this one had drifted to a
+            // bare .system(size:weight:) with the horizontal padding
+            // applied to the illustration too, not just the caption.
             Text("No likes yet — tap the heart on a pod in your feed.")
-                .font(.system(size: 14, weight: .medium))
+                .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
-        .padding(.horizontal, 40)
     }
 }
 
