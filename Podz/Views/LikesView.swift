@@ -296,10 +296,18 @@ struct LikesView: View {
     // MARK: - Empty state
     
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "heart")
-                .font(.system(size: 32))
-                .foregroundColor(.appTextMuted)
+        VStack(spacing: 24) {
+            // Explicit width AND height, not aspectRatio(contentMode: .fit)
+            // plus just one dimension — PodsView's own empty-state
+            // illustration hit a real bug that way: the fill computation
+            // reports its own aspect-correct width as this view's ideal
+            // size, which can be wider than intended and drag ancestors
+            // (like the persistent bottom tab bar) wider along with it.
+            Image("NoLikesIllustration")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 280, height: 280 * 198 / 276)
+
             Text("No likes yet — tap the heart on a pod in your feed.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.appTextMuted)
