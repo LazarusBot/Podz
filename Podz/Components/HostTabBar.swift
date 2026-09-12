@@ -66,6 +66,10 @@ struct HostTabBar: View {
     @State private var tabFrames: [HostTab: CGRect] = [:]
     @State private var isModeSwitchRevealed = false
     @State private var modeSwitchProgress: CGFloat = 0
+    /// See `BottomTabBar`'s identical `modeSwitchPillHeight` — measured so
+    /// the pill's own offset lands an exact 10pt gap above this bar
+    /// regardless of the pill's actual rendered height.
+    @State private var modeSwitchPillHeight: CGFloat = 56
     /// Same race-free suppression as `BottomTabBar`'s own — see that
     /// type's doc comment on its own `suppressNextProfileTap`.
     @State private var suppressNextProfileTap = false
@@ -100,7 +104,8 @@ struct HostTabBar: View {
                     // `BottomTabBar`'s identical wiring/reasoning.
                     onCancel: dismissModeSwitchInstantly
                 )
-                .offset(y: -60)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { modeSwitchPillHeight = $0 }
+                .offset(y: -(modeSwitchPillHeight + 10))
                 // See `BottomTabBar`'s identical structure for why this
                 // is a `.background`, not a `ZStack` sibling.
                 .background(ModeSwitchDismissCatcher(onDismiss: dismissModeSwitchInstantly))

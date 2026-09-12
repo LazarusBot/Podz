@@ -185,15 +185,17 @@ struct ModeSwitchPill: View {
     }
 }
 
-/// The label's brushed-metal look: a solid black "classic" text layer
-/// underneath (`.appTextPrimary` — same as `reservationBar`'s own pod-
-/// name text on this identical glass background) for legibility, with a
-/// brighter band sweeping left to right on a loop layered on top as the
-/// actual "metal" sheen. An all-gray/white gradient base was the first
-/// pass here, but this pill's glass (`ReservationBarGlass`, a light
-/// `.black.opacity(0.1)`-tinted material — not a dark/solid fill) is
-/// much closer to white than black, so light-on-light text read as
-/// washed out; black is what's actually legible against it.
+/// The label's brushed-metal look: a white-to-`.appTextMuted` gradient
+/// text layer underneath (matching Figma node 4418:1395's own
+/// `from-white to-[#999]` spec exactly), with a brighter band sweeping
+/// left to right on a loop layered on top as the actual "metal" sheen.
+/// An earlier version of this used that same light gradient and swapped
+/// it for solid black, reasoning that this pill's glass
+/// (`ReservationBarGlass`, a light `.black.opacity(0.1)`-tinted
+/// material — not a dark/solid fill) is much closer to white than
+/// black, so light-on-light text read as washed out. Reverted back to
+/// match the design spec exactly — worth double-checking legibility
+/// on-device against the glass background for the same reason.
 ///
 /// Plain SwiftUI (`.mask`/`LinearGradient`/a repeating `withAnimation`),
 /// not an actual Metal shader — this app has no existing shader
@@ -213,7 +215,14 @@ private struct MetalSweepText: View {
     var body: some View {
         Text(label)
             .font(font)
-            .foregroundStyle(Color.appTextPrimary)
+            // Light gray to the app's own existing muted gray, matching
+            // Figma node 4418:1395's own `from-white to-[#999]` text
+            // gradient — was a flat `.appTextPrimary`. The sweep overlay
+            // below (the "shader") is untouched, just layered on top of
+            // this new base gradient instead of a solid color.
+            .foregroundStyle(
+                LinearGradient(colors: [.white, .appTextMuted], startPoint: .leading, endPoint: .trailing)
+            )
             .overlay {
                 GeometryReader { proxy in
                     let width = proxy.size.width

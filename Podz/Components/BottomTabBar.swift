@@ -84,6 +84,13 @@ struct BottomTabBar: View {
     /// True while `ModeSwitchPill` is up, revealed by a long press on
     /// the Profile tab — see `profileModeSwitch`.
     @State private var isModeSwitchRevealed = false
+    /// The pill's own measured height, so its resting offset (see
+    /// `profileModeSwitch`) can put an exact 10pt gap between its bottom
+    /// edge and this bar's top edge instead of a hand-guessed constant
+    /// that only happened to match the pill's height at one particular
+    /// sizing. 56 is just a reasonable first-frame guess before the real
+    /// measurement lands.
+    @State private var modeSwitchPillHeight: CGFloat = 56
     /// 0...1 drag progress of the pill's handle, owned here so it can be
     /// reset the instant the switch commits (closing the pill mid-way
     /// through its own commit action would otherwise show the handle
@@ -149,16 +156,17 @@ struct BottomTabBar: View {
                     // that makes an already-abandoned gesture linger.
                     onCancel: dismissModeSwitchInstantly
                 )
-                .offset(y: -60)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { modeSwitchPillHeight = $0 }
+                .offset(y: -(modeSwitchPillHeight + 10))
                 // `.background`, not a `ZStack` sibling — a sibling's
                 // huge 2000x2000 frame would make the *whole stack* size
                 // to it, which shifts where "center" is and throws off
-                // this pill's own `.offset(y: -60)` (it landed hundreds
-                // of points off-screen the first time). `.background`
-                // doesn't propose its own size upward — the reported
-                // layout size stays the pill's own small footprint, with
-                // the catcher just painted (and hit-testable) behind it
-                // without disturbing that.
+                // this pill's own offset (it landed hundreds of points
+                // off-screen the first time). `.background` doesn't
+                // propose its own size upward — the reported layout size
+                // stays the pill's own small footprint, with the catcher
+                // just painted (and hit-testable) behind it without
+                // disturbing that.
                 .background(ModeSwitchDismissCatcher(onDismiss: dismissModeSwitchInstantly))
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
                 .zIndex(1)
