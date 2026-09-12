@@ -121,7 +121,7 @@ final class AuthManager: ObservableObject {
     /// Update your own profile (e.g. from a settings screen). `username`
     /// must stay unique — a duplicate will throw, so surface `lastError`
     /// to the user if you call this from a form.
-    func updateProfile(username: String? = nil, fullName: String? = nil, avatarURL: String? = nil, age: Int? = nil, location: String? = nil) async {
+    func updateProfile(username: String? = nil, fullName: String? = nil, avatarURL: String? = nil, headerPhotoURL: String? = nil, age: Int? = nil, location: String? = nil) async {
         guard let userId = session?.user.id else {
             lastError = "No active session — can't update profile."
             return
@@ -130,6 +130,7 @@ final class AuthManager: ObservableObject {
         if let username { updates["username"] = .string(username) }
         if let fullName { updates["full_name"] = .string(fullName) }
         if let avatarURL { updates["avatar_url"] = .string(avatarURL) }
+        if let headerPhotoURL { updates["header_photo_url"] = .string(headerPhotoURL) }
         if let age { updates["age"] = .integer(age) }
         if let location { updates["location"] = .string(location) }
         guard !updates.isEmpty else {

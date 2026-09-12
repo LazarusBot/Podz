@@ -20,6 +20,14 @@ struct ProfileTopBar: View {
     /// count, since the real number already shows elsewhere (the "Posts"
     /// row's badge, or whatever screen this leads to).
     var trailingBadge: Bool = false
+    /// Skips the opaque `appHomeBackground` fill — e.g. ProfileEditView's
+    /// own header, floating this bar's back/edit buttons over a photo
+    /// instead of a flat colored bar. Also switches the buttons themselves
+    /// from solid white circles to real Liquid Glass with a white stroke —
+    /// a solid white circle reads fine on a flat background, but over
+    /// varied photo content it looks like an odd opaque patch rather than
+    /// a floating control.
+    var transparentBackground: Bool = false
 
     var body: some View {
         HStack {
@@ -30,8 +38,7 @@ struct ProfileTopBar: View {
                         .foregroundColor(.black)
                         .frame(width: 44, height: 44)
                 }
-                .background(Circle().fill(Color.white))
-                .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .modifier(TopBarButtonChrome(transparentBackground: transparentBackground))
                 .accessibilityLabel("Back")
             } else {
                 Color.clear.frame(width: 44, height: 44)
@@ -53,8 +60,7 @@ struct ProfileTopBar: View {
                         .foregroundColor(.black)
                         .frame(width: 44, height: 44)
                 }
-                .background(Circle().fill(Color.white))
-                .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .modifier(TopBarButtonChrome(transparentBackground: transparentBackground))
                 .accessibilityLabel(trailingAccessibilityLabel)
                 .overlay(alignment: .topTrailing) {
                     if trailingBadge {
@@ -79,6 +85,35 @@ struct ProfileTopBar: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 31)
-        .background(Color.appHomeBackground)
+        .background(transparentBackground ? Color.clear : Color.appHomeBackground)
+    }
+}
+
+/// Solid white circle everywhere this bar had it before, or real Liquid
+/// Glass — with its own dynamic specular highlight, not just a blur —
+/// over `transparentBackground`'s photo. Same recipe as `AvatarPicker`'s
+/// own `CameraBadge`, so a floating circle button reads the same wherever
+/// it shows up in the app, with the same iOS 26 availability gate and
+/// `.ultraThinMaterial` fallback below it.
+private struct TopBarButtonChrome: ViewModifier {
+    let transparentBackground: Bool
+
+    func body(content: Content) -> some View {
+        if transparentBackground {
+            Group {
+                if #available(iOS 26, *) {
+                    GlassEffectContainer {
+                        content.glassEffect(.regular.tint(.white.opacity(0.1)), in: .circle)
+                    }
+                } else {
+                    content.background(Circle().fill(.ultraThinMaterial))
+                }
+            }
+            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
+        } else {
+            content
+                .background(Circle().fill(Color.white))
+                .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+        }
     }
 }

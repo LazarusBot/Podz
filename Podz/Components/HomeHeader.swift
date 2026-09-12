@@ -41,6 +41,12 @@ struct AvatarView: View {
     /// top-bar avatar, matching PodDetailView's small top-bar photo
     /// (`RoundedRectangle(cornerRadius: AppRadius.r10, style: .continuous)`).
     var cornerRadius: CGFloat? = nil
+    /// False drops the white ring overlay — e.g. ProfileEditView's own
+    /// header avatar, which sits on the header photo's own faded-to-solid
+    /// bottom edge rather than directly on a photo needing that ring for
+    /// separation. True (default) matches every call site this had before
+    /// the parameter existed.
+    var showsStroke: Bool = true
 
     var body: some View {
         Group {
@@ -54,7 +60,7 @@ struct AvatarView: View {
             }
         }
         .frame(width: size, height: size)
-        .modifier(AvatarClipStyle(cornerRadius: cornerRadius))
+        .modifier(AvatarClipStyle(cornerRadius: cornerRadius, showsStroke: showsStroke))
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 2)
     }
 
@@ -74,19 +80,26 @@ struct AvatarView: View {
 /// so a type-erased single code path isn't an option here.
 private struct AvatarClipStyle: ViewModifier {
     let cornerRadius: CGFloat?
+    var showsStroke: Bool = true
 
     func body(content: Content) -> some View {
         if let cornerRadius {
             content
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
-                )
+                .overlay {
+                    if showsStroke {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                    }
+                }
         } else {
             content
                 .clipShape(Circle())
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1))
+                .overlay {
+                    if showsStroke {
+                        Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                    }
+                }
         }
     }
 }

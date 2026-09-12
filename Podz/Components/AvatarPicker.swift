@@ -11,36 +11,58 @@ internal import Auth
 import Storage
 import Supabase
 
-/// Tap the avatar → pick a photo → uploads to Supabase Storage →
-/// updates the profile row automatically. Drop this in place of a plain
-/// AvatarView anywhere you want the picture to be editable.
+/// Tap the avatar (or flip `isPickerPresented` from outside, `isInteractive`
+/// false) → pick a photo → uploads to Supabase Storage → updates the
+/// profile row automatically. Drop this in place of a plain AvatarView
+/// anywhere you want the picture to be editable.
 struct AvatarPicker: View {
     var currentImageURL: String?
     var size: CGFloat = 42
+    /// Nil (default) clips to a circle, matching `AvatarView`'s own
+    /// default — a value switches to a rounded square at that radius
+    /// instead, e.g. ProfileEditView's own header avatar.
+    var cornerRadius: CGFloat? = nil
+    /// See `AvatarView.showsStroke` — passed straight through.
+    var showsStroke: Bool = true
+    /// Lets a second control open this same picker — e.g. ProfileEditView's
+    /// header "edit profile picture" button triggers the identical upload
+    /// flow as tapping the avatar itself, rather than each wiring up its
+    /// own separate picker and upload logic. Nil (default) falls back to
+    /// purely internal state, matching every call site this had before
+    /// this parameter existed.
+    var isPickerPresented: Binding<Bool>? = nil
+    /// False renders a plain, non-interactive avatar — no tap gesture, no
+    /// camera badge — driven entirely by `isPickerPresented` from outside
+    /// instead. E.g. ProfileEditView's own header avatar, which is only
+    /// ever edited via the header's shared "edit photo" menu, not by
+    /// tapping the avatar directly. True (default) matches every call
+    /// site this had before the parameter existed.
+    var isInteractive: Bool = true
 
+    @State private var internalPickerPresented = false
     @State private var selectedItem: PhotosPickerItem?
     @State private var isUploading = false
     @State private var errorMessage: String?
 
-    var body: some View {
-        PhotosPicker(selection: $selectedItem, matching: .images) {
-            ZStack {
-                AvatarView(imageName: currentImageURL, size: size)
+    private var pickerPresented: Binding<Bool> {
+        isPickerPresented ?? $internalPickerPresented
+    }
 
-                if isUploading {
-                    Circle()
-                        .fill(Color.black.opacity(0.4))
-                        .frame(width: size, height: size)
-                    ProgressView().tint(.white).scaleEffect(0.6)
-                } else {
-                    // Small camera badge, bottom-right corner
-                    CameraBadge(size: size)
-                        .offset(x: size * 0.32, y: size * 0.32)
+    var body: some View {
+        Group {
+            if isInteractive {
+                Button {
+                    pickerPresented.wrappedValue = true
+                } label: {
+                    avatarContent
                 }
+                .disabled(isUploading)
+                .accessibilityLabel("Change profile photo")
+            } else {
+                avatarContent
             }
         }
-        .disabled(isUploading)
-        .accessibilityLabel("Change profile photo")
+        .photosPicker(isPresented: pickerPresented, selection: $selectedItem, matching: .images)
         .onChange(of: selectedItem) { _, newItem in
             guard let newItem else { return }
             Task { await upload(item: newItem) }
@@ -50,6 +72,23 @@ struct AvatarPicker: View {
         }, message: {
             Text(errorMessage ?? "")
         })
+    }
+
+    private var avatarContent: some View {
+        ZStack {
+            AvatarView(imageName: currentImageURL, size: size, cornerRadius: cornerRadius, showsStroke: showsStroke)
+
+            if isUploading {
+                Circle()
+                    .fill(Color.black.opacity(0.4))
+                    .frame(width: size, height: size)
+                ProgressView().tint(.white).scaleEffect(0.6)
+            } else if isInteractive {
+                // Small camera badge, bottom-right corner
+                CameraBadge(size: size)
+                    .offset(x: size * 0.32, y: size * 0.32)
+            }
+        }
     }
 
     private func upload(item: PhotosPickerItem) async {
