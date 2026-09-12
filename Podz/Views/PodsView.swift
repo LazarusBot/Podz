@@ -102,10 +102,11 @@ struct PodsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "mountain.2")
-                .font(.system(size: 32))
-                .foregroundColor(.appTextMuted)
+        VStack(spacing: 20) {
+            Image("NoTripsIllustration")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: 220)
             Text("No upcoming trips yet — reserve a pod to see it here.")
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
