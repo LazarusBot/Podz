@@ -26,6 +26,11 @@ struct PodsView: View {
     // bar's scroll-down shrink (MainTabView).
     @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedPass: TripPass?
+    /// Drives `emptyState`'s rolling face — a single one-shot animation to
+    /// 360° with `repeatForever`, the standard way to get a continuous
+    /// spin in SwiftUI (animating a value that keeps growing, rather than
+    /// something that would visibly snap back from 360° to 0° each lap).
+    @State private var rollingFaceRotation: Double = 0
 
     var body: some View {
         if let pass = selectedPass {
@@ -103,10 +108,18 @@ struct PodsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 32) {
-            Image("NoTripsIllustration")
+            // Same sad face as before, just continuously rolling in
+            // place — no expression change, no lateral movement.
+            Image("RollingFaceIllustration")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .padding(.horizontal, 56)
+                .frame(width: 140, height: 140)
+                .rotationEffect(.degrees(rollingFaceRotation))
+                .onAppear {
+                    withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                        rollingFaceRotation = 360
+                    }
+                }
 
             Text("No upcoming trips yet — reserve a pod to see it here.")
                 .font(AppFont.regularLabel(14))
