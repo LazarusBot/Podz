@@ -103,18 +103,22 @@ struct PodsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 20) {
+            // Full width, not the 40pt horizontal inset the caption below
+            // still uses — the illustration is meant to fill the tab
+            // edge-to-edge, not sit inside the page's usual text margins.
             Image("NoTripsIllustration")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(maxWidth: 220)
+                .frame(maxWidth: .infinity)
+
             Text("No upcoming trips yet — reserve a pod to see it here.")
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
-        .padding(.horizontal, 40)
     }
 }
 
