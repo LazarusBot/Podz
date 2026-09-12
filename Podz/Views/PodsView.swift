@@ -122,9 +122,12 @@ struct PodsView: View {
                 .rotationEffect(.degrees(rollingFaceRotation))
                 .offset(x: rollingFaceOffsetX)
                 .onAppear {
-                    withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: true)) {
+                    // Slower now too (was 1.6s for a 45pt roll) — 400pt
+                    // at that same pace would've blurred past rather
+                    // than read as rolling.
+                    withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: true)) {
                         rollingFaceRotation = 360
-                        rollingFaceOffsetX = 45
+                        rollingFaceOffsetX = 400
                     }
                 }
 
