@@ -325,7 +325,12 @@ struct LikesView: View {
 /// oversized *reported* size instead of filling the display frame).
 private struct LikesEmptyStateIllustration: View {
     private let canvasSize = CGSize(width: 276, height: 198)
-    private let displayWidth: CGFloat = 280
+    // Matches PodsEmptyStateIllustration's own displayed *height*
+    // (202.455 * 280/418 ≈ 135.6pt), not its displayWidth verbatim — the
+    // two canvases have different aspect ratios (276x198 here vs
+    // 418x202.455 there), so matching width alone left this one visibly
+    // taller despite both nominally being "280".
+    private let displayWidth: CGFloat = 135.6 / 198 * 276
     private let smallHeartSize = CGSize(width: 75.1, height: 66.98)
 
     private var scale: CGFloat { displayWidth / canvasSize.width }
