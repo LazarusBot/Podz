@@ -26,11 +26,12 @@ struct PodsView: View {
     // bar's scroll-down shrink (MainTabView).
     @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedPass: TripPass?
-    /// Drives `emptyState`'s rolling face — a single one-shot animation to
-    /// 360° with `repeatForever`, the standard way to get a continuous
-    /// spin in SwiftUI (animating a value that keeps growing, rather than
-    /// something that would visibly snap back from 360° to 0° each lap).
+    /// Drives `emptyState`'s rolling face, together with
+    /// `rollingFaceOffsetX` — animated together so `repeatForever(autoreverses:
+    /// true)` plays both in lockstep, rolling right then back left rather
+    /// than spinning in place.
     @State private var rollingFaceRotation: Double = 0
+    @State private var rollingFaceOffsetX: CGFloat = 0
 
     var body: some View {
         if let pass = selectedPass {
@@ -108,16 +109,22 @@ struct PodsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 32) {
-            // Same sad face as before, just continuously rolling in
-            // place — no expression change, no lateral movement.
+            // Same sad face as before, rolling back and forth along the
+            // ground rather than spinning in place — rotation and X
+            // offset animate together in one `withAnimation`, so
+            // `autoreverses` plays both forward (roll right, one full
+            // turn) and then in reverse (roll back left, un-turning) in
+            // lockstep, the way an actual ball rolling on a track would.
             Image("RollingFaceIllustration")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 140, height: 140)
+                .frame(width: 100, height: 100)
                 .rotationEffect(.degrees(rollingFaceRotation))
+                .offset(x: rollingFaceOffsetX)
                 .onAppear {
-                    withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                    withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: true)) {
                         rollingFaceRotation = 360
+                        rollingFaceOffsetX = 45
                     }
                 }
 
