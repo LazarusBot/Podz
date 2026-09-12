@@ -122,15 +122,19 @@ struct PodsView: View {
                 .rotationEffect(.degrees(rollingFaceRotation))
                 .offset(x: rollingFaceOffsetX)
                 .onAppear {
+                    // Half the screen width, minus half the face's own
+                    // 100pt, lands its own edge exactly on the screen's
+                    // edge at each extreme. Set as the *starting* offset
+                    // first (an unanimated jump to the left edge) rather
+                    // than only ever giving `withAnimation` a target —
+                    // that earlier version only had a target of
+                    // +amplitude, so it oscillated between center and the
+                    // right edge and never actually reached the left one.
+                    let amplitude = (UIScreen.main.bounds.width - 100) / 2
+                    rollingFaceOffsetX = -amplitude
                     withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: true)) {
                         rollingFaceRotation = 360
-                        // Screen-width-derived, not a fixed ±400 — that
-                        // let it roll off both edges. This instead lands
-                        // its own edge exactly on the screen's edge at
-                        // each extreme (half the screen width, minus half
-                        // the face's own 100pt), so it travels edge to
-                        // edge without ever leaving the screen.
-                        rollingFaceOffsetX = (UIScreen.main.bounds.width - 100) / 2
+                        rollingFaceOffsetX = amplitude
                     }
                 }
 
