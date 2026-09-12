@@ -296,7 +296,8 @@ struct LikesView: View {
     // MARK: - Empty state
     
     private var emptyState: some View {
-        VStack(spacing: 24) {
+        // 32, matching PodsView's own empty-state VStack spacing exactly.
+        VStack(spacing: 32) {
             LikesEmptyStateIllustration()
 
             // Same font/color/padding shape as PodsView's own empty-state
