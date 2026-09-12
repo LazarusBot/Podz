@@ -188,7 +188,15 @@ private struct PodsEmptyStateIllustration: View {
         }
         .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
         .scaleEffect(scale, anchor: .topLeading)
-        .frame(width: displayWidth, height: canvasSize.height * scale)
+        // `scaleEffect` is a pure paint-time transform — it doesn't
+        // shrink what this view *reports* as its own size (still
+        // canvasSize, not the visually-scaled displayWidth), so without
+        // an explicit `.topLeading` alignment here too, this frame would
+        // center that still-oversized reported box inside the smaller
+        // displayWidth one, shifting the actually-painted (already
+        // correctly sized) content off toward the top-left corner
+        // instead of filling this frame edge to edge.
+        .frame(width: displayWidth, height: canvasSize.height * scale, alignment: .topLeading)
     }
 }
 
