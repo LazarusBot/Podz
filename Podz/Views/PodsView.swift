@@ -122,12 +122,15 @@ struct PodsView: View {
                 .rotationEffect(.degrees(rollingFaceRotation))
                 .offset(x: rollingFaceOffsetX)
                 .onAppear {
-                    // Slower now too (was 1.6s for a 45pt roll) — 400pt
-                    // at that same pace would've blurred past rather
-                    // than read as rolling.
                     withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: true)) {
                         rollingFaceRotation = 360
-                        rollingFaceOffsetX = 400
+                        // Screen-width-derived, not a fixed ±400 — that
+                        // let it roll off both edges. This instead lands
+                        // its own edge exactly on the screen's edge at
+                        // each extreme (half the screen width, minus half
+                        // the face's own 100pt), so it travels edge to
+                        // edge without ever leaving the screen.
+                        rollingFaceOffsetX = (UIScreen.main.bounds.width - 100) / 2
                     }
                 }
 
