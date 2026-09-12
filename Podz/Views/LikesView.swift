@@ -297,16 +297,7 @@ struct LikesView: View {
     
     private var emptyState: some View {
         VStack(spacing: 24) {
-            // Explicit width AND height, not aspectRatio(contentMode: .fit)
-            // plus just one dimension — PodsView's own empty-state
-            // illustration hit a real bug that way: the fill computation
-            // reports its own aspect-correct width as this view's ideal
-            // size, which can be wider than intended and drag ancestors
-            // (like the persistent bottom tab bar) wider along with it.
-            Image("NoLikesIllustration")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 280, height: 280 * 198 / 276)
+            LikesEmptyStateIllustration()
 
             Text("No likes yet — tap the heart on a pod in your feed.")
                 .font(.system(size: 14, weight: .medium))
@@ -316,5 +307,72 @@ struct LikesView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
         .padding(.horizontal, 40)
+    }
+}
+
+/// The big sad outline heart plus three small broken-heart accents,
+/// each beating on its own independent `HeartbeatImage` period with a
+/// slight phase offset — matches Figma's own `get_motion_context` for
+/// node 4512:392 (the three small hearts are `motion.div`s there; the
+/// big heart isn't animated). Positions/sizes are that frame's own
+/// layout percentages converted to points on a 276x198 canvas (the big
+/// heart's native SVG size), laid out at native scale and scaled down
+/// together via one `scaleEffect` — same approach, and the same
+/// `.topLeading`-alignment fix, as `PodsView`'s own
+/// `PodsEmptyStateIllustration` (see that type's doc comment for why
+/// the final `.frame`'s alignment has to match the `scaleEffect`
+/// anchor, or the scaled content ends up centered inside its own
+/// oversized *reported* size instead of filling the display frame).
+private struct LikesEmptyStateIllustration: View {
+    private let canvasSize = CGSize(width: 276, height: 198)
+    private let displayWidth: CGFloat = 280
+    private let smallHeartSize = CGSize(width: 75.1, height: 66.98)
+
+    private var scale: CGFloat { displayWidth / canvasSize.width }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Image("BigHeartIllustration")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 223.23, height: 197.525)
+                .offset(x: 24.87, y: 0.475)
+
+            HeartbeatImage(
+                imageName: "SmallHeartIllustration",
+                size: smallHeartSize,
+                rotationAmplitudeDegrees: 4,
+                bounceAmplitude: 6,
+                scaleUp: 1.07,
+                scaleDown: 0.97,
+                initialDelaySeconds: 0.5
+            )
+            .offset(x: 0, y: 61.76)
+
+            HeartbeatImage(
+                imageName: "SmallHeartIllustration",
+                size: smallHeartSize,
+                rotationAmplitudeDegrees: 4,
+                bounceAmplitude: 6,
+                scaleUp: 1.07,
+                scaleDown: 0.97,
+                initialDelaySeconds: 1.0
+            )
+            .offset(x: 200.9, y: 0)
+
+            HeartbeatImage(
+                imageName: "SmallHeartIllustration",
+                size: smallHeartSize,
+                rotationAmplitudeDegrees: 4,
+                bounceAmplitude: 6,
+                scaleUp: 1.07,
+                scaleDown: 0.97,
+                initialDelaySeconds: 0
+            )
+            .offset(x: 172.5, y: 120.76)
+        }
+        .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
+        .scaleEffect(scale, anchor: .topLeading)
+        .frame(width: displayWidth, height: canvasSize.height * scale, alignment: .topLeading)
     }
 }
