@@ -26,7 +26,14 @@ import SwiftUI
 /// approach `PodsEmptyStateIllustration` uses.
 struct LennyWalkingAvatar: View {
     private let canvasSize = CGSize(width: 183, height: 224.667)
-    var displayWidth: CGFloat = 150
+    // Matches PodsEmptyStateIllustration's own displayed *height*
+    // (202.455 * 280/418 ≈ 135.6pt, the shared target every empty-state
+    // illustration in the app sizes itself to — see
+    // LikesEmptyStateIllustration's identical comment), not some other
+    // illustration's displayWidth verbatim — this canvas has yet another
+    // aspect ratio (183x224.667), so matching width alone would leave it
+    // a visibly different size on screen despite any shared number.
+    var displayWidth: CGFloat = 135.6 / 224.667 * 183
 
     private var scale: CGFloat { displayWidth / canvasSize.width }
 
