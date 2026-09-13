@@ -477,7 +477,9 @@ struct HomeView: View {
     }
 
     private var awaitingQueryState: some View {
-        VStack(spacing: 12) {
+        // 32, matching PodsView/LikesView's own empty-state VStack
+        // spacing exactly.
+        VStack(spacing: 32) {
             LennySearchAvatar()
             Text("Type a location to search.")
                 .font(AppFont.regularLabel(14))
@@ -490,7 +492,9 @@ struct HomeView: View {
     }
 
     private var awaitingLennyQueryState: some View {
-        VStack(spacing: 12) {
+        // 32, matching PodsView/LikesView's own empty-state VStack
+        // spacing exactly.
+        VStack(spacing: 32) {
             LennyWalkingAvatar()
             Text("Describe your hike and Lenny will find pods along the way.")
                 .font(AppFont.regularLabel(14))
