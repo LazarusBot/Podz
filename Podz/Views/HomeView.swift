@@ -480,7 +480,7 @@ struct HomeView: View {
         VStack(spacing: 12) {
             LennySearchAvatar()
             Text("Type a location to search.")
-                .font(.system(size: 14, weight: .medium))
+                .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
         }
