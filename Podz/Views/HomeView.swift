@@ -495,7 +495,7 @@ struct HomeView: View {
         VStack(spacing: 12) {
             LennyWalkingAvatar()
             Text("Describe your hike and Lenny will find pods along the way.")
-                .font(.system(size: 14, weight: .medium))
+                .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
         }
