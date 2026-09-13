@@ -36,48 +36,30 @@ struct ModeSwitchPill: View {
     /// Fixed gap between the handle's resting position and the label —
     /// the label sits at `handleWidth + labelLeadingGap` from the left
     /// edge, not centered across the whole pill, so it reads as "next to
-    /// the handle" rather than floating independently in the bar.
-    private let labelLeadingGap: CGFloat = 20
+    /// the handle" rather than floating independently in the bar. 25,
+    /// matching Figma node 4418:1395's own `gap-[25px]` exactly.
+    private let labelLeadingGap: CGFloat = 25
     @State private var trackWidth: CGFloat = 0
-    @State private var labelWidth: CGFloat = 0
 
-    /// A head start before the handle actually reaches the label — fading
-    /// only starting at true contact read as too sudden, so this pulls
-    /// the fade's own start line back by this much (the finish line, full
-    /// coverage, is untouched).
-    private let labelFadeLead: CGFloat = 40
-
-    /// 1 until the handle nears the label (see `labelFadeLead`), 0 once
-    /// it's fully covered it, interpolated across that whole span so the
-    /// fade both starts ahead of contact and still lands on exactly 0
-    /// right as the handle finishes passing over the label.
-    private var labelOpacity: CGFloat {
-        guard labelWidth > 0, trackWidth > handleWidth else { return 1 }
-        let handleLeftEdge = progress * (trackWidth - handleWidth)
-        let handleRightEdge = handleLeftEdge + handleWidth
+    /// How much of the label, measured from its own left edge, the
+    /// handle has already swept over (or is currently over) — the label
+    /// itself sits still (see `.offset` below); the handle is what
+    /// moves, so this is what actually drives which of its letters are
+    /// still meant to be visible. Explicitly masked out in
+    /// `MetalSweepText` rather than left to the handle's own opacity/
+    /// z-order to hide by simply drawing on top — that looked right at
+    /// rest but let letters show through once the handle was actually
+    /// mid-slide over them.
+    private var labelHiddenWidth: CGFloat {
+        guard trackWidth > handleWidth else { return 0 }
+        let handleRightEdge = progress * (trackWidth - handleWidth) + handleWidth
         let labelLeftEdge = handleWidth + labelLeadingGap
-        let labelRightEdge = labelLeftEdge + labelWidth
-        let fadeStartEdge = labelLeftEdge - labelFadeLead
-        if handleRightEdge <= fadeStartEdge { return 1 }
-        if handleLeftEdge >= labelRightEdge { return 0 }
-        let covered = min(handleRightEdge, labelRightEdge) - max(handleLeftEdge, fadeStartEdge)
-        return 1 - min(max(covered / (labelWidth + labelFadeLead), 0), 1)
+        return max(0, handleRightEdge - labelLeftEdge)
     }
 
     var body: some View {
         ZStack(alignment: .leading) {
-            MetalSweepText(label: label)
-                // Measures the label's own intrinsic width — attached
-                // before `.offset` below, which (unlike `.padding`)
-                // shifts where this renders without folding that shift
-                // into the reported size, so `labelWidth` stays the
-                // text's real width for `labelOpacity`'s own math.
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { labelWidth = $0 }
-                // 0.5 max, not 1 — the label rests at half-opacity even
-                // before the handle starts covering it, same fade curve
-                // (`labelOpacity`) just scaled down rather than starting
-                // fully opaque.
-                .opacity(labelOpacity * 0.5)
+            MetalSweepText(label: label, hiddenWidth: labelHiddenWidth)
                 .offset(x: handleWidth + labelLeadingGap)
 
             Image(systemName: "chevron.right")
@@ -88,16 +70,15 @@ struct ModeSwitchPill: View {
                 // same-size button.
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.white)
-                // A real icon frame first — same 20-ish "standalone icon"
-                // sizing the app already uses elsewhere (tab bar icons at
-                // 26, Reserve's checkmark badge at 26) — THEN generous
-                // horizontal padding around that (18, well past the 8
-                // vertical) so it actually reads as a wide pill rather
-                // than padding just barely clearing a square.
-                .frame(width: 20, height: 20)
-                .padding(.leading, 18)
-                .padding(.trailing, 18)
-                .padding(.vertical, 8)
+                // Icon frame + padding matched to Figma node 4418:1395's
+                // own "Next Button" measurements exactly: a 16x16 icon
+                // container, `pl-[24px] pr-[20px] py-[12px]` (asymmetric
+                // leading/trailing, not the symmetric 18/18/8 this used
+                // to be).
+                .frame(width: 16, height: 16)
+                .padding(.leading, 24)
+                .padding(.trailing, 20)
+                .padding(.vertical, 12)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { handleWidth = $0 }
                 .pillStyle(
                     fill: Color.appAccentBlack,
@@ -185,15 +166,15 @@ struct ModeSwitchPill: View {
     }
 }
 
-/// The label's brushed-metal look: a solid black "classic" text layer
-/// underneath (`.appTextPrimary` — same as `reservationBar`'s own pod-
-/// name text on this identical glass background) for legibility, with a
-/// brighter band sweeping left to right on a loop layered on top as the
-/// actual "metal" sheen. An all-gray/white gradient base was the first
-/// pass here, but this pill's glass (`ReservationBarGlass`, a light
-/// `.black.opacity(0.1)`-tinted material — not a dark/solid fill) is
-/// much closer to white than black, so light-on-light text read as
-/// washed out; black is what's actually legible against it.
+/// The label's brushed-metal look: a gradient text layer underneath,
+/// with a brighter band sweeping left to right on a loop layered on top
+/// as the actual "metal" sheen. Figma's own spec (node 4418:1395) is a
+/// flat `from-white to-[#999]`, but that washes out in light mode —
+/// this pill's glass (`ReservationBarGlass`) is light, near-white, not
+/// the dark backdrop the spec was mocked up against — so the base
+/// gradient uses `.appTextPrimary` (black light / white dark) instead
+/// of a hardcoded `.white`, matching the glass's own light/dark swing
+/// rather than reading correctly in only one of the two.
 ///
 /// Plain SwiftUI (`.mask`/`LinearGradient`/a repeating `withAnimation`),
 /// not an actual Metal shader — this app has no existing shader
@@ -202,6 +183,11 @@ struct ModeSwitchPill: View {
 /// `.colorEffect`/`ShaderLibrary` setup would need.
 private struct MetalSweepText: View {
     let label: String
+    /// How much of the label's own width, from its left edge, to mask
+    /// away — see `ModeSwitchPill.labelHiddenWidth`. Applied here, after
+    /// the sweep overlay, so it hides that layer too, not just the base
+    /// gradient text underneath it.
+    let hiddenWidth: CGFloat
     /// Drives the sweep via a plain repeating animation rather than a
     /// per-frame `TimelineView` — this is a decorative loop, not
     /// something that needs to react to any other state, so the
@@ -213,7 +199,9 @@ private struct MetalSweepText: View {
     var body: some View {
         Text(label)
             .font(font)
-            .foregroundStyle(Color.appTextPrimary)
+            .foregroundStyle(
+                LinearGradient(colors: [.appTextPrimary, .appTextMuted], startPoint: .leading, endPoint: .trailing)
+            )
             .overlay {
                 GeometryReader { proxy in
                     let width = proxy.size.width
@@ -237,6 +225,18 @@ private struct MetalSweepText: View {
                     sweepForward = true
                 }
             }
+            // Reveals only what's still ahead of the handle — everything
+            // from the label's own left edge up to `hiddenWidth` is cut
+            // away outright (not faded), so nothing is ever visible
+            // under or behind the handle as it slides across.
+            .mask(
+                GeometryReader { proxy in
+                    HStack(spacing: 0) {
+                        Color.clear.frame(width: min(hiddenWidth, proxy.size.width))
+                        Color.black.frame(width: max(proxy.size.width - hiddenWidth, 0))
+                    }
+                }
+            )
     }
 }
 
