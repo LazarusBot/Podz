@@ -40,49 +40,26 @@ struct ModeSwitchPill: View {
     /// matching Figma node 4418:1395's own `gap-[25px]` exactly.
     private let labelLeadingGap: CGFloat = 25
     @State private var trackWidth: CGFloat = 0
-    @State private var labelWidth: CGFloat = 0
 
-    /// A head start before the handle actually reaches the label — fading
-    /// only starting at true contact read as too sudden, so this pulls
-    /// the fade's own start line back by this much (the finish line, full
-    /// coverage, is untouched).
-    private let labelFadeLead: CGFloat = 40
-
-    /// 1 until the handle nears the label (see `labelFadeLead`), 0 once
-    /// it's fully covered it, interpolated across that whole span so the
-    /// fade both starts ahead of contact and still lands on exactly 0
-    /// right as the handle finishes passing over the label.
-    private var labelOpacity: CGFloat {
-        guard labelWidth > 0, trackWidth > handleWidth else { return 1 }
-        let handleLeftEdge = progress * (trackWidth - handleWidth)
-        let handleRightEdge = handleLeftEdge + handleWidth
+    /// How much of the label, measured from its own left edge, the
+    /// handle has already swept over (or is currently over) — the label
+    /// itself sits still (see `.offset` below); the handle is what
+    /// moves, so this is what actually drives which of its letters are
+    /// still meant to be visible. Explicitly masked out in
+    /// `MetalSweepText` rather than left to the handle's own opacity/
+    /// z-order to hide by simply drawing on top — that looked right at
+    /// rest but let letters show through once the handle was actually
+    /// mid-slide over them.
+    private var labelHiddenWidth: CGFloat {
+        guard trackWidth > handleWidth else { return 0 }
+        let handleRightEdge = progress * (trackWidth - handleWidth) + handleWidth
         let labelLeftEdge = handleWidth + labelLeadingGap
-        let labelRightEdge = labelLeftEdge + labelWidth
-        let fadeStartEdge = labelLeftEdge - labelFadeLead
-        if handleRightEdge <= fadeStartEdge { return 1 }
-        if handleLeftEdge >= labelRightEdge { return 0 }
-        let covered = min(handleRightEdge, labelRightEdge) - max(handleLeftEdge, fadeStartEdge)
-        return 1 - min(max(covered / (labelWidth + labelFadeLead), 0), 1)
+        return max(0, handleRightEdge - labelLeftEdge)
     }
 
     var body: some View {
         ZStack(alignment: .leading) {
-            MetalSweepText(label: label)
-                // Measures the label's own intrinsic width — attached
-                // before `.offset` below, which (unlike `.padding`)
-                // shifts where this renders without folding that shift
-                // into the reported size, so `labelWidth` stays the
-                // text's real width for `labelOpacity`'s own math.
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { labelWidth = $0 }
-                // Full opacity at rest now, not a 0.5 cap — that was
-                // tuned back when this label was solid black, which
-                // still read fine at half-strength against this pill's
-                // light glass. The white-to-appTextMuted gradient it
-                // uses now washes out badly at 50% over that same
-                // near-white background, so this fades only once the
-                // handle actually approaches/covers it (still via
-                // `labelOpacity`), not before.
-                .opacity(labelOpacity)
+            MetalSweepText(label: label, hiddenWidth: labelHiddenWidth)
                 .offset(x: handleWidth + labelLeadingGap)
 
             Image(systemName: "chevron.right")
@@ -189,17 +166,15 @@ struct ModeSwitchPill: View {
     }
 }
 
-/// The label's brushed-metal look: a white-to-`.appTextMuted` gradient
-/// text layer underneath (matching Figma node 4418:1395's own
-/// `from-white to-[#999]` spec exactly), with a brighter band sweeping
-/// left to right on a loop layered on top as the actual "metal" sheen.
-/// An earlier version of this used that same light gradient and swapped
-/// it for solid black, reasoning that this pill's glass
-/// (`ReservationBarGlass`, a light `.black.opacity(0.1)`-tinted
-/// material — not a dark/solid fill) is much closer to white than
-/// black, so light-on-light text read as washed out. Reverted back to
-/// match the design spec exactly — worth double-checking legibility
-/// on-device against the glass background for the same reason.
+/// The label's brushed-metal look: a gradient text layer underneath,
+/// with a brighter band sweeping left to right on a loop layered on top
+/// as the actual "metal" sheen. Figma's own spec (node 4418:1395) is a
+/// flat `from-white to-[#999]`, but that washes out in light mode —
+/// this pill's glass (`ReservationBarGlass`) is light, near-white, not
+/// the dark backdrop the spec was mocked up against — so the base
+/// gradient uses `.appTextPrimary` (black light / white dark) instead
+/// of a hardcoded `.white`, matching the glass's own light/dark swing
+/// rather than reading correctly in only one of the two.
 ///
 /// Plain SwiftUI (`.mask`/`LinearGradient`/a repeating `withAnimation`),
 /// not an actual Metal shader — this app has no existing shader
@@ -208,6 +183,11 @@ struct ModeSwitchPill: View {
 /// `.colorEffect`/`ShaderLibrary` setup would need.
 private struct MetalSweepText: View {
     let label: String
+    /// How much of the label's own width, from its left edge, to mask
+    /// away — see `ModeSwitchPill.labelHiddenWidth`. Applied here, after
+    /// the sweep overlay, so it hides that layer too, not just the base
+    /// gradient text underneath it.
+    let hiddenWidth: CGFloat
     /// Drives the sweep via a plain repeating animation rather than a
     /// per-frame `TimelineView` — this is a decorative loop, not
     /// something that needs to react to any other state, so the
@@ -219,13 +199,8 @@ private struct MetalSweepText: View {
     var body: some View {
         Text(label)
             .font(font)
-            // Light gray to the app's own existing muted gray, matching
-            // Figma node 4418:1395's own `from-white to-[#999]` text
-            // gradient — was a flat `.appTextPrimary`. The sweep overlay
-            // below (the "shader") is untouched, just layered on top of
-            // this new base gradient instead of a solid color.
             .foregroundStyle(
-                LinearGradient(colors: [.white, .appTextMuted], startPoint: .leading, endPoint: .trailing)
+                LinearGradient(colors: [.appTextPrimary, .appTextMuted], startPoint: .leading, endPoint: .trailing)
             )
             .overlay {
                 GeometryReader { proxy in
@@ -250,6 +225,18 @@ private struct MetalSweepText: View {
                     sweepForward = true
                 }
             }
+            // Reveals only what's still ahead of the handle — everything
+            // from the label's own left edge up to `hiddenWidth` is cut
+            // away outright (not faded), so nothing is ever visible
+            // under or behind the handle as it slides across.
+            .mask(
+                GeometryReader { proxy in
+                    HStack(spacing: 0) {
+                        Color.clear.frame(width: min(hiddenWidth, proxy.size.width))
+                        Color.black.frame(width: max(proxy.size.width - hiddenWidth, 0))
+                    }
+                }
+            )
     }
 }
 
