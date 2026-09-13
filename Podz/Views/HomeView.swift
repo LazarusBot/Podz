@@ -478,9 +478,7 @@ struct HomeView: View {
 
     private var awaitingQueryState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 32))
-                .foregroundColor(.appTextMuted)
+            LennySearchAvatar()
             Text("Type a location to search.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.appTextMuted)
