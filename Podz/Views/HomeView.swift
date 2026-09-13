@@ -493,9 +493,7 @@ struct HomeView: View {
 
     private var awaitingLennyQueryState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "figure.hiking")
-                .font(.system(size: 32))
-                .foregroundColor(.appTextMuted)
+            LennyWalkingAvatar()
             Text("Describe your hike and Lenny will find pods along the way.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.appTextMuted)
