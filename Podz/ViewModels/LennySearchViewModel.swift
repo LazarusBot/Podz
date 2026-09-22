@@ -124,7 +124,11 @@ final class LennySearchViewModel: ObservableObject {
             steps = [
                 StepInfo(id: 0, title: "Recognized a country", subtitle: matchedCountry, isDone: true)
             ]
-            try? await Task.sleep(nanoseconds: 500_000_000)
+            // Long enough to actually read the single step, not just
+            // register a flash before results replace it — this is the
+            // fast path's whole "searching" phase, so it's the only
+            // chance to see it happen at all.
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
             let found = PodsStore.shared.pods(inCountry: matchedCountry, type: nil)
             matchingPods = found
             journeyStops = [JourneyStop(name: matchedCountry, podsFound: found.count, isResolved: true)]
@@ -158,12 +162,15 @@ final class LennySearchViewModel: ObservableObject {
         }
         steps[0].subtitle = placeNames.joined(separator: ", ")
         steps[0].isDone = true
-        try? await Task.sleep(nanoseconds: 400_000_000) // keeps the step readable, not just a flash
-        
+        try? await Task.sleep(nanoseconds: 700_000_000) // keeps the step readable, not just a flash
+
         steps[1].isDone = true
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        try? await Task.sleep(nanoseconds: 700_000_000)
         steps[2].isDone = true
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        // Same 700ms as the other two, not the original 300 — all
+        // three steps used to fly by in ~1s total, too fast to read
+        // any of them before results replaced the list outright.
+        try? await Task.sleep(nanoseconds: 700_000_000)
         
         // Switch to the results screen now, then resolve each stop one
         // at a time — the journey timeline fills in live rather than
