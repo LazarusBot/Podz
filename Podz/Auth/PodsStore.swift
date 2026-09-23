@@ -155,11 +155,20 @@ final class PodsStore: ObservableObject {
     /// as `avatars`/`post-photos`, neither of which has a tracked SQL
     /// migration either (both created directly in the Supabase dashboard),
     /// so this one needs the same one-time manual setup.
+    ///
+    /// `scannedModelURL`, when present, is a local `.usdz` file from a
+    /// host's in-app LiDAR scan (see `PodScanCaptureView`) — uploaded to
+    /// its own `pod-models` bucket (same one-time manual setup as
+    /// `pod-photos`) and written to `pods.model_url` via an update, not an
+    /// insert column, for the same reason photos are a separate step: it
+    /// needs `inserted.id` for the storage path, which doesn't exist until
+    /// after the pod row itself is created. See SQL/pod_3d_models.sql for
+    /// the column and the update policy this needs.
     @discardableResult
-    func createPod(_ insert: PodInsert, images: [UIImage] = []) async -> Pod? {
+    func createPod(_ insert: PodInsert, images: [UIImage] = [], scannedModelURL: URL? = nil) async -> Pod? {
         lastError = nil
         do {
-            let inserted: Pod = try await supabase
+            var inserted: Pod = try await supabase
                 .from("pods")
                 .insert(insert)
                 .select()
@@ -182,6 +191,28 @@ final class PodsStore: ObservableObject {
                         .execute()
                     if index == 0 {
                         primaryPhotoByPodId[inserted.id] = publicURL.absoluteString
+                    }
+                } catch {
+                    lastError = error.localizedDescription
+                }
+            }
+
+            if let scannedModelURL {
+                do {
+                    let modelData = try Data(contentsOf: scannedModelURL)
+                    let path = "\(insert.hostId.uuidString.lowercased())/\(inserted.id.uuidString.lowercased())/model.usdz"
+                    try await supabase.storage
+                        .from("pod-models")
+                        .upload(path, data: modelData, options: FileOptions(contentType: "model/vnd.usdz+zip", upsert: true))
+                    let publicURL = try supabase.storage.from("pod-models").getPublicURL(path: path)
+                    try await supabase
+                        .from("pods")
+                        .update(["model_url": publicURL.absoluteString])
+                        .eq("id", value: inserted.id)
+                        .execute()
+                    inserted.modelURL = publicURL.absoluteString
+                    if let podsIndex = pods.firstIndex(where: { $0.id == inserted.id }) {
+                        pods[podsIndex].modelURL = publicURL.absoluteString
                     }
                 } catch {
                     lastError = error.localizedDescription

@@ -24,6 +24,10 @@ struct Pod: Codable, Identifiable, Equatable {
     /// before host accounts (see SQL/host_accounts.sql), not just newly
     /// created ones.
     var hostId: UUID?
+    /// Set after creation, not at insert — a host's optional in-app LiDAR
+    /// scan (see SQL/pod_3d_models.sql) uploads after the pod row and any
+    /// photos already exist, same reason it's not on `PodInsert` either.
+    var modelURL: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name
@@ -33,6 +37,7 @@ struct Pod: Codable, Identifiable, Equatable {
         case bedsTotal = "beds_total"
         case description
         case hostId = "host_id"
+        case modelURL = "model_url"
     }
 }
 

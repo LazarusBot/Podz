@@ -15,6 +15,8 @@
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Podz uses your camera to scan a pod into a 3D model when you list it.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>DarkerGrotesque-Black.ttf</string>

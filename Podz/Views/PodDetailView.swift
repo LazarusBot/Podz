@@ -196,16 +196,25 @@ struct PodDetailView: View {
     }
 
     private var heroImage: some View {
-        heroGallery
-            .frame(maxWidth: .infinity)
-            .frame(height: heroHeight + heroStretch)
-            .clipped()
-            .offset(y: -heroStretch)
-            .background(
-                GeometryReader { geo in
-                    Color.clear.preference(key: HeroWidthPreferenceKey.self, value: geo.size.width)
-                }
-            )
+        Group {
+            // Most pods won't have one yet — the scan is optional and
+            // gated to LiDAR devices (see PodScanCaptureView) — so this
+            // falls back to the untouched photo carousel for everyone else.
+            if let modelURL = pod.modelURL {
+                Pod3DModelView(modelURL: modelURL, fallbackPhotoURL: heroPhotoURLs.first)
+            } else {
+                heroGallery
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: heroHeight + heroStretch)
+        .clipped()
+        .offset(y: -heroStretch)
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(key: HeroWidthPreferenceKey.self, value: geo.size.width)
+            }
+        )
             .onPreferenceChange(HeroWidthPreferenceKey.self) { heroWidth = $0 }
     }
 

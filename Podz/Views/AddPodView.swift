@@ -8,6 +8,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import RealityKit
 internal import Auth
 
 /// Presented as a sheet from `ProfilePromoCard`'s tap — that tap also
@@ -40,6 +41,8 @@ struct AddPodView: View {
     @State private var description = ""
     @State private var selectedPodPhotoItems: [PhotosPickerItem] = []
     @State private var selectedPodPhotos: [UIImage] = []
+    @State private var scannedModelURL: URL?
+    @State private var isShowingScanCapture = false
     @State private var isSubmitting = false
     @State private var didSucceed = false
     @State private var errorMessage: String?
@@ -262,6 +265,41 @@ struct AddPodView: View {
                     .foregroundColor(.appTextMuted)
                 podPhotoPicker
             }
+
+            // Only shown when the device can actually run it — no button
+            // that's guaranteed to fail the moment it's tapped.
+            // `ObjectCaptureSession.isSupported` needs a LiDAR sensor
+            // (iPhone 12 Pro+ / LiDAR iPad Pro); hosts without one just
+            // don't see this, photos stay their only option.
+            if ObjectCaptureSession.isSupported {
+                podScanButton
+            }
+        }
+        .fullScreenCover(isPresented: $isShowingScanCapture) {
+            PodScanCaptureView(
+                onComplete: { url in
+                    scannedModelURL = url
+                    isShowingScanCapture = false
+                },
+                onCancel: { isShowingScanCapture = false }
+            )
+        }
+    }
+
+    private var podScanButton: some View {
+        Button {
+            isShowingScanCapture = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: scannedModelURL == nil ? "cube.transparent" : "checkmark.circle.fill")
+                Text(scannedModelURL == nil ? "Scan your pod in 3D (optional)" : "3D scan captured")
+                    .font(AppFont.mediumLabel(14))
+            }
+            .foregroundColor(scannedModelURL == nil ? .appTextMuted : .black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(RoundedRectangle(cornerRadius: AppRadius.r14).fill(Color.appIconButtonBackground))
+            .overlay(RoundedRectangle(cornerRadius: AppRadius.r14).strokeBorder(Color.appBorder, lineWidth: 1))
         }
     }
 
@@ -400,7 +438,8 @@ struct AddPodView: View {
                     description: description.trimmed.isEmpty ? nil : description.trimmed,
                     hostId: hostId
                 ),
-                images: selectedPodPhotos
+                images: selectedPodPhotos,
+                scannedModelURL: scannedModelURL
             )
             isSubmitting = false
             if inserted != nil {
