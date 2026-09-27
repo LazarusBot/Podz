@@ -23,8 +23,6 @@ struct ProfileView: View {
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
     @State private var showAddPod = false
-    @State private var showAddFriendFromPromo = false
-    @State private var showPostComposerFromPromo = false
     /// contentOffset.y — 0 at rest, grows positive scrolling down. Same
     /// `onScrollGeometryChange` approach PodDetailView uses for its own
     /// persistent top bar.
@@ -82,16 +80,6 @@ struct ProfileView: View {
                                 }
                             )
 
-                            // Straight into AddFriendSheet, not FriendsView
-                            // first — same "skip the intermediate screen"
-                            // reasoning as the host card above.
-                            PromoCard(
-                                backgroundImageName: "Hutte2",
-                                title: PromoCard.title(prefix: "Plan trips with your ", underlined: "friends"),
-                                subtitleLines: ["Find people you know and see where they're headed."],
-                                onTap: { showAddFriendFromPromo = true }
-                            )
-
                             // Only while there's actually something to
                             // complete — unlike the cards above, showing
                             // this to someone whose profile is already
@@ -103,18 +91,6 @@ struct ProfileView: View {
                                     title: PromoCard.title(prefix: "Finish your ", underlined: "profile"),
                                     subtitleLines: ["Add a photo and a few details so hosts know who's booking."],
                                     onTap: { showEditProfile = true }
-                                )
-                            }
-
-                            // Only before a first post exists — same
-                            // "don't ask for something already done"
-                            // reasoning as the profile card above.
-                            if myPostsCount == 0 {
-                                PromoCard(
-                                    backgroundImageName: "Hutte3",
-                                    title: PromoCard.title(prefix: "Share your first ", underlined: "trip"),
-                                    subtitleLines: ["Post a photo from a pod you've visited."],
-                                    onTap: { showPostComposerFromPromo = true }
                                 )
                             }
 
@@ -185,17 +161,6 @@ struct ProfileView: View {
         // AddFriendSheet.
         .sheet(isPresented: $showAddPod) {
             AddPodView()
-        }
-        // Same reasoning as showAddPod's own sheet above — a focused
-        // task on top of Profile, not another full-screen push.
-        .sheet(isPresented: $showAddFriendFromPromo) {
-            AddFriendSheet()
-        }
-        .sheet(isPresented: $showPostComposerFromPromo) {
-            PostComposerView(onPosted: {})
-                // Same detent HomeView's own presentation uses — short
-                // enough not to need the full sheet.
-                .presentationDetents([.medium])
         }
     }
 

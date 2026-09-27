@@ -26,6 +26,19 @@ struct FriendsView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
+                        // Same PromoCard shell as Profile's own host/finish-
+                        // profile cards — reuses the floating "+" button's
+                        // own `showAddFriend` sheet rather than a separate
+                        // state, so there's exactly one way this screen
+                        // opens AddFriendSheet, not two that happen to do
+                        // the same thing.
+                        PromoCard(
+                            backgroundImageName: "Hutte2",
+                            title: PromoCard.title(prefix: "Plan trips with your ", underlined: "friends"),
+                            subtitleLines: ["Find people you know and see where they're headed."],
+                            onTap: { showAddFriend = true }
+                        )
+
                         if !friendsStore.incomingRequests.isEmpty {
                             SectionLabel(title: "Requests")
                             ForEach(friendsStore.incomingRequests) { request in

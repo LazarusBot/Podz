@@ -1,4 +1,5 @@
 import SwiftUI
+internal import Auth
 
 /// Reports the "Friends' posts" section's real available width — same
 /// background-GeometryReader-plus-preference trick as PodCard's
@@ -377,6 +378,23 @@ struct HomeView: View {
             if postsStore.posts.isEmpty {
                 friendsEmptyState
             } else {
+                // Only once there's already a feed to see — the empty
+                // state above already nudges "tap + to share one
+                // yourself" for the zero-posts-at-all case, so this
+                // covers the gap that leaves: friends have posted, but
+                // you haven't yet. A sibling here, not nested inside the
+                // padded VStack below — PromoCard already carries its own
+                // 24pt horizontal margin, so nesting it inside that
+                // VStack's matching padding would double-inset it.
+                if myPostsCount == 0 {
+                    PromoCard(
+                        backgroundImageName: "Hutte3",
+                        title: PromoCard.title(prefix: "Share your first ", underlined: "trip"),
+                        subtitleLines: ["Post a photo from a pod you've visited."],
+                        onTap: { showPostComposer = true }
+                    )
+                }
+
                 VStack(spacing: 16) {
                     ForEach(postsStore.posts) { post in
                         PostCard(post: post, cardWidth: postCardWidth, onTapPod: {
@@ -419,6 +437,15 @@ struct HomeView: View {
 
     private var postCardWidth: CGFloat {
         postsFeedAvailableWidth - 48
+    }
+
+    /// Same computation as ProfileView's own `myPostsCount` — not shared
+    /// between the two, since neither file reaches for the other's
+    /// private members and this is a one-line filter, not worth a shared
+    /// helper for.
+    private var myPostsCount: Int {
+        guard let userId = auth.session?.user.id else { return 0 }
+        return postsStore.posts.filter { $0.authorId == userId }.count
     }
 
     private var friendsEmptyState: some View {
