@@ -50,16 +50,20 @@ struct LikesPodCard: View {
                             .strokeBorder(Color.white.opacity(0.75), lineWidth: 3)
                     )
 
+                // Exactly `PodCard`'s own like-button styling (same
+                // component, `showLikeButton`'s branch) — no background
+                // circle, red glyph directly on the photo — so the heart
+                // reads as the same control wherever it shows up in the
+                // app, not a different one that happens to mean the same
+                // thing.
                 if let onUnlike {
                     Button(action: onUnlike) {
                         Image(systemName: "heart.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(8)
-                            .background(Circle().fill(Color.black.opacity(0.35)))
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.red)
+                            .padding(11)
                             .contentShape(Rectangle())
                     }
-                    .padding(6)
                     .accessibilityLabel("Unlike")
                 }
             }
