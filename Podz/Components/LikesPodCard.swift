@@ -16,11 +16,23 @@ import SwiftUI
 struct LikesPodCard: View {
     let pod: Pod
     let photoURL: String?
+    /// Explicit, not `.aspectRatio(1, contentMode: .fill)` on its own — an
+    /// aspect ratio with no preceding fixed frame sizes itself against
+    /// whatever height the grid row happens to propose (effectively
+    /// unbounded, since `LazyVGrid` rows size to content), not the column
+    /// width the grid actually gave it, and blew up well past the second
+    /// column. Same fix `PodCard` already uses for the identical problem:
+    /// the caller measures real available width and hands down a size.
+    let size: CGFloat
     /// `nil` hides the unlike button entirely — used for a folder shared
     /// with you, where removing someone else's like isn't a real action
     /// (a heart that quietly does nothing is worse than no heart at all).
     var onUnlike: (() -> Void)? = nil
     var onTap: () -> Void
+
+    /// Caption scales down with a narrower card the same way `PodCard`'s
+    /// own text does — 160 is that card's own baseline size.
+    private var scale: CGFloat { size / 160 }
 
     var body: some View {
         // `.onTapGesture` on the outer container, not a `Button` — same
@@ -28,10 +40,10 @@ struct LikesPodCard: View {
         // below is a real nested `Button`, and an outer `Button` around
         // it too is exactly the nested-Button-hit-testing ambiguity that
         // pattern avoids.
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topTrailing) {
                 PodPhoto(url: photoURL)
-                    .aspectRatio(1, contentMode: .fill)
+                    .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: AppRadius.r18, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: AppRadius.r18, style: .continuous)
@@ -41,9 +53,9 @@ struct LikesPodCard: View {
                 if let onUnlike {
                     Button(action: onUnlike) {
                         Image(systemName: "heart.fill")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding(9)
+                            .padding(8)
                             .background(Circle().fill(Color.black.opacity(0.35)))
                             .contentShape(Rectangle())
                     }
@@ -54,7 +66,7 @@ struct LikesPodCard: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(pod.name)
-                    .font(AppFont.pillLabelSemiBold(16))
+                    .font(AppFont.pillLabelSemiBold(16 * scale))
                     .foregroundColor(.appTextPrimary)
                     .lineLimit(1)
 
@@ -65,12 +77,13 @@ struct LikesPodCard: View {
                     }
                     Text(pod.country)
                 }
-                .font(AppFont.regularLabel(12))
+                .font(AppFont.regularLabel(12 * scale))
                 .foregroundColor(.appTextMuted)
                 .lineLimit(1)
             }
             .padding(.leading, 5)
         }
+        .frame(width: size, alignment: .leading)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
     }
