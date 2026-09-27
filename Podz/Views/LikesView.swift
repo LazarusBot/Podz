@@ -190,6 +190,10 @@ struct LikesView: View {
     // own metrics exactly, since it copies its visual style.
     private let folderTopBarHeight: CGFloat = 106
 
+    /// Two `LikesPodCard`s per row, inside a folder's own contents — was a
+    /// single-column stack of wide `LennyResultCard` rows.
+    private let likesGridColumns = [GridItem(.flexible()), GridItem(.flexible())]
+
     private func folderContentView(folder: LikeFolder) -> some View {
         let folderPods = pods(in: folder)
 
@@ -202,16 +206,13 @@ struct LikesView: View {
                     // content instead of keeping it reachable.
                     Color.clear.frame(height: folderTopBarHeight)
 
-                    VStack(spacing: 30) {
+                    LazyVGrid(columns: likesGridColumns, spacing: 20) {
                         ForEach(folderPods) { pod in
-                            LennyResultCard(
+                            LikesPodCard(
                                 pod: pod,
                                 photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                                isSelected: true,
-                                selectedIcon: "heart.fill",
-                                photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
-                                onToggleSelect: { Task { await likesStore.removeLike(pod) } },
-                                onTapCard: { selectedPod = pod }
+                                onUnlike: { Task { await likesStore.removeLike(pod) } },
+                                onTap: { selectedPod = pod }
                             )
                         }
                     }
@@ -259,18 +260,16 @@ struct LikesView: View {
                     // Same persistent-top-bar reasoning as folderContentView.
                     Color.clear.frame(height: folderTopBarHeight)
 
-                    VStack(spacing: 30) {
+                    LazyVGrid(columns: likesGridColumns, spacing: 20) {
                         ForEach(folderPods) { pod in
-                            LennyResultCard(
+                            // No `onUnlike` — this isn't your like to
+                            // remove, read-only for now. `LikesPodCard`
+                            // hides the heart button entirely rather than
+                            // showing a no-op one.
+                            LikesPodCard(
                                 pod: pod,
                                 photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                                isSelected: true,
-                                selectedIcon: "heart.fill",
-                                photoCornerRadius: PodCard.scaledCornerRadius(for: 345),
-                                // No-op, not removeLike — this isn't your like
-                                // to remove. Read-only for now.
-                                onToggleSelect: {},
-                                onTapCard: { selectedPod = pod }
+                                onTap: { selectedPod = pod }
                             )
                         }
                     }
