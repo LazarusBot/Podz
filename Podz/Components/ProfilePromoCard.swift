@@ -9,11 +9,7 @@ import SwiftUI
 struct ProfilePromoCard: View {
     var backgroundImageName: String = "Pod"
     var onTap: () -> Void = {}
-    /// `nil` (the default) hides the close button entirely — a caller
-    /// that doesn't pass one is opting out of dismissal, not getting a
-    /// dead button.
-    var onDismiss: (() -> Void)? = nil
-
+    
     var imageScale: CGFloat = 1.4
     var imageOffset: CGSize = .init(width: 110, height: 0)
     
@@ -32,21 +28,6 @@ struct ProfilePromoCard: View {
     }
 
     var body: some View {
-        // .topTrailing, not directly on the Button's own label — a close
-        // button has to be a sibling tap target outside the card's
-        // Button, or tapping it would also fire `onTap` (which kicks off
-        // becomeHost() + opens AddPodView, the opposite of dismissing).
-        ZStack(alignment: .topTrailing) {
-            promoButton
-            if let onDismiss {
-                closeButton(action: onDismiss)
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 31)
-    }
-
-    private var promoButton: some View {
         Button(action: onTap) {
             ZStack(alignment: .leading) {
                 // Photo ancrée à droite, largeur fixe (pas toute la carte)
@@ -131,19 +112,8 @@ struct ProfilePromoCard: View {
         // at all (same reasoning as LikesFolderCard's own NoFadeButtonStyle,
         // which only solves the first half of that).
         .buttonStyle(TapScaleButtonStyle())
-    }
-
-    private func closeButton(action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: "xmark")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.black)
-                .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.white.opacity(0.85)))
-                .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
-        }
-        .padding(8)
-        .accessibilityLabel("Dismiss")
+        .padding(.horizontal, 24)
+        .padding(.vertical, 31)
     }
 }
 
