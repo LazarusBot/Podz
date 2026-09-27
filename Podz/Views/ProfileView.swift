@@ -23,6 +23,9 @@ struct ProfileView: View {
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
     @State private var showAddPod = false
+    /// Persisted, not a plain `@State` — a dismissed promo shouldn't come
+    /// back the next time this screen loads.
+    @AppStorage("hasHiddenHostPromoCard") private var hasHiddenHostPromoCard = false
     /// contentOffset.y — 0 at rest, grows positive scrolling down. Same
     /// `onScrollGeometryChange` approach PodDetailView uses for its own
     /// persistent top bar.
@@ -67,9 +70,14 @@ struct ProfileView: View {
                             // no separate "you're now a host!" step, since
                             // becoming one only actually matters once
                             // there's a pod behind it.
-                            ProfilePromoCard {
-                                Task { await AuthManager.shared.becomeHost() }
-                                showAddPod = true
+                            if !hasHiddenHostPromoCard {
+                                ProfilePromoCard(
+                                    onTap: {
+                                        Task { await AuthManager.shared.becomeHost() }
+                                        showAddPod = true
+                                    },
+                                    onDismiss: { hasHiddenHostPromoCard = true }
+                                )
                             }
 
                             SectionLabel(title: "Social", trailing: "Kangchenjunga · 8,586m")
