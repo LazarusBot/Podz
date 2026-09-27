@@ -189,16 +189,32 @@ struct AddPodView: View {
     private var basicsStep: some View {
         VStack(alignment: .leading, spacing: 28) {
             FormField(label: "Name", placeholder: "Rifugio Passo Santner", text: $name)
-            FormField(label: "Type", placeholder: "Refuge, hut, bivouac…", text: $podType)
+            PickerFormField(label: "Type", placeholder: "Choose a type", selection: $podType, options: Self.podTypeOptions)
         }
     }
 
     private var locationStep: some View {
         VStack(alignment: .leading, spacing: 28) {
-            FormField(label: "Country", placeholder: "Italia", text: $country)
+            PickerFormField(label: "Country", placeholder: "Choose a country", selection: $country, options: Self.countryOptions)
             FormField(label: "Region", placeholder: "Süd Tirol", text: $region, isRequired: false)
         }
     }
+
+    /// A short, real vocabulary — not exhaustive, but enough that a host
+    /// picks a consistent value instead of typing "Refuge"/"refuge"/"Mtn
+    /// hut" for the same kind of place (free text here is exactly what
+    /// broke type-based filtering elsewhere in the app).
+    private static let podTypeOptions = ["Refuge", "Hut", "Bivouac", "Cabin", "Lodge", "Shelter"]
+
+    /// Real country names from Foundation's own locale data, not a
+    /// hand-typed list — `NSLocale.isoCountryCodes` is ISO 3166-1 alpha-2
+    /// codes only (actual countries, no continents/regions mixed in,
+    /// unlike some newer `Locale.Region` listings).
+    private static let countryOptions: [String] = {
+        NSLocale.isoCountryCodes
+            .compactMap { Locale.current.localizedString(forRegionCode: $0) }
+            .sorted()
+    }()
 
     private var placeStep: some View {
         VStack(alignment: .leading, spacing: 28) {
@@ -511,6 +527,98 @@ private struct FormField: View {
                 .overlay(alignment: .bottom) {
                     Rectangle().fill(Color.appBorder).frame(height: 1)
                 }
+        }
+    }
+}
+
+/// Same label/underline styling as `FormField` — a field that picks from
+/// a real, known list (country, pod type) shouldn't invite typing
+/// something that isn't one of them. Tapping the value row opens a sheet
+/// list instead of the keyboard.
+private struct PickerFormField: View {
+    let label: String
+    let placeholder: String
+    @Binding var selection: String
+    var isRequired: Bool = true
+    let options: [String]
+
+    @State private var isPresented = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text((isRequired ? label : "\(label) (optional)").uppercased())
+                .font(AppFont.regularLabel(12))
+                .tracking(0.5)
+                .foregroundColor(.appTextMuted)
+            Button {
+                isPresented = true
+            } label: {
+                HStack {
+                    Text(selection.isEmpty ? placeholder : selection)
+                        .font(AppFont.mediumLabel(20))
+                        .foregroundColor(selection.isEmpty ? .appTextMuted : .appTextPrimary)
+                    Spacer(minLength: 12)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.appTextMuted)
+                }
+                .padding(.vertical, 8)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(Color.appBorder).frame(height: 1)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $isPresented) {
+            PickerListSheet(title: label, options: options, selection: $selection)
+        }
+    }
+}
+
+/// The list itself — searchable, since `countryOptions` alone is ~195
+/// rows. A short list (pod type) just renders with nothing to filter.
+private struct PickerListSheet: View {
+    let title: String
+    let options: [String]
+    @Binding var selection: String
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private var filteredOptions: [String] {
+        guard !query.isEmpty else { return options }
+        return options.filter { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List(filteredOptions, id: \.self) { option in
+                Button {
+                    selection = option
+                    dismiss()
+                } label: {
+                    HStack {
+                        Text(option)
+                            .foregroundColor(.appTextPrimary)
+                        Spacer()
+                        if option == selection {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.appTextPrimary)
+                        }
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .searchable(text: $query)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
         }
     }
 }
