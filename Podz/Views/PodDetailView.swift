@@ -6,26 +6,6 @@
 //
 
 import SwiftUI
-import MapKit
-
-/// Reports the hero container's real available width — same background-
-/// GeometryReader-plus-preference trick as `PodCard.swift`'s
-/// `SectionWidthPreferenceKey` (correct in Slide Over/Split View on iPad,
-/// unlike `UIScreen.main.bounds.width`, the full physical screen). Applied
-/// to `heroImage`'s own `.background`, not nested inside the TabView or
-/// wrapping it — that's the distinction from the *other* GeometryReader
-/// approaches tried on this screen and abandoned (see `scrollOffset`'s
-/// comment): those read live `.frame(in:)` geometry every frame from
-/// *inside* the scrolling/swiping content, fighting its own layout. This
-/// one just observes a size from the outside via `.background` and only
-/// updates on genuine container resizes (rotation, Split View), not on
-/// every swipe frame.
-private struct HeroWidthPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = UIScreen.main.bounds.width
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
 
 /// node 4028:586 — pod detail screen. No bottom tab bar here — MainTabView's
 /// bar stays visible underneath, same pattern as ProfileEditView.
@@ -45,7 +25,6 @@ struct PodDetailView: View {
     @State private var heroPhotoURLs: [String]
     /// Optional — required by `.scrollPosition(id:)`'s binding type.
     @State private var heroPageIndex: Int? = 0
-    @StateObject private var trailRoute = TrailRouteLoader()
     @ObservedObject private var likesStore = LikesStore.shared
     @State private var showFolderPicker = false
     /// Drives the reservation bar growing in place to show the booking
@@ -64,10 +43,6 @@ struct PodDetailView: View {
     /// so rendering the card there would mean re-running ImageRenderer
     /// dozens of times a second.
     @State private var shareCardImage: UIImage?
-    // Seeded from UIScreen so the very first frame (before
-    // HeroWidthPreferenceKey reports back) is still correctly sized
-    // rather than starting at 0.
-    @State private var heroWidth: CGFloat = UIScreen.main.bounds.width
 
     /// Single source of truth for the hero's height — referenced both by
     /// `heroImage`'s own frame and by `chromeOpacity`'s arithmetic (hero's
@@ -103,7 +78,7 @@ struct PodDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     heroImage
-                    header
+                    quickStatsRow
                     sectionDivider
                     hostSection
                     sectionDivider
@@ -111,9 +86,7 @@ struct PodDetailView: View {
                     sectionDivider
                     pricesSection
                     sectionDivider
-                    cancellationSection
-                    sectionDivider
-                    mapSection
+                    whatToExpectSection
                     // Extra clearance (not the old 80) — the floating
                     // reservation card now sits above the app's own
                     // floating tab bar, and content needs to clear both.
@@ -176,9 +149,6 @@ struct PodDetailView: View {
             let renderer = ImageRenderer(content: PodShareCard(pod: pod, photo: photo))
             renderer.scale = UIScreen.main.scale
             shareCardImage = renderer.uiImage
-            // The map's own resting shot and flyover are set from
-            // `mapSection`'s own `.task` instead (see `TrailRouteLoader`) —
-            // this task doesn't otherwise touch the map.
         }
     }
 
@@ -206,16 +176,78 @@ struct PodDetailView: View {
                 heroGallery
             }
         }
+        .overlay(heroOverlayContent)
+        // On top of heroOverlayContent's gradient, not under it (that's
+        // where this lived when it was still attached inside
+        // `heroGallery` itself) — the stack's own white borders and
+        // shadow read a lot cleaner sitting above the scrim than muddied
+        // underneath it. `pod.modelURL == nil` since a 3D-scanned pod's
+        // hero is `Pod3DModelView`, never `heroGallery`, so there's no
+        // photo stack to show there at all.
+        .overlay(alignment: .bottomTrailing) {
+            if pod.modelURL == nil, heroPhotoURLs.count > 1 {
+                heroPhotoStack
+            }
+        }
         .frame(maxWidth: .infinity)
         .frame(height: heroHeight + heroStretch)
         .clipped()
         .offset(y: -heroStretch)
-        .background(
-            GeometryReader { geo in
-                Color.clear.preference(key: HeroWidthPreferenceKey.self, value: geo.size.width)
+    }
+
+    /// Editorial treatment — name/location/live-availability live directly
+    /// on the photo (gradient scrim underneath), not in a separate white
+    /// block below it. Replaces the old standalone `header`. Non-
+    /// interactive throughout (`.allowsHitTesting(false)`) so it never
+    /// steals `Pod3DModelView`'s own drag-to-orbit gesture on pods with a
+    /// scan — this sits in the same `.overlay` z-order, right on top of it.
+    private var heroOverlayContent: some View {
+        ZStack(alignment: .bottom) {
+            // Stronger and taller than a first pass, which left the
+            // caption unreadable on a bright/snowy photo — clear through
+            // the top half so the photo itself isn't needlessly darkened,
+            // then ramping hard through the bottom half to a near-opaque
+            // black right where the text sits, not a gentle fade that
+            // still lets a light photo show through behind white text.
+            LinearGradient(
+                colors: [.clear, .clear, .black.opacity(0.6), .black.opacity(0.92)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(pod.name)
+                    .font(AppFont.pillLabel(30))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+
+                HStack(spacing: 6) {
+                    if let region = pod.region {
+                        Text(region)
+                        Circle().fill(Color.white.opacity(0.6)).frame(width: 3, height: 3)
+                    }
+                    Text(pod.country)
+                }
+                // 16, not 13 — at 13/0.7 this dropped in size *and*
+                // opacity at once against the 30pt name, reading as an
+                // afterthought rather than a deliberate secondary line.
+                // Still clearly one step down from the name, just with
+                // enough presence to actually be read at a glance, not
+                // squinted at.
+                .font(AppFont.pillLabelMedium(16))
+                .foregroundColor(.white.opacity(0.85))
             }
-        )
-            .onPreferenceChange(HeroWidthPreferenceKey.self) { heroWidth = $0 }
+            // A soft shadow on the text itself, independent of the
+            // gradient above — belt-and-suspenders for a photo bright
+            // enough that even the strong gradient stop still leaves
+            // white text marginal right at the edge of the readable
+            // region.
+            .shadow(color: .black.opacity(0.4), radius: 6, y: 1)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 22)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Top bar (back/heart/share — persistent, never re-instantiated)
@@ -363,22 +395,21 @@ struct PodDetailView: View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 0) {
                 ForEach(Array(heroPhotoURLs.enumerated()), id: \.offset) { index, url in
-                    // Explicit, hard frame per photo — not left to
-                    // whatever size the scroll view proposes to each
-                    // page. That ambient sizing is what .aspectRatio(.fill)
-                    // needs to compute its scale, and it wasn't keeping up
-                    // mid-drag during an interactive page transition,
-                    // which is what showed up as photos failing to fill
-                    // the width specifically while swiping. A concrete
-                    // number (heroWidth) is required here, not
-                    // .frame(maxWidth: .infinity) — that flexible
-                    // constraint turned out to still get renegotiated
-                    // mid-drag and let the bug back in. heroWidth itself
-                    // comes from HeroWidthPreferenceKey (measured once,
-                    // not live), not UIScreen.main.bounds.width, which
-                    // breaks in Split View.
+                    // `.containerRelativeFrame(.horizontal)`, not a
+                    // manually-measured-and-cached width — that GeometryReader
+                    // + PreferenceKey approach (tried twice, most recently
+                    // rounding the measured value to kill a suspected
+                    // fractional-pixel drift) still occasionally let
+                    // `.scrollTargetBehavior(.paging)`'s snap points land
+                    // between two pages instead of squarely on one — a
+                    // separately-stored width can always go one layout
+                    // pass stale relative to the scroll container's own
+                    // current size. `containerRelativeFrame` reads that
+                    // container's width directly, on the same layout pass,
+                    // with nothing to fall out of sync.
                     PodPhoto(url: url)
-                        .frame(width: heroWidth, height: heroHeight + heroStretch)
+                        .containerRelativeFrame(.horizontal)
+                        .frame(height: heroHeight + heroStretch)
                         .clipped()
                         .id(index)
                 }
@@ -389,33 +420,66 @@ struct PodDetailView: View {
         .scrollIndicators(.hidden)
         .scrollDisabled(heroPhotoURLs.count <= 1)
         .scrollPosition(id: $heroPageIndex)
-        .overlay(alignment: .bottom) {
-            // Hand-built page dots — .indexViewStyle came for free with
-            // TabView.page; a plain ScrollView has no equivalent, so this
-            // replaces it rather than just losing the indicator. Figma
-            // node 4408:693 — a light frosted pill (white 50% fill,
-            // 0.5pt #E1E1E1 stroke, which is exactly `.appBorder`'s own
-            // light-mode value) with solid black dots, not the previous
-            // white-dots-on-dark-pill treatment. Plain black/white here,
-            // not adaptive tokens — this sits on top of the photo itself,
-            // same "photo overlay chrome" family as the map's address pill
-            // and PodRoomCard's price pill, both of which are also
-            // plain/non-adaptive for the same reason.
-            if heroPhotoURLs.count > 1 {
-                HStack(spacing: 10) {
-                    ForEach(heroPhotoURLs.indices, id: \.self) { index in
-                        Circle()
-                            .fill(Color.black.opacity(index == (heroPageIndex ?? 0) ? 1 : 0.2))
-                            .frame(width: 5, height: 5)
+    }
+
+    /// Clamped so a stale/nil index never reads out of bounds — same
+    /// reasoning as PostCard's own `safeSelectedIndex`.
+    private var safeHeroIndex: Int {
+        min(heroPageIndex ?? 0, max(heroPhotoURLs.count - 1, 0))
+    }
+
+    /// Up to 3 of the photos *coming next* in swipe order (wrapping past
+    /// the end), fanned over the hero's bottom-trailing corner — the same
+    /// visual language as `PostCard`'s own photo stack (Figma's
+    /// "Frame 71"), adapted for an ordered, swipeable carousel rather
+    /// than PostCard's cycle-any-photo one: this shows what a swipe would
+    /// land on next, not just "the other photos" in arbitrary order.
+    /// Tapping the stack advances one photo forward, same direction a
+    /// swipe goes — the real swipe gesture itself is still the paging
+    /// `ScrollView` above (already proven to coexist with this screen's
+    /// own vertical scroll; a raw `DragGesture` here risked fighting it).
+    private var heroPhotoStack: some View {
+        let upcoming = (1...min(3, heroPhotoURLs.count - 1)).map { (safeHeroIndex + $0) % heroPhotoURLs.count }
+        let overflowCount = heroPhotoURLs.count - 1 - upcoming.count
+
+        return ZStack(alignment: .bottomTrailing) {
+            ForEach(Array(upcoming.enumerated()), id: \.offset) { position, photoIndex in
+                let distanceFromFront = upcoming.count - 1 - position
+                PodPhoto(url: heroPhotoURLs[photoIndex])
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.r8, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: AppRadius.r8).strokeBorder(Color.white, lineWidth: 2))
+                    .overlay {
+                        if position == upcoming.count - 1 && overflowCount > 0 {
+                            RoundedRectangle(cornerRadius: AppRadius.r8)
+                                .fill(Color.black.opacity(0.45))
+                                .overlay(
+                                    Text("+\(overflowCount)")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(.white)
+                                )
+                        }
                     }
-                }
-                .padding(.horizontal, 15)
-                .padding(.vertical, 10)
-                .background(Capsule().fill(Color.white.opacity(0.5)))
-                .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
-                .opacity(0.9)
-                .padding(.bottom, 12)
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                    .rotationEffect(.degrees([-6, 4, -3][position % 3]))
+                    .offset(x: -CGFloat(distanceFromFront) * 16, y: -CGFloat(distanceFromFront) * 8)
+                    .zIndex(Double(position))
             }
+        }
+        .padding(14)
+        // One tap target for the whole fanned stack, not one per tiny
+        // thumbnail — same reasoning as PostCard's identical choice.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // No `withAnimation` — an animated `.scrollPosition(id:)`
+            // change is a multi-frame scroll transition that a swipe
+            // starting right after can interrupt mid-flight, and
+            // `.scrollTargetBehavior(.paging)`'s own snap logic assumes
+            // it's starting from a settled, page-aligned position. That
+            // interrupted-animation state is exactly what left the
+            // scroll view stuck between two pages. An instant jump has
+            // no multi-frame window for a swipe to land inside.
+            heroPageIndex = (safeHeroIndex + 1) % heroPhotoURLs.count
         }
     }
 
@@ -448,58 +512,49 @@ struct PodDetailView: View {
         return image
     }
 
-    // MARK: - Header
+    // MARK: - Quick stats
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Altitude sits on the title row itself, right-aligned — not
-            // stacked below with the beds-available pill, which moved out
-            // to its own `availabilitySection` entirely. Plain text, no
-            // capsule — a badge here read as another interactive-looking
-            // chip competing with the title, when it's just a fact about
-            // the place, same tier as the region/country line below it.
-            // `.firstTextBaseline`, not `.top` — sits the smaller number
-            // on the title's actual baseline instead of its cap height.
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                // pillLabel is already Darker Grotesque Black — the one
-                // text on this screen that's actually meant to be the
-                // heaviest weight, so no .fontWeight() needed (it'd be a
-                // no-op on a .custom font anyway; see the header/body
-                // fixes below).
-                Text(pod.name)
-                    .font(AppFont.pillLabel(24))
-                    .foregroundColor(.appTextPrimary)
-
-                Spacer(minLength: 12)
-
-                if let altitude = pod.altitudeM {
-                    Text("\(altitude) m")
-                        .font(AppFont.pillLabelMedium(16))
-                        .foregroundColor(Color.appTextSubtle)
-                }
-            }
-
-            HStack(spacing: 10) {
-                if let region = pod.region {
-                    Text(region)
-                        .font(AppFont.pillLabelMedium(20))
-                        .foregroundColor(Color.appTextSubtle)
-                    Circle().fill(Color.appTextSubtle).frame(width: 4, height: 4)
-                }
-                Text(pod.country)
-                    .font(AppFont.pillLabelMedium(20))
-                    .foregroundColor(Color.appTextSubtle)
-            }
+    /// Name/region/country/altitude used to live here, in a plain white
+    /// block below the hero — moved onto the photo itself
+    /// (`heroOverlayContent`). What's left is the three facts someone
+    /// scans for first: altitude, capacity, price. All three are real
+    /// data already on `pod`/`rooms`, not new fields — an em dash where
+    /// the pod genuinely doesn't have that data yet (most commonly price,
+    /// since `pricesSection` below already shows "No rooms listed yet"
+    /// for the same reason), same honesty as every other empty state on
+    /// this screen.
+    private var quickStatsRow: some View {
+        HStack(spacing: 0) {
+            quickStat(value: pod.altitudeM.map { "\($0) m" } ?? "—", label: "Altitude")
+            Rectangle().fill(Color.appBorder).frame(width: 0.5, height: 32)
+            quickStat(value: pod.bedsTotal.map { "\($0)" } ?? "—", label: "Beds")
+            Rectangle().fill(Color.appBorder).frame(width: 0.5, height: 32)
+            quickStat(value: priceRangeText ?? "—", label: "Per night")
         }
         .padding(.horizontal, 24)
-        .padding(.top, 24)
-        // Matches `sectionBottomPadding` — without this, the gap to the
-        // first `sectionDivider` below was just that divider's own 4pt,
-        // since `header` isn't itself one of the sections that constant
-        // is shared between. Every other divider sits 24pt from the
-        // content on both sides; this one was sitting 4pt from the
-        // header above it and 24pt from Host below it.
-        .padding(.bottom, sectionBottomPadding)
+        .padding(.vertical, 26)
+    }
+
+    private func quickStat(value: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(AppFont.pillLabel(19))
+                .foregroundColor(.appTextPrimary)
+            Text(label.uppercased())
+                .font(AppFont.mediumLabel(11))
+                .tracking(0.3)
+                .foregroundColor(.appTextMuted)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// From the same `rooms` `pricesSection` already fetched — not a
+    /// separate lookup. `nil` while rooms are still loading or genuinely
+    /// empty, same case `pricesSection` itself already handles.
+    private var priceRangeText: String? {
+        guard !rooms.isEmpty else { return nil }
+        guard let lo = rooms.map(\.priceMin).min(), let hi = rooms.map(\.priceMax).max() else { return nil }
+        return lo == hi ? "\(Int(lo))€" : "\(Int(lo))-\(Int(hi))€"
     }
 
     // MARK: - Host
@@ -636,18 +691,34 @@ struct PodDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel(title: "Availability")
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
                 if let beds = displayedBedsAvailable, let tier = availabilityTier {
-                    // SemiBold, not Medium — this is the single biggest
-                    // number on the screen; Medium at this size read as
-                    // bigger-but-weaker than the Bold/Black text
-                    // everywhere else something's meant to stand out,
-                    // inverting how weight tracks size on this page.
-                    // 24, not 28 — big enough to read as a callout next
-                    // to the 24pt pod name without out-sizing it.
-                    Text(tier == .full ? "Fully booked" : "\(beds) beds available")
-                        .font(AppFont.pillLabelSemiBold(24))
-                        .foregroundColor(tier.tint)
+                    HStack(alignment: .lastTextBaseline) {
+                        // SemiBold, not Medium — this is the single biggest
+                        // number on the screen; Medium at this size read as
+                        // bigger-but-weaker than the Bold/Black text
+                        // everywhere else something's meant to stand out,
+                        // inverting how weight tracks size on this page.
+                        Text(tier == .full ? "Fully booked" : "\(beds) available")
+                            .font(AppFont.pillLabelSemiBold(22))
+                            .foregroundColor(.appTextPrimary)
+                        Spacer()
+                        if let total = pod.bedsTotal {
+                            Text("out of \(total)")
+                                .font(AppFont.mediumLabel(12))
+                                .foregroundColor(.appTextMuted)
+                        }
+                    }
+
+                    // Same real ratio the text above already states, just
+                    // rendered as filled/empty segments instead of a bare
+                    // number — monochrome throughout, not tier.tint: the
+                    // one color on this whole screen that carries real
+                    // meaning is the small status dot on the hero photo,
+                    // and the caption line below already spells out
+                    // "fully booked" in words, so nothing here needs a
+                    // second color to repeat the same fact.
+                    availabilityGauge
 
                     // 13, not 16 — matches the caption/helper size used
                     // elsewhere (ReservationSheet's "3 nights", FilterRow's
@@ -655,7 +726,7 @@ struct PodDetailView: View {
                     // rather than a second line of equal weight.
                     Text(tier.caption)
                         .font(AppFont.mediumLabel(13))
-                        .foregroundColor(tier.tint.opacity(0.5))
+                        .foregroundColor(.appTextMuted)
                 } else {
                     // Parity with `pricesSection`'s "No rooms listed yet"
                     // — `pod.bedsTotal` is part of the initial `Pod`
@@ -670,6 +741,25 @@ struct PodDetailView: View {
             }
             .padding(.horizontal, 24)
             .padding(.bottom, sectionBottomPadding)
+        }
+    }
+
+    /// 10 segments, filled left-to-right by the same `beds`/`bedsTotal`
+    /// ratio `availabilityTier` already computes — a derived read of real
+    /// numbers already on screen, not a new metric.
+    private var availabilityGauge: some View {
+        let segmentCount = 10
+        let filled: Int = {
+            guard let beds = displayedBedsAvailable, let total = pod.bedsTotal, total > 0 else { return 0 }
+            let ratio = Double(beds) / Double(total)
+            return max(0, min(segmentCount, Int((ratio * Double(segmentCount)).rounded())))
+        }()
+        return HStack(spacing: 3) {
+            ForEach(0..<segmentCount, id: \.self) { index in
+                Rectangle()
+                    .fill(index < filled ? Color.appTextPrimary : Color.appBorder)
+                    .frame(height: 5)
+            }
         }
     }
 
@@ -908,17 +998,25 @@ struct PodDetailView: View {
         }
     }
 
-    // MARK: - Cancellation
+    // MARK: - What to expect
 
-    private var cancellationSection: some View {
+    /// Was two separate sections (a payment note buried in
+    /// `ReservationSheet`, a standalone "Cancel & reservation changes"
+    /// block here) — merged into one, since both are the same kind of
+    /// fact: what happens after you tap Reserve, not during it. The
+    /// payment line is real, not new copy — same fact `ReservationSheet`
+    /// already states ("No payment is taken now — you'll settle up at the
+    /// shelter"), just surfaced earlier where a decision is being made
+    /// rather than only after reservation's already expanded.
+    private var whatToExpectSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionLabel(title: "Cancel & reservation changes")
+            SectionLabel(title: "What to expect")
 
             // Inter (mediumLabel), not the Darker Grotesque pill-label
             // family — this is a real paragraph of body copy, not a pill
             // label or a large number, the two things Darker Grotesque is
             // meant for per AppFont's own doc comment.
-            Text(cancellationPolicy)
+            Text("No payment now — settle up at the shelter. \(cancellationPolicy)")
                 .font(AppFont.regularLabel(16))
                 .foregroundColor(.appTextMuted)
                 .padding(.horizontal, 24)
@@ -926,90 +1024,6 @@ struct PodDetailView: View {
         }
     }
 
-    // MARK: - Map
-
-    private var mapSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionLabel(title: "Find us quickly in the wild")
-
-            ZStack(alignment: .top) {
-                if let lat = pod.latitude, let lng = pod.longitude {
-                    // interactionModes: [] — this Map sits inside a
-                    // vertical ScrollView, so its own pan/pinch would
-                    // otherwise fight the page scroll. Tapping it opens
-                    // the real, interactive map in Apple Maps instead.
-                    // No Marker/Annotation — this close in, at this pitch,
-                    // the shelter itself is already visible in the 3D
-                    // terrain, so a pin pointing at it is redundant.
-                    Map(position: $trailRoute.cameraPosition, interactionModes: []) {
-                        // Grows point-by-point as TrailRouteLoader reveals
-                        // it — see that type's own doc comment for why a
-                        // real MapPolyline can't be `.trim()`-animated the
-                        // way a Shape can.
-                        if trailRoute.revealedCoordinates.count > 1 {
-                            MapPolyline(coordinates: trailRoute.revealedCoordinates)
-                                .stroke(Color.appAccentBlack, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                        }
-                    }
-                    .mapStyle(.standard(elevation: .realistic))
-                    .onTapGesture { openInMaps(lat: lat, lng: lng) }
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityLabel("Open \(pod.name) location in Maps")
-                    .onAppear {
-                        // Just the resting shot — cheap, and means the map
-                        // is already framed correctly the moment it
-                        // scrolls into view, rather than sitting on
-                        // MapKit's own default `.automatic` region for a
-                        // beat first.
-                        trailRoute.showShelter(CLLocationCoordinate2D(latitude: lat, longitude: lng))
-                    }
-                    // The flyover itself waits for mapSection to actually
-                    // be on screen — this view sits inside an eager
-                    // (non-lazy) VStack, so without this gate the two
-                    // network lookups and the flyover would fire the
-                    // moment PodDetailView loads, for a section near the
-                    // bottom of a long scroll that may never be seen.
-                    .onScrollVisibilityChange(threshold: 0.3) { isVisible in
-                        guard isVisible else { return }
-                        Task {
-                            await trailRoute.startFlyover(to: CLLocationCoordinate2D(latitude: lat, longitude: lng))
-                        }
-                    }
-                } else {
-                    Rectangle().fill(Color.gray.opacity(0.2))
-                }
-
-                if let address = pod.address {
-                    // Same frosted-glass treatment as `PodRoomCard`'s
-                    // price pill now — both are a caption floating on a
-                    // photo, the same UI role, so they shouldn't look
-                    // like two different components. Was a solid black
-                    // 88%-opacity pill with no stroke.
-                    Text(address)
-                        .font(AppFont.pillLabelSemiBold(11))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.white.opacity(0.33)))
-                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.75), lineWidth: 0.5))
-                        .padding(.top, 12)
-                        .allowsHitTesting(false)
-                }
-            }
-            .frame(height: 283)
-            .clipShape(RoundedRectangle(cornerRadius: AppRadius.r20))
-            .overlay(RoundedRectangle(cornerRadius: AppRadius.r20).strokeBorder(Color.white, lineWidth: 1))
-            .padding(.horizontal, 24)
-            .padding(.bottom, sectionBottomPadding)
-        }
-    }
-
-    private func openInMaps(lat: Double, lng: Double) {
-        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
-        mapItem.name = pod.name
-        mapItem.openInMaps()
-    }
 }
 
 /// Shared visual for the hero's floating circle buttons — factored out so
