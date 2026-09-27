@@ -23,6 +23,8 @@ struct ProfileView: View {
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
     @State private var showAddPod = false
+    @State private var showAddFriendFromPromo = false
+    @State private var showPostComposerFromPromo = false
     /// contentOffset.y — 0 at rest, grows positive scrolling down. Same
     /// `onScrollGeometryChange` approach PodDetailView uses for its own
     /// persistent top bar.
@@ -66,10 +68,54 @@ struct ProfileView: View {
                             // and takes them straight into the pod form —
                             // no separate "you're now a host!" step, since
                             // becoming one only actually matters once
-                            // there's a pod behind it.
-                            ProfilePromoCard {
-                                Task { await AuthManager.shared.becomeHost() }
-                                showAddPod = true
+                            // there's a pod behind it. Always shown,
+                            // regardless of `isHost` — matches this
+                            // screen's other promo cards below, none of
+                            // which hide themselves once acted on either.
+                            PromoCard(
+                                backgroundImageName: "Pod",
+                                title: PromoCard.title(prefix: "Make your place a ", underlined: "Podz"),
+                                subtitleLines: ["Set up easily and start earning from your home.", "It's free."],
+                                onTap: {
+                                    Task { await AuthManager.shared.becomeHost() }
+                                    showAddPod = true
+                                }
+                            )
+
+                            // Straight into AddFriendSheet, not FriendsView
+                            // first — same "skip the intermediate screen"
+                            // reasoning as the host card above.
+                            PromoCard(
+                                backgroundImageName: "Hutte2",
+                                title: PromoCard.title(prefix: "Plan trips with your ", underlined: "friends"),
+                                subtitleLines: ["Find people you know and see where they're headed."],
+                                onTap: { showAddFriendFromPromo = true }
+                            )
+
+                            // Only while there's actually something to
+                            // complete — unlike the cards above, showing
+                            // this to someone whose profile is already
+                            // filled in would be asking them to finish
+                            // something that isn't unfinished.
+                            if isProfileIncomplete {
+                                PromoCard(
+                                    backgroundImageName: "Hutte1",
+                                    title: PromoCard.title(prefix: "Finish your ", underlined: "profile"),
+                                    subtitleLines: ["Add a photo and a few details so hosts know who's booking."],
+                                    onTap: { showEditProfile = true }
+                                )
+                            }
+
+                            // Only before a first post exists — same
+                            // "don't ask for something already done"
+                            // reasoning as the profile card above.
+                            if myPostsCount == 0 {
+                                PromoCard(
+                                    backgroundImageName: "Hutte3",
+                                    title: PromoCard.title(prefix: "Share your first ", underlined: "trip"),
+                                    subtitleLines: ["Post a photo from a pod you've visited."],
+                                    onTap: { showPostComposerFromPromo = true }
+                                )
                             }
 
                             SectionLabel(title: "Social", trailing: "Kangchenjunga · 8,586m")
@@ -139,6 +185,17 @@ struct ProfileView: View {
         // AddFriendSheet.
         .sheet(isPresented: $showAddPod) {
             AddPodView()
+        }
+        // Same reasoning as showAddPod's own sheet above — a focused
+        // task on top of Profile, not another full-screen push.
+        .sheet(isPresented: $showAddFriendFromPromo) {
+            AddFriendSheet()
+        }
+        .sheet(isPresented: $showPostComposerFromPromo) {
+            PostComposerView(onPosted: {})
+                // Same detent HomeView's own presentation uses — short
+                // enough not to need the full sheet.
+                .presentationDetents([.medium])
         }
     }
 
@@ -225,6 +282,15 @@ struct ProfileView: View {
     private var myPostsCount: Int {
         guard let userId = auth.session?.user.id else { return 0 }
         return postsStore.posts.filter { $0.authorId == userId }.count
+    }
+
+    /// Missing any of the fields `ProfileEditView` actually lets you set
+    /// (photo, age, location) — not `fullName`/`username`, which are
+    /// already required at signup. `Profile` has no `bio` field to check
+    /// yet.
+    private var isProfileIncomplete: Bool {
+        guard let profile = auth.profile else { return false }
+        return profile.avatarURL == nil || profile.age == nil || profile.location == nil
     }
 
     private var postsActivityCount: Int {
