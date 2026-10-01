@@ -175,12 +175,14 @@ struct PromoCard: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Scaled up before blurring so the blur's own edge falloff
-            // never reveals transparent/background pixels at the card's
-            // border — then clipped back down to the card's actual
-            // bounds.
-            .scaleEffect(1.15)
-            .blur(radius: 6)
+            // Just enough to soften the photo for text legibility, not
+            // enough to read as an actual blur effect. Scaled up before
+            // blurring so the blur's own (much smaller, at this radius)
+            // edge falloff never reveals transparent/background pixels
+            // at the card's border — then clipped back down to the
+            // card's actual bounds.
+            .scaleEffect(1.05)
+            .blur(radius: 2)
             .clipped()
 
             VStack(alignment: .leading, spacing: 5) {
