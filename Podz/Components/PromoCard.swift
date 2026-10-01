@@ -165,25 +165,13 @@ struct PromoCard: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Scaled up before blurring so the blur's own edge falloff
+            // never reveals transparent/background pixels at the card's
+            // border — then clipped back down to the card's actual
+            // bounds.
+            .scaleEffect(1.15)
+            .blur(radius: 6)
             .clipped()
-
-            // Same fade geometry as `.light`'s (0 / 0.66 / 1 stops,
-            // trailing → leading) so the photo stays fully visible on
-            // the right and the text sits on a readable dark scrim on
-            // the left — just a dark color instead of the light panel,
-            // since here the photo itself fills the whole card rather
-            // than stopping short of it. A real scrim (not just relying
-            // on a dark source photo, which is all Figma's own mockup
-            // does) keeps this legible for whatever photo a future
-            // caller passes in, not just this one hand-picked shot.
-            LinearGradient(
-                stops: [
-                    .init(color: Color.black.opacity(0), location: 0),
-                    .init(color: Color.black.opacity(0.82), location: 0.66),
-                    .init(color: Color.black.opacity(0.82), location: 1)
-                ],
-                startPoint: .trailing, endPoint: .leading
-            )
 
             VStack(alignment: .leading, spacing: 5) {
                 if let caption {
