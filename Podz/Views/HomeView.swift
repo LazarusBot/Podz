@@ -136,6 +136,28 @@ struct HomeView: View {
                             if isAwaitingQuery {
                                 awaitingQueryState
                             } else {
+                                // "Continue a previous search" banner (node
+                                // 4642:766) — only while there's no active
+                                // query already narrowing the feed, since
+                                // "pick up your Slovénia search" reads as
+                                // redundant once they're already looking at
+                                // Slovénia. Tapping it re-runs that search
+                                // by setting `locationSearch`, same as
+                                // typing it in the pill would. The place/
+                                // date content itself is still static —
+                                // there's no persisted "last search" model
+                                // yet to back it with the user's real one.
+                                if query.isEmpty {
+                                    PromoCard(
+                                        style: .photo,
+                                        backgroundImageName: "Hutte",
+                                        title: AttributedString("Slovénia is waiting on you!"),
+                                        subtitleLines: ["Open the available pods for Slovénia."],
+                                        caption: "5-7 September",
+                                        onTap: { locationSearch = "Slovénia" }
+                                    )
+                                }
+
                                 // Only alongside the pod-browsing content,
                                 // not while the search pill's own full-
                                 // screen "awaiting a query" prompt is

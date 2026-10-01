@@ -1,29 +1,52 @@
 import SwiftUI
 
-/// Generic photo-banner promo card (node 3827:1459) — originally built
-/// just for "become a host," now the shared shell behind every card of
-/// this shape (invite friends, complete your profile, share a trip).
-/// Figma's own height (99) read as too small in practice — sized up to
-/// 124 (text/padding bumped to match), everything else still the exact
-/// Figma values: corner radius 15, border 0.5px #E1E1E1, shadow
-/// "1px 3px 4px rgba(166,166,166,0.1)" (= AppShadow.panel), outer padding
-/// 24 horizontal / 31 vertical around the card itself.
+/// Generic promo card (node 3827:1459, photo-style node 4642:766) — the
+/// shared shell behind every card of this shape. Started as a single
+/// look (photo anchored right, fading into a light panel — `.light`
+/// below), then grew a second `.photo` form for banners that need to
+/// read as live/personalized content (e.g. "continue a previous
+/// search") rather than an evergreen feature ad — a full-bleed photo
+/// under a dark scrim reads as "a real place," the light panel reads as
+/// "an app feature." Same outer chrome either way (corner radius 15,
+/// border 0.5px #E1E1E1, shadow "1px 3px 4px rgba(166,166,166,0.1)" =
+/// AppShadow.panel, 124pt tall — Figma's own 99 read as too small in
+/// practice — outer padding 24 horizontal / 31 vertical), so a caller
+/// only ever has to pick a `style`, not rebuild the frame.
 struct PromoCard: View {
+    enum Style {
+        /// Original look: fixed-width photo anchored to the trailing
+        /// edge, fading into a plain panel on the leading edge where
+        /// the text sits. Reads as a static feature/marketing slot.
+        case light
+        /// Node 4642:766: full-bleed photo under a dark scrim, white
+        /// text directly on top, small "open" affordance top-trailing.
+        /// Reads as dynamic, personalized content.
+        case photo
+    }
+
+    var style: Style = .light
     var backgroundImageName: String
     var title: AttributedString
     /// Stacked with zero spacing between lines, same as the original
     /// "Set up easily.../It's free." two-liner — a caller wanting a
     /// single-sentence subtitle just passes one element.
     var subtitleLines: [String]
+    /// Small de-emphasized eyebrow label above the title (e.g. a date
+    /// range) — only `.photo` renders it today, but it's a general
+    /// field rather than a `.photo`-only parameter so a future form can
+    /// pick it up without another API change.
+    var caption: String? = nil
     var onTap: () -> Void = {}
 
     var imageScale: CGFloat = 1.4
     var imageOffset: CGSize = .init(width: 110, height: 0)
 
     /// Builds "<prefix><underlined word/phrase><suffix>" — the one-word-
-    /// underlined title treatment every promo card uses. `AttributedString`
+    /// underlined title treatment the `.light` cards use. `AttributedString`
     /// segments keep their own attributes when spliced into another one
-    /// this way.
+    /// this way. `.photo` cards tend to use a plain, unstyled title
+    /// instead (node 4642:766's isn't underlined), so this is opt-in,
+    /// not required.
     static func title(prefix: String, underlined: String, suffix: String = ".") -> AttributedString {
         var underline = AttributeContainer()
         underline.underlineStyle = .single
@@ -32,53 +55,11 @@ struct PromoCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            ZStack(alignment: .leading) {
-                // Photo ancrée à droite, largeur fixe (pas toute la carte)
-                Group {
-                    if UIImage(named: backgroundImageName) != nil {
-                        Image(backgroundImageName)
-                            .resizable()
-                            .scaleEffect(imageScale)
-                            .offset(imageOffset)
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle().fill(Color.gray.opacity(0.25))
-                    }
+            Group {
+                switch style {
+                case .light: lightContent
+                case .photo: photoContent
                 }
-                .frame(width: 345, height: 124)
-                .clipped()
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
-                // Fondu blanc qui recouvre la gauche et dévoile l'image à droite
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.appHomeBackground.opacity(0), location: 0),
-                        .init(color: Color.appHomeBackground, location: 0.66),
-                        .init(color: Color.appHomeBackground, location: 1)
-                    ],
-                    startPoint: .trailing, endPoint: .leading
-                )
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(AppFont.pillLabel(18))
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
-
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(subtitleLines, id: \.self) { line in
-                            Text(line)
-                        }
-                    }
-                    // Real Inter, Regular weight — see
-                    // `ProfileRows.swift`'s `ProfileAccountRow` for why
-                    // this isn't `AppFont.itemHelper`.
-                    .font(AppFont.regularLabel(11))
-                    .foregroundColor(.black)
-                }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 24)
-                .frame(maxWidth: 266, alignment: .leading)
             }
             .frame(height: 124)
             // Background/clip/border live inside the button's label now,
@@ -119,6 +100,125 @@ struct PromoCard: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 31)
     }
+
+    private var lightContent: some View {
+        ZStack(alignment: .leading) {
+            // Photo anchored trailing, fixed width (not the full card).
+            Group {
+                if UIImage(named: backgroundImageName) != nil {
+                    Image(backgroundImageName)
+                        .resizable()
+                        .scaleEffect(imageScale)
+                        .offset(imageOffset)
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Rectangle().fill(Color.gray.opacity(0.25))
+                }
+            }
+            .frame(width: 345, height: 124)
+            .clipped()
+            .frame(maxWidth: .infinity, alignment: .trailing)
+
+            // Fade from the plain panel color (leading) into the photo
+            // (trailing).
+            LinearGradient(
+                stops: [
+                    .init(color: Color.appHomeBackground.opacity(0), location: 0),
+                    .init(color: Color.appHomeBackground, location: 0.66),
+                    .init(color: Color.appHomeBackground, location: 1)
+                ],
+                startPoint: .trailing, endPoint: .leading
+            )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(AppFont.pillLabel(18))
+                    .fontWeight(.bold)
+                    .foregroundColor(.black)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(subtitleLines, id: \.self) { line in
+                        Text(line)
+                    }
+                }
+                // Real Inter, Regular weight — see
+                // `ProfileRows.swift`'s `ProfileAccountRow` for why
+                // this isn't `AppFont.itemHelper`.
+                .font(AppFont.regularLabel(11))
+                .foregroundColor(.black)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 24)
+            .frame(maxWidth: 266, alignment: .leading)
+        }
+    }
+
+    private var photoContent: some View {
+        ZStack(alignment: .leading) {
+            Group {
+                if UIImage(named: backgroundImageName) != nil {
+                    Image(backgroundImageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Rectangle().fill(Color.gray.opacity(0.25))
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+
+            // Same fade geometry as `.light`'s (0 / 0.66 / 1 stops,
+            // trailing → leading) so the photo stays fully visible on
+            // the right and the text sits on a readable dark scrim on
+            // the left — just a dark color instead of the light panel,
+            // since here the photo itself fills the whole card rather
+            // than stopping short of it. A real scrim (not just relying
+            // on a dark source photo, which is all Figma's own mockup
+            // does) keeps this legible for whatever photo a future
+            // caller passes in, not just this one hand-picked shot.
+            LinearGradient(
+                stops: [
+                    .init(color: Color.black.opacity(0), location: 0),
+                    .init(color: Color.black.opacity(0.82), location: 0.66),
+                    .init(color: Color.black.opacity(0.82), location: 1)
+                ],
+                startPoint: .trailing, endPoint: .leading
+            )
+
+            VStack(alignment: .leading, spacing: 5) {
+                if let caption {
+                    Text(caption)
+                        .font(AppFont.pillLabelRegular(8))
+                        .underline()
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                Text(title)
+                    .font(AppFont.pillLabelSemiBold(18))
+                    .foregroundColor(.white)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(subtitleLines, id: \.self) { line in
+                        Text(line)
+                    }
+                }
+                .font(AppFont.pillLabelMedium(10))
+                .foregroundColor(.white.opacity(0.85))
+            }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: 210, alignment: .leading)
+
+            HStack {
+                Spacer()
+                VStack {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+            }
+            .padding(14)
+        }
+    }
 }
 
 #Preview {
@@ -132,6 +232,13 @@ struct PromoCard: View {
             backgroundImageName: "Hutte2",
             title: PromoCard.title(prefix: "Plan trips with your ", underlined: "friends"),
             subtitleLines: ["Find people you know and see where they're headed."]
+        )
+        PromoCard(
+            style: .photo,
+            backgroundImageName: "Hutte",
+            title: AttributedString("Slovénia is waiting on you!"),
+            subtitleLines: ["Open the available pods for Slovénia."],
+            caption: "5-7 September"
         )
     }
     .background(Color.appHomeBackground)

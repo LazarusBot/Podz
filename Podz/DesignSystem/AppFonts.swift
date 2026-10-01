@@ -49,6 +49,14 @@ enum AppFont {
             ? .custom("DarkerGrotesque-SemiBold", size: size)
             : .system(size: size, weight: .semibold)
     }
+
+    /// Regular variant — the lightest weight, used for small de-emphasized
+    /// captions like a promo card's date-range eyebrow label.
+    static func pillLabelRegular(_ size: CGFloat = 14) -> Font {
+        darkerGrotesqueAvailable
+            ? .custom("DarkerGrotesque-Regular", size: size)
+            : .system(size: size, weight: .regular)
+    }
     
     static func mediumLabel(_ size: CGFloat = 14) -> Font {
         interVariable(size: size, weight: 500)
