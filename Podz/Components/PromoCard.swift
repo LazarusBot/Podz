@@ -5,21 +5,23 @@ import SwiftUI
 /// look (photo anchored right, fading into a light panel — `.light`
 /// below), then grew a second `.photo` form for banners that need to
 /// read as live/personalized content (e.g. "continue a previous
-/// search") rather than an evergreen feature ad — a full-bleed photo
-/// under a dark scrim reads as "a real place," the light panel reads as
-/// "an app feature." Same outer chrome either way (corner radius 15,
-/// border 0.5px #E1E1E1, shadow "1px 3px 4px rgba(166,166,166,0.1)" =
-/// AppShadow.panel, 124pt tall — Figma's own 99 read as too small in
-/// practice — outer padding 24 horizontal / 31 vertical), so a caller
-/// only ever has to pick a `style`, not rebuild the frame.
+/// search") rather than an evergreen feature ad — a full-bleed, blurred
+/// photo reads as "a real place," the light panel reads as "an app
+/// feature." Both styles share one text hierarchy (Darker Grotesque
+/// Bold title, Inter Regular subtitle/caption below it) and the same
+/// outer chrome (corner radius 15, border 0.5px #E1E1E1, shadow
+/// "1px 3px 4px rgba(166,166,166,0.1)" = AppShadow.panel, 124pt tall —
+/// Figma's own 99 read as too small in practice — outer padding 24
+/// horizontal / 31 vertical), so a caller only ever has to pick a
+/// `style`, not rebuild the frame or guess at a new type scale.
 struct PromoCard: View {
     enum Style {
         /// Original look: fixed-width photo anchored to the trailing
         /// edge, fading into a plain panel on the leading edge where
         /// the text sits. Reads as a static feature/marketing slot.
         case light
-        /// Node 4642:766: full-bleed photo under a dark scrim, white
-        /// text directly on top, small "open" affordance top-trailing.
+        /// Node 4642:766: full-bleed, blurred photo, white text
+        /// directly on top, small "open" affordance top-trailing.
         /// Reads as dynamic, personalized content.
         case photo
     }
@@ -131,9 +133,15 @@ struct PromoCard: View {
             )
 
             VStack(alignment: .leading, spacing: 6) {
+                // Darker Grotesque Bold — the same weight `AppFont`'s own
+                // doc comment calls out for "section titles," which is
+                // what a promo card headline is. Was `pillLabel` (Black)
+                // plus a `.fontWeight(.bold)` that did nothing — SwiftUI
+                // doesn't reweight a `.custom` font via `.fontWeight()`,
+                // so it was silently rendering as Black, one step heavier
+                // than intended and mismatched with `.photo`'s own title.
                 Text(title)
-                    .font(AppFont.pillLabel(18))
-                    .fontWeight(.bold)
+                    .font(AppFont.pillLabelBold(18))
                     .foregroundColor(.black)
 
                 VStack(alignment: .leading, spacing: 0) {
@@ -143,7 +151,9 @@ struct PromoCard: View {
                 }
                 // Real Inter, Regular weight — see
                 // `ProfileRows.swift`'s `ProfileAccountRow` for why
-                // this isn't `AppFont.itemHelper`.
+                // this isn't `AppFont.itemHelper`. Same size/weight as
+                // `.photo`'s own subtitle — one shared text hierarchy
+                // for the whole component, not one per style.
                 .font(AppFont.regularLabel(11))
                 .foregroundColor(.black)
             }
@@ -174,14 +184,20 @@ struct PromoCard: View {
             .clipped()
 
             VStack(alignment: .leading, spacing: 5) {
+                // Same two-tier type system as `.light`: Darker Grotesque
+                // Bold for the headline, real Inter Regular for
+                // everything below it, differentiated by size + opacity
+                // rather than by piling on more font weights. The
+                // caption sits a step below the subtitle on both — same
+                // family/weight, just smaller and more muted.
                 if let caption {
                     Text(caption)
-                        .font(AppFont.pillLabelRegular(8))
+                        .font(AppFont.regularLabel(8))
                         .underline()
                         .foregroundColor(.white.opacity(0.6))
                 }
                 Text(title)
-                    .font(AppFont.pillLabelSemiBold(18))
+                    .font(AppFont.pillLabelBold(18))
                     .foregroundColor(.white)
 
                 VStack(alignment: .leading, spacing: 0) {
@@ -189,7 +205,7 @@ struct PromoCard: View {
                         Text(line)
                     }
                 }
-                .font(AppFont.pillLabelMedium(10))
+                .font(AppFont.regularLabel(11))
                 .foregroundColor(.white.opacity(0.85))
             }
             .padding(.horizontal, 18)
