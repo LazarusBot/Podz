@@ -36,6 +36,7 @@ struct LikesView: View {
     @State private var selectedFolder: LikeFolder?
     @State private var selectedSharedFolder: SharedFolder?
     @State private var selectedPod: Pod?
+    @Namespace private var podZoomNamespace
     @State private var isEditMode = false
     @State private var folderPendingDeletion: LikeFolder?
     @State private var folderPendingShare: LikeFolder?
@@ -67,17 +68,33 @@ struct LikesView: View {
     }
 
     var body: some View {
-        if let pod = selectedPod {
+        // ZStack + `.animation(value:)` so the overview ⇄ folder swap
+        // below has a persistent container to run its `.blurReplace`
+        // transition in — a bare if/else at the root of `body` was a hard
+        // cut. Only folder open/close animates here; a pod opens in its own
+        // zoom-transitioned cover below.
+        ZStack {
+            if let folder = selectedFolder {
+                folderContentView(folder: folder)
+                    .onChange(of: likesStore.likes) { _, _ in
+                        if pods(in: folder).isEmpty { selectedFolder = nil }
+                    }
+                    .transition(.blurReplace)
+            } else if let sharedFolder = selectedSharedFolder {
+                sharedFolderContentView(folder: sharedFolder)
+                    .transition(.blurReplace)
+            } else {
+                foldersOverview
+                    .transition(.blurReplace)
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: selectedFolder?.id)
+        .animation(.easeInOut(duration: 0.35), value: selectedSharedFolder?.id)
+        // Same zoom-from-the-tapped-photo cover Home uses — the folder
+        // grid stays mounted underneath (scroll position kept).
+        .fullScreenCover(item: $selectedPod) { pod in
             PodDetailView(pod: pod, onBack: { selectedPod = nil })
-        } else if let folder = selectedFolder {
-            folderContentView(folder: folder)
-                .onChange(of: likesStore.likes) { _, _ in
-                    if pods(in: folder).isEmpty { selectedFolder = nil }
-                }
-        } else if let sharedFolder = selectedSharedFolder {
-            sharedFolderContentView(folder: sharedFolder)
-        } else {
-            foldersOverview
+                .navigationTransition(.zoom(sourceID: pod.id, in: podZoomNamespace))
         }
     }
     
@@ -244,7 +261,8 @@ struct LikesView: View {
                                 photoURL: podsStore.primaryPhotoByPodId[pod.id],
                                 size: likesCardSize,
                                 onUnlike: { Task { await likesStore.removeLike(pod) } },
-                                onTap: { selectedPod = pod }
+                                onTap: { selectedPod = pod },
+                                zoomNamespace: podZoomNamespace
                             )
                         }
                     }
@@ -308,7 +326,8 @@ struct LikesView: View {
                                 pod: pod,
                                 photoURL: podsStore.primaryPhotoByPodId[pod.id],
                                 size: likesCardSize,
-                                onTap: { selectedPod = pod }
+                                onTap: { selectedPod = pod },
+                                zoomNamespace: podZoomNamespace
                             )
                         }
                     }

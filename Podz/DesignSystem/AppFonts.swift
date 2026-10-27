@@ -49,7 +49,7 @@ enum AppFont {
             ? .custom("DarkerGrotesque-SemiBold", size: size)
             : .system(size: size, weight: .semibold)
     }
-    
+
     static func mediumLabel(_ size: CGFloat = 14) -> Font {
         interVariable(size: size, weight: 500)
     }

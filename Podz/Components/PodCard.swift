@@ -6,6 +6,9 @@ struct PodCard: View {
     var size: CGFloat = 160
     var showLikeButton: Bool = false
     var onTap: () -> Void = {}
+    /// Source side of Home's zoom transition into `PodDetailView` — the
+    /// photo grows out of this card (see `HomeView`'s `fullScreenCover`).
+    let zoomNamespace: Namespace.ID
     @ObservedObject private var likesStore = LikesStore.shared
     @State private var showFolderPicker = false
 
@@ -32,7 +35,8 @@ struct PodCard: View {
                         RoundedRectangle(cornerRadius: AppRadius.r18, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.75), lineWidth: 3)
                     )
-                
+                    .podZoomSource(id: pod.id, in: zoomNamespace, cornerRadius: AppRadius.r18)
+
                 if showLikeButton {
                     Button {
                         if likesStore.isLiked(pod) {
@@ -102,6 +106,7 @@ struct PodSection: View {
     var photoURLs: [UUID: String] = [:]
     var showLikeButtons: Bool = false
     var onTapPod: (Pod) -> Void = { _ in }
+    let zoomNamespace: Namespace.ID
 
     private let horizontalPadding: CGFloat = 24
     private let cardSpacing: CGFloat = 12
@@ -134,7 +139,7 @@ struct PodSection: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: cardSpacing) {
                     ForEach(pods) { pod in
-                        PodCard(pod: pod, photoURL: photoURLs[pod.id], size: cardSize, showLikeButton: showLikeButtons, onTap: { onTapPod(pod) })
+                        PodCard(pod: pod, photoURL: photoURLs[pod.id], size: cardSize, showLikeButton: showLikeButtons, onTap: { onTapPod(pod) }, zoomNamespace: zoomNamespace)
                     }
                 }
                 .padding(.leading, horizontalPadding)

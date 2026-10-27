@@ -29,6 +29,8 @@ struct LikesPodCard: View {
     /// (a heart that quietly does nothing is worse than no heart at all).
     var onUnlike: (() -> Void)? = nil
     var onTap: () -> Void
+    /// Source side of the zoom transition into `PodDetailView`.
+    var zoomNamespace: Namespace.ID? = nil
 
     /// Caption scales down with a narrower card the same way `PodCard`'s
     /// own text does — 160 is that card's own baseline size.
@@ -49,6 +51,7 @@ struct LikesPodCard: View {
                         RoundedRectangle(cornerRadius: AppRadius.r18, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.75), lineWidth: 3)
                     )
+                    .podZoomSource(id: pod.id, in: zoomNamespace, cornerRadius: AppRadius.r18)
 
                 // Exactly `PodCard`'s own like-button styling (same
                 // component, `showLikeButton`'s branch) — no background

@@ -23,9 +23,6 @@ struct ProfileView: View {
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
     @State private var showAddPod = false
-    /// Persisted, not a plain `@State` — a dismissed promo shouldn't come
-    /// back the next time this screen loads.
-    @AppStorage("hasHiddenHostPromoCard") private var hasHiddenHostPromoCard = false
     /// contentOffset.y — 0 at rest, grows positive scrolling down. Same
     /// `onScrollGeometryChange` approach PodDetailView uses for its own
     /// persistent top bar.
@@ -69,14 +66,31 @@ struct ProfileView: View {
                             // and takes them straight into the pod form —
                             // no separate "you're now a host!" step, since
                             // becoming one only actually matters once
-                            // there's a pod behind it.
-                            if !hasHiddenHostPromoCard {
-                                ProfilePromoCard(
-                                    onTap: {
-                                        Task { await AuthManager.shared.becomeHost() }
-                                        showAddPod = true
-                                    },
-                                    onDismiss: { hasHiddenHostPromoCard = true }
+                            // there's a pod behind it. Always shown,
+                            // regardless of `isHost` — matches this
+                            // screen's other promo cards below, none of
+                            // which hide themselves once acted on either.
+                            PromoCard(
+                                backgroundImageName: "Pod",
+                                title: PromoCard.title(prefix: "Make your place a ", underlined: "Podz"),
+                                subtitleLines: ["Set up easily and start earning from your home.", "It's free."],
+                                onTap: {
+                                    Task { await AuthManager.shared.becomeHost() }
+                                    showAddPod = true
+                                }
+                            )
+
+                            // Only while there's actually something to
+                            // complete — unlike the cards above, showing
+                            // this to someone whose profile is already
+                            // filled in would be asking them to finish
+                            // something that isn't unfinished.
+                            if isProfileIncomplete {
+                                PromoCard(
+                                    backgroundImageName: "Hutte1",
+                                    title: PromoCard.title(prefix: "Finish your ", underlined: "profile"),
+                                    subtitleLines: ["Add a photo and a few details so hosts know who's booking."],
+                                    onTap: { showEditProfile = true }
                                 )
                             }
 
@@ -233,6 +247,15 @@ struct ProfileView: View {
     private var myPostsCount: Int {
         guard let userId = auth.session?.user.id else { return 0 }
         return postsStore.posts.filter { $0.authorId == userId }.count
+    }
+
+    /// Missing any of the fields `ProfileEditView` actually lets you set
+    /// (photo, age, location) — not `fullName`/`username`, which are
+    /// already required at signup. `Profile` has no `bio` field to check
+    /// yet.
+    private var isProfileIncomplete: Bool {
+        guard let profile = auth.profile else { return false }
+        return profile.avatarURL == nil || profile.age == nil || profile.location == nil
     }
 
     private var postsActivityCount: Int {

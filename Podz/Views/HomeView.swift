@@ -1,4 +1,5 @@
 import SwiftUI
+internal import Auth
 
 /// Reports the "Friends' posts" section's real available width — same
 /// background-GeometryReader-plus-preference trick as PodCard's
@@ -37,6 +38,7 @@ struct HomeView: View {
     @StateObject private var scrollState = ScrollTrackingState.shared
     @StateObject private var deepLinkRouter = DeepLinkRouter.shared
     @State private var selectedPod: Pod?
+    @Namespace private var podZoomNamespace
     @State private var locationSearch = ""
     @State private var showLennyCoachmark = false
     @State private var showPostComposer = false
@@ -59,9 +61,7 @@ struct HomeView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            if let pod = selectedPod {
-                PodDetailView(pod: pod, onBack: { selectedPod = nil })
-            } else if let post = selectedPost {
+            if let post = selectedPost {
                 PostDetailView(
                     post: post,
                     onBack: { selectedPost = nil },
@@ -104,7 +104,8 @@ struct HomeView: View {
                                         photoURL: podsStore.primaryPhotoByPodId[pod.id],
                                         isSelected: lenny.selectedPodIDs.contains(pod.id),
                                         onToggleSelect: { lenny.toggleSelection(for: pod) },
-                                        onTapCard: { selectedPod = pod }
+                                        onTapCard: { selectedPod = pod },
+                                        zoomNamespace: podZoomNamespace
                                     )
                                 }
                             }
@@ -135,6 +136,35 @@ struct HomeView: View {
                             if isAwaitingQuery {
                                 awaitingQueryState
                             } else {
+                                // "Continue a previous search" banner (node
+                                // 4642:766) — only while there's no active
+                                // query already narrowing the feed, since
+                                // "pick up your Slovénia search" reads as
+                                // redundant once they're already looking at
+                                // Slovénia. Tapping it re-runs that search
+                                // by setting `locationSearch`, same as
+                                // typing it in the pill would. The place/
+                                // date content itself is still static —
+                                // there's no persisted "last search" model
+                                // yet to back it with the user's real one.
+                                if query.isEmpty {
+                                    // Temporarily on .stack — the actual
+                                    // Figma "Card A" (node 4642:753, a
+                                    // fanned photo cluster, not .light's
+                                    // single fading photo) — so it can be
+                                    // compared against .photo on-device.
+                                    // Revert to whichever one wins.
+                                    PromoCard(
+                                        style: .stack,
+                                        backgroundImageName: "Hutte",
+                                        secondaryImageNames: ["Hutte2", "Hutte3"],
+                                        title: AttributedString("Slovénia is waiting on you!"),
+                                        subtitleLines: ["Open the available pods for Slovénia."],
+                                        caption: "5-7 September",
+                                        onTap: { locationSearch = "Slovénia" }
+                                    )
+                                }
+
                                 // Only alongside the pod-browsing content,
                                 // not while the search pill's own full-
                                 // screen "awaiting a query" prompt is
@@ -156,7 +186,8 @@ struct HomeView: View {
                                                 pods: pods,
                                                 photoURLs: podsStore.primaryPhotoByPodId,
                                                 showLikeButtons: true,
-                                                onTapPod: { selectedPod = $0 }
+                                                onTapPod: { selectedPod = $0 },
+                                                zoomNamespace: podZoomNamespace
                                             )
                                         }
                                     }
@@ -209,10 +240,20 @@ struct HomeView: View {
             }
         }
         .background(Color.appHomeBackground.ignoresSafeArea())
+        // A cover (not an inline swap like the post detail above) so iOS
+        // can run its zoom transition: the tapped card's photo grows into
+        // the detail and shrinks back on close, and the feed stays
+        // mounted underneath (scroll position kept). Pods opened from
+        // somewhere with no matching card — a deep link, a post's pod —
+        // have no zoom source and fall back to the default cover animation.
+        .fullScreenCover(item: $selectedPod) { pod in
+            PodDetailView(pod: pod, onBack: { selectedPod = nil })
+                .navigationTransition(.zoom(sourceID: pod.id, in: podZoomNamespace))
+        }
         // On the outer ZStack, not the ScrollView above — that branch is
-        // torn down and rebuilt every time `selectedPod` toggles (feed <->
-        // detail), which was re-running both fetches on every single "back"
-        // tap. The ZStack's identity is stable for HomeView's whole
+        // torn down and rebuilt every time `selectedPost` toggles (feed <->
+        // post detail), which was re-running both fetches on every single
+        // "back" tap. The ZStack's identity is stable for HomeView's whole
         // lifetime, so this now runs once.
         .task { await podsStore.fetchPods() }
         .task { await likesStore.fetchAll() }
@@ -377,6 +418,23 @@ struct HomeView: View {
             if postsStore.posts.isEmpty {
                 friendsEmptyState
             } else {
+                // Only once there's already a feed to see — the empty
+                // state above already nudges "tap + to share one
+                // yourself" for the zero-posts-at-all case, so this
+                // covers the gap that leaves: friends have posted, but
+                // you haven't yet. A sibling here, not nested inside the
+                // padded VStack below — PromoCard already carries its own
+                // 24pt horizontal margin, so nesting it inside that
+                // VStack's matching padding would double-inset it.
+                if myPostsCount == 0 {
+                    PromoCard(
+                        backgroundImageName: "Hutte3",
+                        title: PromoCard.title(prefix: "Share your first ", underlined: "trip"),
+                        subtitleLines: ["Post a photo from a pod you've visited."],
+                        onTap: { showPostComposer = true }
+                    )
+                }
+
                 VStack(spacing: 16) {
                     ForEach(postsStore.posts) { post in
                         PostCard(post: post, cardWidth: postCardWidth, onTapPod: {
@@ -419,6 +477,15 @@ struct HomeView: View {
 
     private var postCardWidth: CGFloat {
         postsFeedAvailableWidth - 48
+    }
+
+    /// Same computation as ProfileView's own `myPostsCount` — not shared
+    /// between the two, since neither file reaches for the other's
+    /// private members and this is a one-line filter, not worth a shared
+    /// helper for.
+    private var myPostsCount: Int {
+        guard let userId = auth.session?.user.id else { return 0 }
+        return postsStore.posts.filter { $0.authorId == userId }.count
     }
 
     private var friendsEmptyState: some View {
