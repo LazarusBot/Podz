@@ -22,6 +22,8 @@ struct LennyResultCard: View {
     var photoCornerRadius: CGFloat = 10
     var onToggleSelect: () -> Void = {}
     var onTapCard: () -> Void = {}
+    /// Source side of the zoom transition into `PodDetailView`.
+    var zoomNamespace: Namespace.ID? = nil
     @State private var showFolderPicker = false
 
     var body: some View {
@@ -31,6 +33,7 @@ struct LennyResultCard: View {
                     .frame(width: 345, height: 345)
                     .clipShape(RoundedRectangle(cornerRadius: photoCornerRadius))
                     .overlay(RoundedRectangle(cornerRadius: photoCornerRadius).strokeBorder(Color.white.opacity(0.75), lineWidth: 3))
+                    .podZoomSource(id: pod.id, in: zoomNamespace, cornerRadius: photoCornerRadius, style: .circular)
             }
             .buttonStyle(.plain)
             

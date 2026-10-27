@@ -38,6 +38,7 @@ struct HomeView: View {
     @StateObject private var scrollState = ScrollTrackingState.shared
     @StateObject private var deepLinkRouter = DeepLinkRouter.shared
     @State private var selectedPod: Pod?
+    @Namespace private var podZoomNamespace
     @State private var locationSearch = ""
     @State private var showLennyCoachmark = false
     @State private var showPostComposer = false
@@ -60,9 +61,7 @@ struct HomeView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            if let pod = selectedPod {
-                PodDetailView(pod: pod, onBack: { selectedPod = nil })
-            } else if let post = selectedPost {
+            if let post = selectedPost {
                 PostDetailView(
                     post: post,
                     onBack: { selectedPost = nil },
@@ -105,7 +104,8 @@ struct HomeView: View {
                                         photoURL: podsStore.primaryPhotoByPodId[pod.id],
                                         isSelected: lenny.selectedPodIDs.contains(pod.id),
                                         onToggleSelect: { lenny.toggleSelection(for: pod) },
-                                        onTapCard: { selectedPod = pod }
+                                        onTapCard: { selectedPod = pod },
+                                        zoomNamespace: podZoomNamespace
                                     )
                                 }
                             }
@@ -148,9 +148,16 @@ struct HomeView: View {
                                 // there's no persisted "last search" model
                                 // yet to back it with the user's real one.
                                 if query.isEmpty {
+                                    // Temporarily on .stack — the actual
+                                    // Figma "Card A" (node 4642:753, a
+                                    // fanned photo cluster, not .light's
+                                    // single fading photo) — so it can be
+                                    // compared against .photo on-device.
+                                    // Revert to whichever one wins.
                                     PromoCard(
-                                        style: .photo,
+                                        style: .stack,
                                         backgroundImageName: "Hutte",
+                                        secondaryImageNames: ["Hutte2", "Hutte3"],
                                         title: AttributedString("Slovénia is waiting on you!"),
                                         subtitleLines: ["Open the available pods for Slovénia."],
                                         caption: "5-7 September",
@@ -179,7 +186,8 @@ struct HomeView: View {
                                                 pods: pods,
                                                 photoURLs: podsStore.primaryPhotoByPodId,
                                                 showLikeButtons: true,
-                                                onTapPod: { selectedPod = $0 }
+                                                onTapPod: { selectedPod = $0 },
+                                                zoomNamespace: podZoomNamespace
                                             )
                                         }
                                     }
@@ -232,10 +240,20 @@ struct HomeView: View {
             }
         }
         .background(Color.appHomeBackground.ignoresSafeArea())
+        // A cover (not an inline swap like the post detail above) so iOS
+        // can run its zoom transition: the tapped card's photo grows into
+        // the detail and shrinks back on close, and the feed stays
+        // mounted underneath (scroll position kept). Pods opened from
+        // somewhere with no matching card — a deep link, a post's pod —
+        // have no zoom source and fall back to the default cover animation.
+        .fullScreenCover(item: $selectedPod) { pod in
+            PodDetailView(pod: pod, onBack: { selectedPod = nil })
+                .navigationTransition(.zoom(sourceID: pod.id, in: podZoomNamespace))
+        }
         // On the outer ZStack, not the ScrollView above — that branch is
-        // torn down and rebuilt every time `selectedPod` toggles (feed <->
-        // detail), which was re-running both fetches on every single "back"
-        // tap. The ZStack's identity is stable for HomeView's whole
+        // torn down and rebuilt every time `selectedPost` toggles (feed <->
+        // post detail), which was re-running both fetches on every single
+        // "back" tap. The ZStack's identity is stable for HomeView's whole
         // lifetime, so this now runs once.
         .task { await podsStore.fetchPods() }
         .task { await likesStore.fetchAll() }

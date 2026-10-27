@@ -1,18 +1,20 @@
 import SwiftUI
 
-/// Generic promo card (node 3827:1459, photo-style node 4642:766) — the
-/// shared shell behind every card of this shape. Started as a single
-/// look (photo anchored right, fading into a light panel — `.light`
-/// below), then grew a second `.photo` form for banners that need to
-/// read as live/personalized content (e.g. "continue a previous
-/// search") rather than an evergreen feature ad — a full-bleed, blurred
-/// photo reads as "a real place," the light panel reads as "an app
-/// feature." Both styles share one text hierarchy (Darker Grotesque
-/// Bold title, Inter Regular subtitle/caption below it) and the same
-/// outer chrome (corner radius 15, border 0.5px #E1E1E1, shadow
-/// "1px 3px 4px rgba(166,166,166,0.1)" = AppShadow.panel, 124pt tall —
-/// Figma's own 99 read as too small in practice — outer padding 24
-/// horizontal / 31 vertical), so a caller only ever has to pick a
+/// Generic promo card (node 3827:1459) — the shared shell behind every
+/// card of this shape. Started as a single look (photo anchored right,
+/// fading into a light panel — `.light` below), then grew two more
+/// forms for banners that need to read as live/personalized content
+/// (e.g. "continue a previous search") rather than an evergreen feature
+/// ad: `.photo` (full-bleed, blurred photo, node 4642:766) and `.stack`
+/// (a fanned cluster of small photos on a plain panel, node 4642:753) —
+/// Figma shows both as candidates for the same search-continuation
+/// banner, kept side by side here so they can be compared on-device
+/// before picking one. All three share one text hierarchy (Darker
+/// Grotesque Bold title, Inter Regular subtitle/caption below it) and
+/// the same outer chrome (corner radius 15, border 0.5px #E1E1E1,
+/// shadow "1px 3px 4px rgba(166,166,166,0.1)" = AppShadow.panel, 124pt
+/// tall — Figma's own 99 read as too small in practice — outer padding
+/// 24 horizontal / 31 vertical), so a caller only ever has to pick a
 /// `style`, not rebuild the frame or guess at a new type scale.
 struct PromoCard: View {
     enum Style {
@@ -24,24 +26,37 @@ struct PromoCard: View {
         /// directly on top, small "open" affordance top-trailing.
         /// Reads as dynamic, personalized content.
         case photo
+        /// Node 4642:753: plain panel background with a small fanned
+        /// cluster of photos (`backgroundImageName` in front, centered
+        /// and unrotated; `secondaryImageNames` behind it, tilted ±6°)
+        /// instead of one large photo. Reads as "a few specific places,"
+        /// closer to a results preview than a single hero shot.
+        case stack
     }
 
     var style: Style = .light
     var backgroundImageName: String
+    /// `.stack` only: the two smaller, tilted photos behind the front
+    /// one. Ignored by `.light`/`.photo`.
+    var secondaryImageNames: [String] = []
     var title: AttributedString
     /// Stacked with zero spacing between lines, same as the original
     /// "Set up easily.../It's free." two-liner — a caller wanting a
     /// single-sentence subtitle just passes one element.
     var subtitleLines: [String]
     /// Small de-emphasized eyebrow label above the title (e.g. a date
-    /// range) — only `.photo` renders it today, but it's a general
-    /// field rather than a `.photo`-only parameter so a future form can
-    /// pick it up without another API change.
+    /// range) — every style renders it, muted gray on `.light`/`.stack`,
+    /// muted white on `.photo`.
     var caption: String? = nil
     var onTap: () -> Void = {}
 
     var imageScale: CGFloat = 1.4
     var imageOffset: CGSize = .init(width: 110, height: 0)
+
+    /// `.stack` only: which of the cluster's photos is currently in front.
+    @State private var frontIndex = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private static let clusterInterval: Double = 1.8
 
     /// Builds "<prefix><underlined word/phrase><suffix>" — the one-word-
     /// underlined title treatment the `.light` cards use. `AttributedString`
@@ -61,6 +76,7 @@ struct PromoCard: View {
                 switch style {
                 case .light: lightContent
                 case .photo: photoContent
+                case .stack: stackContent
                 }
             }
             .frame(height: 124)
@@ -133,6 +149,13 @@ struct PromoCard: View {
             )
 
             VStack(alignment: .leading, spacing: 6) {
+                if let caption {
+                    Text(caption)
+                        .font(AppFont.regularLabel(8))
+                        .underline()
+                        .foregroundColor(.appTextMuted)
+                }
+
                 // Darker Grotesque Bold — the same weight `AppFont`'s own
                 // doc comment calls out for "section titles," which is
                 // what a promo card headline is. Was `pillLabel` (Black)
@@ -225,6 +248,98 @@ struct PromoCard: View {
             .padding(14)
         }
     }
+
+    private var stackContent: some View {
+        ZStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 6) {
+                if let caption {
+                    Text(caption)
+                        .font(AppFont.regularLabel(8))
+                        .underline()
+                        .foregroundColor(.appTextMuted)
+                }
+                // `.fixedSize` so the headline lays out at its natural
+                // single-line width instead of wrapping inside the
+                // `maxWidth` below — there's room for it next to the
+                // photo cluster, the subtitle is what should wrap if
+                // anything does.
+                Text(title)
+                    .font(AppFont.pillLabelBold(18))
+                    .foregroundColor(.black)
+                    .fixedSize(horizontal: true, vertical: false)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(subtitleLines, id: \.self) { line in
+                        Text(line)
+                    }
+                }
+                .font(AppFont.regularLabel(11))
+                .foregroundColor(.black)
+            }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: 190, alignment: .leading)
+
+            HStack {
+                Spacer()
+                photoCluster
+                    .padding(.trailing, 22)
+            }
+        }
+    }
+
+    /// Three fanned, overlapping thumbnails (node 4642:753's own
+    /// "image 3" / "image 50" / "image 51") — the front one centered
+    /// and unrotated, the two behind it smaller and tilted ±6°, same
+    /// idea as `PostCard`/`PodDetailView`'s own fanned "coming next"
+    /// stacks. Loops forever: every `clusterInterval` seconds the front
+    /// photo drops to the back and the next one springs forward, so the
+    /// banner has some movement to it. Each photo keeps its identity
+    /// (ForEach over indices) and only its slot changes, which is what
+    /// lets SwiftUI animate the move instead of cross-fading.
+    private var photoCluster: some View {
+        let names = clusterImageNames
+        return ZStack {
+            ForEach(names.indices, id: \.self) { index in
+                let slot = (index - frontIndex + names.count) % names.count
+                stackThumbnail(names[index], size: slot == 0 ? 76 : 64)
+                    .rotationEffect(.degrees(slot == 0 ? 0 : (slot == 1 ? -6 : 6)))
+                    .offset(x: slot == 0 ? 0 : (slot == 1 ? -16 : 16))
+                    .zIndex(Double(names.count - slot))
+            }
+        }
+        .frame(width: 108, height: 88)
+        .task(id: names.count) { await cycleFrontPhoto(count: names.count) }
+    }
+
+    private var clusterImageNames: [String] {
+        [backgroundImageName] + secondaryImageNames
+    }
+
+    private func cycleFrontPhoto(count: Int) async {
+        guard count > 1, !reduceMotion else { return }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(Self.clusterInterval))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                frontIndex = (frontIndex + 1) % count
+            }
+        }
+    }
+
+    private func stackThumbnail(_ name: String, size: CGFloat) -> some View {
+        Group {
+            if UIImage(named: name) != nil {
+                Image(name)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Rectangle().fill(Color.gray.opacity(0.25))
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.appHomeBackground, lineWidth: 2))
+    }
 }
 
 #Preview {
@@ -242,6 +357,14 @@ struct PromoCard: View {
         PromoCard(
             style: .photo,
             backgroundImageName: "Hutte",
+            title: AttributedString("Slovénia is waiting on you!"),
+            subtitleLines: ["Open the available pods for Slovénia."],
+            caption: "5-7 September"
+        )
+        PromoCard(
+            style: .stack,
+            backgroundImageName: "Hutte",
+            secondaryImageNames: ["Hutte2", "Hutte3"],
             title: AttributedString("Slovénia is waiting on you!"),
             subtitleLines: ["Open the available pods for Slovénia."],
             caption: "5-7 September"
