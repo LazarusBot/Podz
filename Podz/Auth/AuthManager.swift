@@ -200,6 +200,65 @@ final class AuthManager: ObservableObject {
     func finishPostRegisterOnboarding() {
         justRegistered = false
     }
+
+    // MARK: - Email code (passwordless)
+
+    /// How recently an account must have been created for the code
+    /// sign-in to count as a registration. Supabase creates the user when
+    /// the code is *requested*, not when it's verified, so this has to
+    /// outlast the wait for the email.
+    private static let newAccountWindow: TimeInterval = 30 * 60
+
+    /// Emails a one-time code. Unknown emails get an account created
+    /// automatically (`shouldCreateUser` defaults to true), so the same
+    /// two screens serve both sign-up and sign-in. Needs the project's
+    /// "Magic Link" email template to include `{{ .Token }}`.
+    @discardableResult
+    func sendEmailCode(to email: String) async -> Bool {
+        isLoading = true
+        lastError = nil
+        defer { isLoading = false }
+
+        do {
+            try await supabase.auth.signInWithOTP(email: email)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Exchanges the emailed code for a session. Returns `.newAccount` for
+    /// a brand-new user, who then continues through the intro steps.
+    enum CodeVerification { case failed, existingAccount, newAccount }
+
+    func verifyEmailCode(email: String, code: String) async -> CodeVerification {
+        isLoading = true
+        lastError = nil
+        defer { isLoading = false }
+
+        // Set *before* verifying, not after: the session lands (and the
+        // root view re-renders) as part of the verify call itself, and
+        // flagging afterward would flash the app for a frame before the
+        // intro steps took over. Undone below for everyone but a new user.
+        justRegistered = true
+        do {
+            let response = try await supabase.auth.verifyOTP(email: email, token: code, type: .email)
+            let user: User = switch response {
+            case .session(let session): session.user
+            case .user(let user): user
+            }
+            guard Date().timeIntervalSince(user.createdAt) < Self.newAccountWindow else {
+                justRegistered = false
+                return .existingAccount
+            }
+            return .newAccount
+        } catch {
+            justRegistered = false
+            lastError = error.localizedDescription
+            return .failed
+        }
+    }
     
     /// `identifier` is whatever's typed into Login's single field — an
     /// email straight through, or a username resolved server-side first

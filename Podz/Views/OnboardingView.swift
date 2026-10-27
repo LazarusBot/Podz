@@ -33,16 +33,15 @@ struct OnboardingView: View {
     var body: some View {
         if auth.isInitializing {
             LaunchLoadingView()
-        } else if auth.isAuthenticated {
-            if auth.justRegistered {
-                PostRegisterOnboardingView(onFinished: auth.finishPostRegisterOnboarding)
-            } else if auth.profile?.isHost == true && appMode.mode == .host {
+        } else if auth.isAuthenticated && !auth.justRegistered {
+            if auth.profile?.isHost == true && appMode.mode == .host {
                 HostTabView()
             } else {
                 MainTabView()
             }
         } else {
-            AuthFlow()
+            // Signed out, or a brand-new account still in its intro steps.
+            OnboardingFlow()
         }
     }
 }
