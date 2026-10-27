@@ -40,56 +40,79 @@ struct OnboardingWelcomeStep: View {
 
 /// The photo wall, laid out on the Figma frame's 393x852 canvas and scaled
 /// to the screen width. The lower half is blurred and faded into the
-/// ground color so the text and button sit on a calm surface.
+/// ground color so the text and button sit on a calm surface. The photos
+/// drift slowly behind it; Reduce Motion freezes them.
 private struct OnboardingCollage: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private let canvas = CGSize(width: 393, height: 852)
 
     var body: some View {
         GeometryReader { proxy in
             let scale = proxy.size.width / canvas.width
-            ZStack(alignment: .topLeading) {
-                wall
+            TimelineView(.animation(paused: reduceMotion)) { context in
+                // One clock for both copies of the wall so the blurred
+                // layer stays locked to the sharp one.
+                let time = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
+                ZStack(alignment: .topLeading) {
+                    wall(at: time)
 
-                wall
-                    .blur(radius: 6)
-                    .mask(
-                        LinearGradient(
-                            stops: [.init(color: .clear, location: 0.5), .init(color: .black, location: 1)],
-                            startPoint: .top,
-                            endPoint: .bottom
+                    wall(at: time)
+                        .blur(radius: 6)
+                        .mask(
+                            LinearGradient(
+                                stops: [.init(color: .clear, location: 0.5), .init(color: .black, location: 1)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                         )
-                    )
 
-                LinearGradient(
-                    stops: [.init(color: .clear, location: 0.5), .init(color: .onbBackground, location: 1)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                    LinearGradient(
+                        stops: [.init(color: .clear, location: 0.5), .init(color: .onbBackground, location: 1)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+                .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
+                .scaleEffect(scale, anchor: .topLeading)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+                .clipped()
             }
-            .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
-            .scaleEffect(scale, anchor: .topLeading)
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-            .clipped()
         }
     }
 
-    private var wall: some View {
+    private func wall(at time: TimeInterval) -> some View {
         ZStack(alignment: .topLeading) {
+            // The outlines drift less than the photos, so the two layers
+            // slide against each other like frames at different depths.
             ForEach(Self.outlines.indices, id: \.self) { index in
                 let frame = Self.outlines[index]
+                let drift = Self.drift(at: time, index: index + 3, amplitude: 6)
                 Rectangle()
                     .strokeBorder(Color.onbCollageOutline, lineWidth: 0.5)
                     .frame(width: frame.width, height: frame.height)
-                    .offset(x: frame.minX, y: frame.minY)
+                    .offset(x: frame.minX + drift.width, y: frame.minY + drift.height)
             }
 
             ForEach(Self.photos.indices, id: \.self) { index in
                 let photo = Self.photos[index]
+                let drift = Self.drift(at: time, index: index, amplitude: 14)
                 CollagePhoto(name: photo.name, size: photo.frame.size, tallCrop: photo.tallCrop)
-                    .offset(x: photo.frame.minX, y: photo.frame.minY)
+                    .offset(x: photo.frame.minX + drift.width, y: photo.frame.minY + drift.height)
             }
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
+    }
+
+    /// A slow, looping wander on a Lissajous-style path. Each item gets its
+    /// own speed and phase from its index, so nothing moves in lockstep.
+    private static func drift(at time: TimeInterval, index: Int, amplitude: CGFloat) -> CGSize {
+        let speed = 0.18 + 0.04 * Double(index % 3)
+        let phase = Double(index) * 1.7
+        return CGSize(
+            width: amplitude * CGFloat(sin(time * speed + phase)),
+            height: amplitude * CGFloat(cos(time * speed * 0.8 + phase * 1.3))
+        )
     }
 
     private struct Photo {
