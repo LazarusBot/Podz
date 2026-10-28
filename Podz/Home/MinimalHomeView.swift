@@ -17,6 +17,12 @@ struct MinimalHomeView: View {
     @State private var showAllPods = false
     @Namespace private var zoomNamespace
 
+    /// One card plus a 73pt peek of the next (24 margin + 12 gap + 61 peek).
+    /// A fixed width from the screen, not `containerRelativeFrame`: inside a
+    /// horizontal scroll view nested in this vertical one it resolved to an
+    /// infinite width and crashed the layer tree.
+    private static var cardWidth: CGFloat { UIScreen.main.bounds.width - 97 }
+
     private var visiblePods: [Pod] {
         let query = query.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return podsStore.pods }
@@ -136,7 +142,7 @@ struct MinimalHomeView: View {
                             zoomNamespace: zoomNamespace,
                             onTap: { selectedPod = pod }
                         )
-                        .containerRelativeFrame(.horizontal) { width, _ in width - 97 }
+                        .frame(width: Self.cardWidth)
                     }
                 }
                 .scrollTargetLayout()
@@ -156,7 +162,7 @@ struct MinimalHomeView: View {
                         .frame(width: 140, height: 16)
                         .padding(.leading, 5)
                 }
-                .containerRelativeFrame(.horizontal) { width, _ in width - 97 }
+                .frame(width: Self.cardWidth)
             }
         }
         .padding(.leading, 24)
