@@ -29,7 +29,8 @@ struct OnboardingEmailStep: View {
                     contentType: .emailAddress,
                     submitLabel: .continue,
                     focusOnAppear: true,
-                    onSubmit: submit
+                    onSubmit: submit,
+                    trailing: { if auth.isLoading { ProgressView() } }
                 )
 
                 // Reserved height so an error appearing doesn't push the
