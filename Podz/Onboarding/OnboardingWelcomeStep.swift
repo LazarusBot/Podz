@@ -87,8 +87,8 @@ private struct OnboardingCollage: View {
                 // The photos stay flat, then bulge toward you near the screen
                 // edges.
                 .layerEffect(
-                    ShaderLibrary.edgeBend(.float2(proxy.size), .float(0.2), .float(0.45)),
-                    maxSampleOffset: CGSize(width: 100, height: 100)
+                    ShaderLibrary.edgeBend(.float2(proxy.size), .float(0.27), .float(0.4)),
+                    maxSampleOffset: CGSize(width: 140, height: 140)
                 )
             }
         }
