@@ -104,10 +104,11 @@ struct LikesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
+                    // Same style as Home's "Where to tonight?".
                     Text("Likes")
-                        .font(AppFont.pillLabel(24))
-                        .fontWeight(.heavy)
-                        .foregroundColor(.black)
+                        .font(AppFont.semiBoldLabel(30))
+                        .tracking(-0.6)
+                        .foregroundColor(.homeText)
                     Spacer()
                     if isEditMode && !likesStore.folders.isEmpty {
                         Button("Done") {
@@ -118,7 +119,7 @@ struct LikesView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 20)
+                .padding(.top, 25)
 
                 if likesStore.folders.isEmpty {
                     emptyState
