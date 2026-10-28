@@ -35,7 +35,7 @@ struct OnboardingEmailStep: View {
 
                 // Reserved height so an error appearing doesn't push the
                 // pill around.
-                Text(auth.lastError ?? " ")
+                Text(auth.lastError.map(OnboardingErrorText.short) ?? " ")
                     .font(OnboardingFont.caption)
                     .foregroundColor(.appBadgeRed)
                     .lineLimit(1)
@@ -105,7 +105,7 @@ struct OnboardingCodeStep: View {
     private var footer: some View {
         Group {
             if let error = auth.lastError {
-                Text(error).foregroundColor(.appBadgeRed)
+                Text(OnboardingErrorText.short(error)).foregroundColor(.appBadgeRed)
             } else if let resendNote {
                 Text(resendNote).foregroundColor(.onbSubtitle)
             } else {
