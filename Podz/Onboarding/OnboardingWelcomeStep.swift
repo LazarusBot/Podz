@@ -120,7 +120,7 @@ private struct OnboardingCollage: View {
     /// A looping wander on a Lissajous-style path. Each item gets its
     /// own speed and phase from its index, so nothing moves in lockstep.
     private static func drift(at time: TimeInterval, index: Int, amplitude: CGFloat) -> CGSize {
-        let speed = 0.5 + 0.1 * Double(index % 3)
+        let speed = 0.38 + 0.08 * Double(index % 3)
         let phase = Double(index) * 1.7
         return CGSize(
             width: amplitude * CGFloat(sin(time * speed + phase)),
