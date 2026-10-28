@@ -55,6 +55,9 @@ private struct OnboardingCollage: View {
                 // layer stays locked to the sharp one.
                 let time = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
                 ZStack(alignment: .topLeading) {
+                    // Opaque base, so the edge shader never sees gaps.
+                    Color.onbBackground
+
                     wall(at: time)
                         .drawingGroup()
 
@@ -81,6 +84,12 @@ private struct OnboardingCollage: View {
                 .scaleEffect(scale, anchor: .topLeading)
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
                 .clipped()
+                // The photos curve away and split into color fringes toward
+                // the screen edges.
+                .layerEffect(
+                    ShaderLibrary.edgeBend(.float2(proxy.size), .float(0.2), .float(0.07)),
+                    maxSampleOffset: CGSize(width: 80, height: 80)
+                )
             }
         }
     }
