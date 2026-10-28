@@ -2,17 +2,15 @@ import SwiftUI
 
 /// The minimalist Home (Paper "Home" frames): a big question, one search
 /// pill, and a row of large pod cards on a pure black / white ground.
-/// Lenny's itinerary search lives behind the pill's round button
-/// (`LennySearchScreen`).
 struct MinimalHomeView: View {
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var likesStore = LikesStore.shared
-    @StateObject private var lenny = LennySearchViewModel.shared
     @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
     @StateObject private var deepLinkRouter = DeepLinkRouter.shared
 
     @State private var query = ""
+    @FocusState private var searchFocused: Bool
     @State private var selectedPod: Pod?
     @State private var showAllPods = false
     @Namespace private var zoomNamespace
@@ -46,16 +44,13 @@ struct MinimalHomeView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        // Tap outside the field to close the keyboard — the cards and
-        // buttons handle their own taps first.
-        .onTapGesture {
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
+        // Tap outside the field to close the keyboard (and roll Lenny
+        // back) — the cards and buttons handle their own taps first.
+        .onTapGesture { searchFocused = false }
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
             scrollState.updateOffset(offset)
         }
         .background(Color.homeBackground.ignoresSafeArea())
-        .fullScreenCover(isPresented: lennyPresented) { LennySearchScreen() }
         .sheet(isPresented: $showAllPods) {
             HomeAllPodsSheet(pods: podsStore.pods, photoURLs: podsStore.primaryPhotoByPodId)
         }
@@ -99,7 +94,7 @@ struct MinimalHomeView: View {
     }
 
     private var searchPill: some View {
-        HomeSearchPill(text: $query, onLenny: { lenny.activate() })
+        HomeSearchPill(text: $query, isFocused: $searchFocused)
             .padding(.horizontal, 24)
             .padding(.top, 20)
     }
@@ -117,14 +112,6 @@ struct MinimalHomeView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 40)
-    }
-
-    /// Lenny's screen is open for as long as its search isn't idle.
-    private var lennyPresented: Binding<Bool> {
-        Binding(
-            get: { lenny.phase != .idle },
-            set: { if !$0 { lenny.forceReset() } }
-        )
     }
 
     @ViewBuilder
