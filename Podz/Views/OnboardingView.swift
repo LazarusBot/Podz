@@ -30,19 +30,29 @@ struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
     @StateObject private var appMode = AppModeStore.shared
 
+    /// Signed out, or a brand-new account still in its intro steps.
+    private var showsOnboarding: Bool {
+        !auth.isInitializing && !(auth.isAuthenticated && !auth.justRegistered)
+    }
+
     var body: some View {
-        if auth.isInitializing {
-            LaunchLoadingView()
-        } else if auth.isAuthenticated && !auth.justRegistered {
-            if auth.profile?.isHost == true && appMode.mode == .host {
-                HostTabView()
+        Group {
+            if auth.isInitializing {
+                LaunchLoadingView()
+            } else if auth.isAuthenticated && !auth.justRegistered {
+                if auth.profile?.isHost == true && appMode.mode == .host {
+                    HostTabView()
+                } else {
+                    MainTabView()
+                }
             } else {
-                MainTabView()
+                OnboardingFlow()
             }
-        } else {
-            // Signed out, or a brand-new account still in its intro steps.
-            OnboardingFlow()
         }
+        // The onboarding follows the system appearance; the rest of the app
+        // has no dark palette yet, so it stays light (this used to be a
+        // global `UIUserInterfaceStyle = Light` in Info.plist).
+        .preferredColorScheme(showsOnboarding ? nil : .light)
     }
 }
 
