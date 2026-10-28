@@ -1,30 +1,5 @@
 import SwiftUI
 
-/// "Good morning, @bosoveille" + round avatar (node 3779:2057).
-struct HomeHeader: View {
-    let greeting: String
-    let username: String
-    var avatarImageName: String? = nil
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(greeting)
-                    .font(AppFont.regularLabel())
-                    .foregroundColor(.appTextMuted)
-                Text("@\(username)")
-                    .font(AppFont.pillLabel(24))
-                    .foregroundColor(.black)
-            }
-            Spacer()
-            AvatarView(imageName: avatarImageName, size: 42)
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 20)
-        .background(Color.appHomeBackground)
-    }
-}
-
 /// Reusable avatar with white ring + soft shadow, used in the header, the
 /// bottom tab bar ("Profile"), and various friend/post rows — round by
 /// default everywhere, since that's every existing call site.
