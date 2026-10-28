@@ -85,9 +85,9 @@ private struct OnboardingCollage: View {
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
                 .clipped()
                 // The photos stay flat, then bulge toward you near the screen
-                // edges, with a slight color fringe right at the edge.
+                // edges.
                 .layerEffect(
-                    ShaderLibrary.edgeBend(.float2(proxy.size), .float(0.2), .float(0.45), .float(0.025)),
+                    ShaderLibrary.edgeBend(.float2(proxy.size), .float(0.2), .float(0.45)),
                     maxSampleOffset: CGSize(width: 100, height: 100)
                 )
             }
