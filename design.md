@@ -42,7 +42,7 @@ Inter, through `AppFont`. Sizes in points.
 
 | Use | Font |
 |---|---|
-| Home title | semiBold 30, tracking -0.02em |
+| Home title, and the title of a Likes sheet ("Save to folder") | semiBold 30, tracking -0.02em, left-aligned at the 24 margin |
 | Screen / detail title | semiBold 20 (the altitude beside it: semiBold 14) |
 | Section header | semiBold 16 |
 | Body copy | regular 16, line spacing 5 |
@@ -76,7 +76,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 - **Search bar, two modes.** Tapping the bar is a plain search (nothing moves). Tapping the Lenny mark enters Lenny mode: the bar inverts (`homeText` fill), the mark rolls one full turn to the leading end and its disc melts into the bar so only the eyes and mouth show, the placeholder becomes "Chamonix to Zermatt in 5 days". Leaving the field rolls it back. Tap outside a field to dismiss the keyboard.
 - **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (swipe up on the photo or title, or tap the title): photo shrinks to 250/852, full description and facts appear; swipe down or tap to return.
-- **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation. The sheet is always light.
+- **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation. The sheet is always light. Its header: close button 44 (`CloseButton(size: 44)`, bigger than the 31 default other sheets use), then the 30 title.
 - **Welcome.** Photos drift behind the text, bent toward you near the screen edges; Reduce Motion freezes the drift.
 
 ## Motion

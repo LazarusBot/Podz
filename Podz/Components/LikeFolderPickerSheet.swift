@@ -24,17 +24,21 @@ struct LikeFolderPickerSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                CloseButton(action: cancelAndDismiss)
+                CloseButton(size: 44, action: cancelAndDismiss)
                 Spacer()
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
 
+            // Same title style as Home's "Where to tonight?".
             Text("Save to folder")
-                .font(AppFont.semiBoldLabel(20))
-                .foregroundColor(.black)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
+                .font(AppFont.semiBoldLabel(30))
+                .tracking(-0.6)
+                .foregroundColor(.homeText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 24)
 
             ScrollView {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
