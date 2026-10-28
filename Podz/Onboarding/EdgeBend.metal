@@ -2,12 +2,13 @@
 #include <SwiftUI/SwiftUI_Metal.h>
 using namespace metal;
 
-/// Bends a layer around its edges like a convex lens and splits the color
-/// channels apart toward the rim. Nothing changes at the center; both effects
-/// grow with the squared distance from it.
+/// Bulges a layer toward the viewer around its edges, and fringes the color
+/// channels only right at the rim. Nothing changes at the center.
 ///
-/// - bend: how far the rim samples outward (content squeezes toward the edges).
-/// - aberration: extra radial offset for red (+) and blue (-) around green.
+/// - bend: how much the rim is magnified (grows with the squared distance
+///   from the center, so the content seems to curve out of the screen).
+/// - aberration: red (+) / blue (-) radial offset around green, applied only
+///   in the last stretch before the screen edge.
 [[ stitchable ]] half4 edgeBend(
     float2 position,
     SwiftUI::Layer layer,
@@ -19,8 +20,12 @@ using namespace metal;
     float2 d = (position - center) / center;
     float r2 = dot(d, d) * 0.5;
 
-    float scale = 1.0 + bend * r2;
-    float shift = aberration * r2;
+    // Sampling closer to the center than the pixel's own position magnifies.
+    float scale = 1.0 - bend * r2;
+
+    // 0 until 80% of the way to an edge, easing up to 1 at the edge itself.
+    float edge = smoothstep(0.8, 1.0, max(abs(d.x), abs(d.y)));
+    float shift = aberration * edge;
     float2 limit = size - 1.0;
 
     half4 red = layer.sample(clamp(center + d * (scale + shift) * center, 0.0, limit));
