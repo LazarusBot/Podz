@@ -173,7 +173,7 @@ struct MinimalHomeView: View {
         .clipped()
     }
 
-    /// Opens `PodDetailView` for whatever pod `DeepLinkRouter` is holding,
+    /// Opens `MinimalPodDetailView` for whatever pod `DeepLinkRouter` is holding,
     /// once it's actually in `podsStore.pods`.
     private func resolveDeepLink() {
         guard let podId = deepLinkRouter.pendingPodId else { return }

@@ -22,7 +22,7 @@ struct LennyResultCard: View {
     var photoCornerRadius: CGFloat = 10
     var onToggleSelect: () -> Void = {}
     var onTapCard: () -> Void = {}
-    /// Source side of the zoom transition into `PodDetailView`.
+    /// Source side of the zoom transition into `MinimalPodDetailView`.
     var zoomNamespace: Namespace.ID? = nil
     @State private var showFolderPicker = false
 

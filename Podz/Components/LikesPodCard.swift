@@ -29,7 +29,7 @@ struct LikesPodCard: View {
     /// (a heart that quietly does nothing is worse than no heart at all).
     var onUnlike: (() -> Void)? = nil
     var onTap: () -> Void
-    /// Source side of the zoom transition into `PodDetailView`.
+    /// Source side of the zoom transition into `MinimalPodDetailView`.
     var zoomNamespace: Namespace.ID? = nil
 
     /// Caption scales down with a narrower card the same way `PodCard`'s
