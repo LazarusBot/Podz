@@ -46,6 +46,11 @@ struct MinimalHomeView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
+        // Tap outside the field to close the keyboard — the cards and
+        // buttons handle their own taps first.
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
             scrollState.updateOffset(offset)
         }

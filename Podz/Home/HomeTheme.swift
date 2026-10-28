@@ -22,3 +22,12 @@ extension Color {
         dark: Color(white: 0xA0 / 255)
     )
 }
+
+extension Color {
+    /// Placeholder on the focused (inverted) search bar — #A0A0A0 on the
+    /// black light-mode bar, #767676 on the white dark-mode bar.
+    static let homeSubtitleOnInverse = Color(
+        light: Color(white: 0xA0 / 255),
+        dark: Color(white: 0x76 / 255)
+    )
+}
