@@ -28,9 +28,8 @@ struct HomeAllPodsSheet: View {
         }
         .background(Color.homeBackground.ignoresSafeArea())
         .fullScreenCover(item: $selectedPod) { pod in
-            PodDetailView(pod: pod, onBack: { selectedPod = nil })
+            MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
-                .preferredColorScheme(.light)
         }
     }
 }

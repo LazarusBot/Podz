@@ -93,7 +93,7 @@ struct LikesView: View {
         // Same zoom-from-the-tapped-photo cover Home uses — the folder
         // grid stays mounted underneath (scroll position kept).
         .fullScreenCover(item: $selectedPod) { pod in
-            PodDetailView(pod: pod, onBack: { selectedPod = nil })
+            MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: podZoomNamespace))
         }
     }

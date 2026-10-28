@@ -28,3 +28,12 @@ extension Color {
     /// the black light-mode bar and the white dark-mode bar (Paper Home2).
     static let homeSubtitleOnInverse = Color(white: 0xA0 / 255)
 }
+
+extension Color {
+    /// #989898 light / white 88% dark — body copy under a title (Paper
+    /// DetailView frames).
+    static let homeBodyText = Color(
+        light: Color(white: 0x98 / 255),
+        dark: Color.white.opacity(0.88)
+    )
+}

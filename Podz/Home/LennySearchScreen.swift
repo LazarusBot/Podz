@@ -41,7 +41,7 @@ struct LennySearchScreen: View {
             fieldFocused = phase == .editing
         }
         .fullScreenCover(item: $selectedPod) { pod in
-            PodDetailView(pod: pod, onBack: { selectedPod = nil })
+            MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
                 .preferredColorScheme(.light)
         }

@@ -66,9 +66,8 @@ struct MinimalHomeView: View {
         // into the detail and shrinks back on close. A pod with no card
         // here (a deep link) falls back to the default cover animation.
         .fullScreenCover(item: $selectedPod) { pod in
-            PodDetailView(pod: pod, onBack: { selectedPod = nil })
+            MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
-                .preferredColorScheme(.light)
         }
         .task { await podsStore.fetchPods() }
         .task { await likesStore.fetchAll() }
