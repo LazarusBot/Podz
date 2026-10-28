@@ -56,16 +56,20 @@ private struct OnboardingCollage: View {
                 let time = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
                 ZStack(alignment: .topLeading) {
                     wall(at: time)
+                        .drawingGroup()
 
+                    // Only the lower half is ever visible blurred, so blur
+                    // just that half — it's re-rendered every frame.
                     wall(at: time)
+                        .offset(y: -canvas.height / 2)
+                        .frame(width: canvas.width, height: canvas.height / 2, alignment: .topLeading)
+                        .clipped()
+                        .drawingGroup()
                         .blur(radius: 6)
                         .mask(
-                            LinearGradient(
-                                stops: [.init(color: .clear, location: 0.5), .init(color: .black, location: 1)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
+                            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
                         )
+                        .offset(y: canvas.height / 2)
 
                     LinearGradient(
                         stops: [.init(color: .clear, location: 0.5), .init(color: .onbBackground, location: 1)],
@@ -104,10 +108,10 @@ private struct OnboardingCollage: View {
         .frame(width: canvas.width, height: canvas.height, alignment: .topLeading)
     }
 
-    /// A slow, looping wander on a Lissajous-style path. Each item gets its
+    /// A looping wander on a Lissajous-style path. Each item gets its
     /// own speed and phase from its index, so nothing moves in lockstep.
     private static func drift(at time: TimeInterval, index: Int, amplitude: CGFloat) -> CGSize {
-        let speed = 0.3 + 0.06 * Double(index % 3)
+        let speed = 0.5 + 0.1 * Double(index % 3)
         let phase = Double(index) * 1.7
         return CGSize(
             width: amplitude * CGFloat(sin(time * speed + phase)),
