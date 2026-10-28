@@ -116,7 +116,7 @@ struct ReservationSheet: View {
             }
 
             if let error = reservationsStore.lastError {
-                AuthErrorBanner(message: error)
+                ErrorBanner(message: error)
             }
 
             Button(action: submit) {

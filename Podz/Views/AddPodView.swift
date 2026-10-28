@@ -18,11 +18,8 @@ internal import Auth
 /// (see SQL/host_accounts.sql's insert policy).
 ///
 /// Five steps of exactly two fields each (basics / location / place /
-/// capacity & description / photos), not one long scrollable form — same
-/// idea as `PostRegisterOnboardingView`'s `step` + dots (its own
-/// `OnboardingPaginationDots`, private to that file, so this has its own
-/// small `StepDots` rather than reaching across files for it), adapted to
-/// a plain forward/back form instead of a swipeable photo carousel.
+/// capacity & description / photos), not one long scrollable form — one
+/// `step` plus a small `StepDots` indicator, as a plain forward/back form.
 struct AddPodView: View {
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var auth = AuthManager.shared
@@ -471,12 +468,8 @@ struct AddPodView: View {
     }
 }
 
-/// Small dot row for this form's own 3 steps — `PostRegisterOnboardingView`
-/// already has one (`OnboardingPaginationDots`), but it's `private` to
-/// that file and Swift's `private` is file-scoped, not type-scoped, so
-/// reaching it from here isn't possible without loosening its access
-/// level for a completely unrelated flow. Same visual idea (active dot
-/// wider, inactive ones dim), scoped to this file instead.
+/// Small dot row for this form's own steps (active dot wider, inactive
+/// ones dim).
 private struct StepDots: View {
     let count: Int
     let activeIndex: Int

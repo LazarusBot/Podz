@@ -2,9 +2,8 @@ import Foundation
 import Supabase
 import Combine
 
-/// Central place for all auth logic. Your views never call `supabase.auth`
-/// directly — they call methods here, which keeps `LoginView` / `RegisterView`
-/// / etc. exactly as they are today, just swapping their TODOs for real calls.
+/// Central place for all auth logic. Views never call `supabase.auth`
+/// directly — they call methods here.
 ///
 /// Session persistence (staying logged in between app launches) is handled
 /// automatically by the Supabase SDK via the Keychain — you don't need to
@@ -18,8 +17,8 @@ final class AuthManager: ObservableObject {
     @Published var lastError: String?
     @Published private(set) var profile: Profile?
     @Published private(set) var isInitializing = true
-    /// Set on a successful `signUp`, cleared once the post-register
-    /// onboarding has been shown. In-memory only (not @AppStorage) — this
+    /// Set while a brand-new account is still in the onboarding intro steps,
+    /// cleared once they're done. In-memory only (not @AppStorage) — this
     /// is intentional, see the PodzApp.swift routing note about the old
     /// hasSeenOnboarding bug.
     @Published private(set) var justRegistered = false
@@ -174,29 +173,7 @@ final class AuthManager: ObservableObject {
         }
     }
 
-    // MARK: - Email / password
-    
-    func signUp(name: String, username: String, email: String, password: String) async {
-        isLoading = true
-        lastError = nil
-        defer { isLoading = false }
-        
-        do {
-            try await supabase.auth.signUp(
-                email: email,
-                password: password,
-                data: [
-                    "full_name": .string(name),
-                    "username": .string(username)
-                ]
-            )
-            justRegistered = true
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    /// Call once the post-register onboarding has been shown/dismissed.
+    /// Call once the onboarding intro steps have been shown/dismissed.
     func finishPostRegisterOnboarding() {
         justRegistered = false
     }
@@ -260,41 +237,6 @@ final class AuthManager: ObservableObject {
         }
     }
     
-    /// `identifier` is whatever's typed into Login's single field — an
-    /// email straight through, or a username resolved server-side first
-    /// (see SQL/get_email_for_username.sql) to the email Supabase Auth
-    /// actually signs in with. Auth itself only ever knows email/password;
-    /// this is the one place username gets translated into that.
-    func signIn(identifier: String, password: String) async {
-        isLoading = true
-        lastError = nil
-        defer { isLoading = false }
-
-        do {
-            let email = try await resolvedEmail(for: identifier)
-            try await supabase.auth.signIn(email: email, password: password)
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    /// A bare heuristic ("@" present) is enough here — this only decides
-    /// whether to skip the username lookup, not whether the string is a
-    /// well-formed email; an actually-malformed email still reaches
-    /// `supabase.auth.signIn` unchanged and fails there with its own
-    /// normal error, same as always.
-    private func resolvedEmail(for identifier: String) async throws -> String {
-        guard !identifier.contains("@") else { return identifier }
-        let email: String? = try await supabase
-            .rpc("get_email_for_username", params: ["p_username": identifier])
-            .execute()
-            .value
-        guard let email else {
-            throw UsernameLookupError.notFound
-        }
-        return email
-    }
-
     /// Sends a password reset email. Returns whether it succeeded so the
     /// caller can show a confirmation — failure is already surfaced via
     /// `lastError`.
@@ -310,25 +252,6 @@ final class AuthManager: ObservableObject {
         }
     }
 
-    // MARK: - Sign in with Apple
-    
-    /// Called from `AppleSignInCoordinator.onSuccess` with the identity
-    /// token Apple returned, plus the raw nonce you generated before
-    /// starting the Apple request (see `AppleNonce.swift`).
-    func signInWithApple(idToken: String, rawNonce: String) async {
-        isLoading = true
-        lastError = nil
-        defer { isLoading = false }
-        
-        do {
-            try await supabase.auth.signInWithIdToken(
-                credentials: .init(provider: .apple, idToken: idToken, nonce: rawNonce)
-            )
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-    
     // MARK: - Delete / sign out
     
     func signOut() async {
@@ -352,16 +275,6 @@ final class AuthManager: ObservableObject {
             try await supabase.auth.signOut()
         } catch {
             lastError = error.localizedDescription
-        }
-    }
-}
-
-private enum UsernameLookupError: LocalizedError {
-    case notFound
-
-    var errorDescription: String? {
-        switch self {
-        case .notFound: "No account found for that username."
         }
     }
 }

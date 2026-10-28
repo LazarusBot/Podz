@@ -603,7 +603,7 @@ struct HomeView: View {
 /// content between pod browsing and friends' posts. No pill/capsule chrome
 /// — just the two labels (muted when inactive, black and underlined when
 /// active) centered between a hairline rule stretching to each edge, same
-/// divider language as OnboardingView's `DividerOr`.
+/// divider language the old sign-in screens used.
 private struct HomeFeedToggle: View {
     @Binding var selection: HomeFeedTab
     /// Transient "+1" on the "Friends" label — same self-clearing style

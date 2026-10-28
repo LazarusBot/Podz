@@ -81,10 +81,11 @@ struct OnboardingCodeStep: View {
                     text: $code,
                     keyboard: .numberPad,
                     contentType: .oneTimeCode,
-                    focusOnAppear: true
-                ) {
-                    if auth.isLoading { ProgressView() }
-                }
+                    focusOnAppear: true,
+                    // Labelled, not a trailing closure: that would bind to
+                    // the `onSubmit` parameter before it.
+                    trailing: { if auth.isLoading { ProgressView() } }
+                )
 
                 footer
             }
