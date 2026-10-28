@@ -31,8 +31,7 @@ struct LikeFolderPickerSheet: View {
             .padding(.top, 16)
 
             Text("Save to folder")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
+                .font(AppFont.semiBoldLabel(20))
                 .foregroundColor(.black)
                 .padding(.top, 8)
                 .padding(.bottom, 20)

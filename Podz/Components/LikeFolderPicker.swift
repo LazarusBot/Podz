@@ -21,6 +21,8 @@ struct LikeFolderPickerModifier: ViewModifier {
                 LikeFolderPickerSheet(pod: pod, onDismiss: { isPresented = false })
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
+                    // The frosted folders are drawn for a light ground.
+                    .preferredColorScheme(.light)
             }
     }
 }

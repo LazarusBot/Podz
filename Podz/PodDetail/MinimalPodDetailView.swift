@@ -18,6 +18,8 @@ struct MinimalPodDetailView: View {
     @State private var liveBedsAvailable: Int?
     @State private var isExtended = false
     @State private var showBooking = false
+    @State private var showFolderPicker = false
+    @ObservedObject private var likesStore = LikesStore.shared
 
     /// Photo heights from the Paper frames, as a share of the screen.
     private static let stackedPhotoShare: CGFloat = 524 / 852
@@ -58,6 +60,11 @@ struct MinimalPodDetailView: View {
                     .padding(.bottom, proxy.safeAreaInsets.bottom + 40)
             }
             .frame(width: proxy.size.width, height: proxy.size.height + proxy.safeAreaInsets.top)
+            .overlay(alignment: .topTrailing) {
+                likeButton
+                    .padding(.top, proxy.safeAreaInsets.top + 8)
+                    .padding(.trailing, 20)
+            }
         }
         .ignoresSafeArea(edges: .top)
         .background(Color.homeBackground.ignoresSafeArea())
@@ -106,6 +113,33 @@ struct MinimalPodDetailView: View {
     /// shows the placeholder.
     private var pagerURLs: [String?] {
         photoURLs.isEmpty ? [nil] : photoURLs.map { Optional($0) }
+    }
+
+    // MARK: - Like
+
+    private var isLiked: Bool { likesStore.isLiked(pod) }
+
+    /// A frosted-glass circle on the photo's top corner. Unliked, a tap
+    /// opens the folder picker (the frosted folders and the photo
+    /// dropping into one); liked, a tap removes the like.
+    private var likeButton: some View {
+        Button {
+            if isLiked {
+                Task { await likesStore.removeLike(pod) }
+            } else {
+                showFolderPicker = true
+            }
+        } label: {
+            Image(systemName: isLiked ? "heart.fill" : "heart")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
+                .symbolEffect(.bounce, value: isLiked)
+                .frame(width: 44, height: 44)
+                .glassEffect(.regular, in: Circle())
+        }
+        .buttonStyle(TapScaleButtonStyle())
+        .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
+        .accessibilityLabel(isLiked ? "Remove from likes" : "Add to likes")
     }
 
     // MARK: - Text
