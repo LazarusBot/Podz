@@ -27,7 +27,7 @@ struct MainTabView: View {
                 Group {
                     switch selectedTab {
                     case .feed:
-                        HomeView()
+                        MinimalHomeView()
                     case .profile:
                         ProfileView()
                     case .likes:
@@ -41,7 +41,7 @@ struct MainTabView: View {
                 .ignoresSafeArea(edges: .bottom)
 
                 if lenny.phase != .editing && !homeSearch.isExpanded && !tabBarVisibility.isHidden {
-                    BottomTabBar(selected: $selectedTab, profileImageName: auth.profile?.avatarURL)
+                    MinimalTabBar(selected: $selectedTab)
                         // 24, not 18 — matches this app's actual spacing
                         // system (24pt is the standard content margin
                         // everywhere else: ProfileTopBar, every screen
@@ -79,6 +79,9 @@ struct MainTabView: View {
         .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)
         .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())
+        // Home follows the system appearance; the other tabs have no dark
+        // palette yet, so they (and the tab bar over them) stay light.
+        .preferredColorScheme(selectedTab == .feed ? nil : .light)
         .task {
             await messagesStore.fetchAll()
             messagesStore.startRealtimeIfNeeded()
