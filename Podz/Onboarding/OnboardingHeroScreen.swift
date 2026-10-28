@@ -49,6 +49,10 @@ struct OnboardingHeroScreen<Bottom: View>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.onbBackground.ignoresSafeArea())
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
     }
 
     private var textTopPadding: CGFloat {
