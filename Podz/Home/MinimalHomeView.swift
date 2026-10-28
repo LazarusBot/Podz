@@ -10,6 +10,10 @@ struct MinimalHomeView: View {
     @StateObject private var deepLinkRouter = DeepLinkRouter.shared
 
     @State private var query = ""
+    /// What's typed while the pill is in Lenny mode — kept apart from
+    /// `query` so a route sentence never filters the cards.
+    @State private var lennyQuery = ""
+    @State private var isLennyMode = false
     @FocusState private var searchFocused: Bool
     @State private var selectedPod: Pod?
     @State private var showAllPods = false
@@ -44,9 +48,13 @@ struct MinimalHomeView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        // Tap outside the field to close the keyboard (and roll Lenny
-        // back) — the cards and buttons handle their own taps first.
+        // Tap outside the field to close the keyboard — the cards and
+        // buttons handle their own taps first.
         .onTapGesture { searchFocused = false }
+        // Leaving the field also leaves Lenny mode: the mark rolls back.
+        .onChange(of: searchFocused) { _, focused in
+            if !focused { isLennyMode = false }
+        }
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
             scrollState.updateOffset(offset)
         }
@@ -94,7 +102,11 @@ struct MinimalHomeView: View {
     }
 
     private var searchPill: some View {
-        HomeSearchPill(text: $query, isFocused: $searchFocused)
+        HomeSearchPill(
+            text: isLennyMode ? $lennyQuery : $query,
+            isLennyMode: $isLennyMode,
+            isFocused: $searchFocused
+        )
             .padding(.horizontal, 24)
             .padding(.top, 20)
     }
