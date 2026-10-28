@@ -60,11 +60,6 @@ struct MinimalPodDetailView: View {
                     .padding(.bottom, proxy.safeAreaInsets.bottom + 40)
             }
             .frame(width: proxy.size.width, height: proxy.size.height + proxy.safeAreaInsets.top)
-            .overlay(alignment: .topTrailing) {
-                likeButton
-                    .padding(.top, proxy.safeAreaInsets.top + 8)
-                    .padding(.trailing, 20)
-            }
         }
         .ignoresSafeArea(edges: .top)
         .background(Color.homeBackground.ignoresSafeArea())
@@ -119,9 +114,9 @@ struct MinimalPodDetailView: View {
 
     private var isLiked: Bool { likesStore.isLiked(pod) }
 
-    /// A frosted-glass circle on the photo's top corner. Unliked, a tap
-    /// opens the folder picker (the frosted folders and the photo
-    /// dropping into one); liked, a tap removes the like.
+    /// A round pill in the action row, same flat style as back and Book.
+    /// Unliked, a tap opens the folder picker (the frosted folders and the
+    /// photo dropping into one); liked, a tap removes the like.
     private var likeButton: some View {
         Button {
             if isLiked {
@@ -130,12 +125,20 @@ struct MinimalPodDetailView: View {
                 showFolderPicker = true
             }
         } label: {
-            Image(systemName: isLiked ? "heart.fill" : "heart")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .symbolEffect(.bounce, value: isLiked)
-                .frame(width: 44, height: 44)
-                .glassEffect(.regular, in: Circle())
+            ZStack {
+                if isLiked { HeartIconShape().fill(Color.homeText) }
+                HeartIconShape()
+                    .stroke(Color.homeText.opacity(isLiked ? 1 : 0.45), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+            }
+            .frame(width: 22, height: 22)
+            .keyframeAnimator(initialValue: 1.0, trigger: isLiked) { content, scale in
+                content.scaleEffect(scale)
+            } keyframes: { _ in
+                SpringKeyframe(1.3, duration: 0.15)
+                SpringKeyframe(1.0, spring: .bouncy)
+            }
+            .frame(width: 83, height: 83)
+            .background(pill)
         }
         .buttonStyle(TapScaleButtonStyle())
         .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
@@ -146,6 +149,7 @@ struct MinimalPodDetailView: View {
 
     private var titleBlock: some View {
         titleText
+            .foregroundColor(.homeText)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
             .padding(.top, 50)
@@ -224,11 +228,13 @@ struct MinimalPodDetailView: View {
                 BackChevron()
                     .stroke(Color.homeText.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
                     .frame(width: 8, height: 12)
-                    .frame(width: 107, height: 83)
+                    .frame(width: 83, height: 83)
                     .background(pill)
             }
             .buttonStyle(TapScaleButtonStyle())
             .accessibilityLabel("Back")
+
+            likeButton
 
             Button { showBooking = true } label: {
                 Text("Book")
@@ -240,7 +246,7 @@ struct MinimalPodDetailView: View {
             }
             .buttonStyle(TapScaleButtonStyle())
         }
-        .padding(.horizontal, 56)
+        .padding(.horizontal, 40)
         .padding(.top, 24)
     }
 
