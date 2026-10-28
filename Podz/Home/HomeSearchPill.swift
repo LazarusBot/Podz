@@ -32,7 +32,7 @@ struct HomeSearchPill: View {
         TextField(
             "",
             text: $text,
-            prompt: Text("Search a region or ask Lenny")
+            prompt: Text(focused ? "Chamonix to Zermatt in 5 days" : "Search a region or ask Lenny")
                 .foregroundColor(focused ? .homeSubtitleOnInverse : .homeSubtitle)
         )
         .font(AppFont.regularLabel(14))
