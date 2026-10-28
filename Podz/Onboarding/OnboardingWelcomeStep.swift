@@ -84,11 +84,11 @@ private struct OnboardingCollage: View {
                 .scaleEffect(scale, anchor: .topLeading)
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
                 .clipped()
-                // The photos bulge toward you at the screen edges, with a
-                // slight color fringe right where they touch the edge.
+                // The photos stay flat, then bulge toward you near the screen
+                // edges, with a slight color fringe right at the edge.
                 .layerEffect(
-                    ShaderLibrary.edgeBend(.float2(proxy.size), .float(0.22), .float(0.025)),
-                    maxSampleOffset: CGSize(width: 110, height: 110)
+                    ShaderLibrary.edgeBend(.float2(proxy.size), .float(0.1), .float(0.6), .float(0.025)),
+                    maxSampleOffset: CGSize(width: 60, height: 60)
                 )
             }
         }
