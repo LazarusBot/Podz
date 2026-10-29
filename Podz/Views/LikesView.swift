@@ -204,7 +204,6 @@ struct LikesView: View {
 
     private func folderContentView(folder: LikeFolder) -> some View {
         MinimalFolderView(
-            name: folder.name,
             pods: pods(in: folder),
             photoURLs: podsStore.primaryPhotoByPodId,
             onBack: { selectedFolder = nil },
@@ -224,7 +223,6 @@ struct LikesView: View {
     /// A folder shared with you: the same screen, read-only (no share).
     private func sharedFolderContentView(folder: SharedFolder) -> some View {
         MinimalFolderView(
-            name: folder.name,
             pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
             photoURLs: podsStore.primaryPhotoByPodId,
             onBack: { selectedSharedFolder = nil },

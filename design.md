@@ -18,7 +18,7 @@ color, a button style or a pattern.** Check it before every commit/push.
   user before building** and propose the simpler option; remove the
   interaction that is hardest to get right.
 - Pure black / white grounds. **No accent color**: the photos carry all the color.
-- Flat. No shadows, no gradients except a fade into the ground. The one frosted
+- Flat. No shadows, no gradients except a fade into the ground and the soft black scrim under a name on a photo tile (white text on photos is the one place text isn't a token). The one frosted
   material is the like-folder picker (see Patterns).
 - Dark and light are both designed. Never hard-code a color: use a token below,
   built with `Color(light:dark:)`.
@@ -60,7 +60,7 @@ Inter, through `AppFont`. Sizes in points.
 
 ## Shape and spacing
 
-- Content margin 24. Button rows sit 40 from the screen edges (56 on onboarding).
+- Content margin 24. Button rows sit 40 from the screen edges on the pod detail, 24 (the grid's edge) on the Likes folder, 56 on onboarding.
 - Pill buttons: capsule, **83 tall**, 13 apart. Search pill: 60 tall. Tab bar: 220 x 64.
 - Pod cards: 296 x 340, radius 36 continuous, caption 12 below. A peek of the next card (card width = screen - 97).
 - Photos that bleed from the top: rounded only along the bottom, radius 75. Onboarding card photo: radius 53, inset 21.
@@ -73,9 +73,9 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 - **Text pill** ("Book", "Open", "Continue", "Touch to start"): 14 regular label in `homeText`.
 - **Highlighted pill** (last onboarding step): ground and text swap, `onbHighlight` fill, 14 semiBold label.
-- **Back**: 83 x 83 pill, chevron 8 x 12, 1.5 stroke, round caps, `homeText` at 45%.
+- **Back**: 83 x 83 pill, chevron 8 x 12, 1.5 stroke, round caps, `homeText` at 35%.
 - **Close** (`CloseButton(style: .pill, size: 44)`): round pill, same fill and 1pt border as back, thin 12pt "x" (1.5 stroke, round caps) in `homeText` at 45%. Only the Likes folder sheet uses it so far; other sheets still use the classic gray circle until they are restyled.
-- **Share** (folder view): round 83 pill like Back, the SF "link" glyph (20 regular) in `homeText` at 45%.
+- **Share** (Likes folder): round 83 pill like Back, the link glyph from Paper (`LinkGlyphShape`, 18pt, 0.96 stroke, round caps) in `homeText` at 35%.
 - **Like**: 83 x 83 pill, the tab bar's heart (22, 1.6 stroke): outline at 45% when not liked, filled at full strength when liked, with a quick bounce. Tapping when liked removes the like; otherwise it opens the folder picker.
 - **Search pill**: capsule in `homePill`, 14 regular text, placeholder in `homeSubtitle`, Lenny mark at the trailing end.
 - **Tab bar**: floating capsule, three line icons (home, heart, person), 22 / 1.6 stroke. Active icon at full strength, others at 45%.
@@ -86,7 +86,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 - **Search bar, two modes.** Tapping the bar is a plain search (nothing moves). Tapping the Lenny mark enters Lenny mode: the bar inverts (`homeText` fill), the mark rolls one full turn to the leading end and its disc melts into the bar so only the eyes and mouth show, the placeholder becomes "Chamonix to Zermatt in 5 days". Leaving the field rolls it back. Tap outside a field to dismiss the keyboard.
 - **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (tap anywhere between the photo and the buttons): photo shrinks to 250/852, full description and facts appear; tap the same area to return. The only swipe on this screen is paging through the photos, and the only way out is the back button (swipe-to-dismiss is off).
-- **Likes folder (a folder opened from the Likes tab).** Same layout as the pod detail, with the folder's pods as the photo pages: title "Folder  -  N pods", teaser naming the pod on screen, back / share (own folders only) / Open. Tap the area under the photo to extend into the list of every pod (tap a row to open it, tap the title to collapse). Same shared pieces as the pod detail (`DetailParts.swift`); the tab bar is hidden while it's open. The old two-column grid and top bar are gone.
+- **Likes folder** (a folder opened from the Likes tab; Paper `LikesFolderView`). A two-column grid of the folder's pods: tiles 166 x 216 (radius 36, 13 apart, 12 between rows, 24 margins), the pod's name (15 semiBold, white) bottom-left on a soft black scrim. One tile is selected: full strength with a white check circle top-right (26, black 1.6 check); the others sit at 55%. Tap a tile to select it (the first one until you pick). The grid fades into the ground over its lower half, with the pills on top: back, share link (own folders only), **Open** (opens the selected pod). No title, no tab bar. The same tile is the onboarding's region picker tile.
 - **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation. The sheet is always light. Its header: the pill close button, then the 20 title.
 - **Welcome.** Photos drift behind the text, bent toward you near the screen edges; Reduce Motion freezes the drift.
 

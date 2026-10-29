@@ -75,14 +75,14 @@ struct DetailRoundButton<Label: View>: View {
     }
 }
 
-/// The back pill: a thin "<" at 45%.
+/// The back pill: a thin "<" at 35%.
 struct DetailBackButton: View {
     var action: () -> Void
 
     var body: some View {
         DetailRoundButton(accessibilityLabel: "Back", action: action) {
             DetailBackChevron()
-                .stroke(Color.homeText.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                .stroke(Color.homeText.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
                 .frame(width: 8, height: 12)
         }
     }
