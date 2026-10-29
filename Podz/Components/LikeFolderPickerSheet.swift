@@ -272,6 +272,6 @@ private struct FolderDropValues {
 
     static let start = FolderDropValues(scale: 1.1, rotationDegrees: -4, xFraction: -0.35, yFraction: -1.35)
     static let midArc = FolderDropValues(scale: 0.95, rotationDegrees: 20, xFraction: -0.12, yFraction: -0.78)
-    static let landed = FolderDropValues(scale: 0.75, rotationDegrees: 42, xFraction: 0.02, yFraction: -0.28)
-    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.02, yFraction: -0.22)
+    static let landed = FolderDropValues(scale: 0.7, rotationDegrees: 42, xFraction: 0.02, yFraction: 0.05)
+    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.02, yFraction: 0.08)
 }

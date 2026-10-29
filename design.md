@@ -18,8 +18,8 @@ color, a button style or a pattern.** Check it before every commit/push.
   user before building** and propose the simpler option; remove the
   interaction that is hardest to get right.
 - Pure black / white grounds. **No accent color**: the photos carry all the color.
-- Flat. No shadows, no gradients except a fade into the ground and the soft black scrim under a name on a photo tile (white text on photos is the one place text isn't a token). The one frosted
-  material is the like-folder picker (see Patterns).
+- Flat. No shadows, no gradients except a fade into the ground and the soft black scrim under a name on a photo tile (white text on photos is the one place text isn't a token). Nothing is glass:
+  the Likes folders are flat trays (see Patterns).
 - Dark and light are both designed. Never hard-code a color: use a token below,
   built with `Color(light:dark:)`.
 - Quiet copy: short, lower-key sentences ("Tell him where and when.").
@@ -39,7 +39,6 @@ color, a button style or a pattern.** Check it before every commit/push.
 | Pill border | `homeBackground` (the ground, so it reads as a gap) | | |
 | Welcome collage outline | `onbCollageOutline` | clear | white 25% |
 | Error text | `appBadgeRed` | | |
-| Frosted folders (Likes): milky fill / front rim / back rim | `homeFrostFill` / `homeFrostRim` / `homeFrostRimBack` | white 18% / 50% / 70% | white 7% / 20% / 22% |
 
 `home*` tokens live in `Podz/Home/HomeTheme.swift`, `onb*` in
 `Podz/Onboarding/OnboardingTheme.swift` (PR #50). They are the same palette:
@@ -88,7 +87,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 - **Search bar, two modes.** Tapping the bar is a plain search (nothing moves). Tapping the Lenny mark enters Lenny mode: the bar inverts (`homeText` fill), the mark rolls one full turn to the leading end and its disc melts into the bar so only the eyes and mouth show, the placeholder becomes "Chamonix to Zermatt in 5 days". Leaving the field rolls it back. Tap outside a field to dismiss the keyboard.
 - **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (tap anywhere between the photo and the buttons): photo shrinks to 250/852, full description and facts appear; tap the same area to return. The only swipe on this screen is paging through the photos, and the only way out is the back button (swipe-to-dismiss is off).
 - **Likes folder** (a folder opened from the Likes tab; Paper `LikesFolderView`). A two-column grid of the folder's pods: tiles 166 x 216 (radius 36, 13 apart, 12 between rows, 24 margins), the pod's name (15 semiBold, white) bottom-left on a soft black scrim. One tile is selected: full strength with a white check circle top-right (26, black 1.6 check); the others sit at 55%. Tap a tile to select it (the first one until you pick). The grid fades into the ground over its lower half, with the pills on top: back, share link (own folders only), **Open** (opens the selected pod). No title, no tab bar. The same tile is the onboarding's region picker tile.
-- **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation; the photos that fan out of a folder and the one that drops in use the folder tile's shape (portrait 166 x 216, radius 36, flat: no white border, no shadow), via `FolderFanPhoto`. Sheets on this tab (folder picker, share folder) share one header: the pill close button (44), then a 20 semiBold title, on the `homeBackground` ground.
+- **Likes folder tray** (the folder card on the Likes tab and in the picker). A flat tray: a back wall in `homePill` at 55%, up to three pod photos standing in it (the folder tile's shape, slightly tilted: portrait 166 x 216, radius 36, flat), a front lip in `homePill` (44% of the tray's height) carrying the pod count in a ground-colored dot, shared-with avatars on the lip's other corner. The name sits below it (15 semiBold, `homeText`). A saved photo drops in and disappears behind the lip. Sheets on this tab (folder picker, share folder) share one header: the pill close button (44), then a 20 semiBold title, on the `homeBackground` ground.
 - **Welcome.** Photos drift behind the text, bent toward you near the screen edges; Reduce Motion freezes the drift.
 
 ## Motion

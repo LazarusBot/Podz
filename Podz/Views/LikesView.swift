@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// Tab content for "Likes" — liked pods grouped into transparent glass
+/// Tab content for "Likes" — liked pods grouped into flat trays
 /// "folders" by country. Tap a folder to see its pods, tap a pod for
 /// the detail screen. Same self-contained navigation pattern as
 /// HomeView/ProfileView (local @State toggles between screens).
