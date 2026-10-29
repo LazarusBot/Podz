@@ -7,29 +7,30 @@
 
 import SwiftUI
 
-/// A Likes folder as a paper tray (see `PaperTray`), with the tap, press,
-/// long-press and edit-mode wiggle behavior the folder cards always had.
+/// A Likes folder as a colored drawer front (see `FolderDrawer`), with the
+/// tap, press, long-press and edit-mode wiggle behavior the folder cards
+/// always had.
 struct LikesFolderCard: View {
     var country: String? = nil
+    /// Picks the drawer's color; the same folder always gets the same one.
+    var folderId: UUID? = nil
     var subtitle: String? = nil
     let pods: [Pod]
-    var photoURLs: [UUID: String] = [:]
     var onTap: () -> Void = {}
-    /// When set, the top sheet becomes an editable, auto-focused name field
-    /// — the "creating a new folder" state in LikeFolderPickerSheet.
+    /// When set, the label becomes an editable, auto-focused name field —
+    /// the "creating a new folder" state in LikeFolderPickerSheet.
     var editableName: Binding<String>? = nil
     var onCommitName: (() -> Void)? = nil
     var showDeleteBadge: Bool = false
     var isWiggling: Bool = false
     var onDelete: () -> Void = {}
     var onLongPress: () -> Void = {}
-    /// Extra content layered between the sheets and the front lip — i.e.
-    /// genuinely *behind* the lip, not drawn on top of the whole card. Takes
-    /// the tray's width. Used by LikeFolderPickerSheet's "drop a pod into
-    /// this folder" animation; nil for every other call site.
+    /// Extra content layered on top of the drawer; takes its width. Used by
+    /// LikeFolderPickerSheet's "drop a pod into this folder" animation; nil
+    /// for every other call site.
     var incomingDropContent: ((CGFloat) -> AnyView)? = nil
     /// Avatars of friends this folder is shared with (or its owner, when it
-    /// was shared with you), on the lip's leading corner.
+    /// was shared with you), at the drawer's right end.
     var sharedWithAvatarURLs: [String] = []
     @State private var isPressed = false
     @State private var wiggleAngle: Double = 0
@@ -94,11 +95,11 @@ struct LikesFolderCard: View {
     }
 
     private var tray: some View {
-        PaperTray(
+        FolderDrawer(
             name: country ?? "",
             subtitle: subtitle,
-            pods: pods,
-            photoURLs: photoURLs,
+            count: pods.count,
+            color: FolderColor.forFolder(folderId),
             editableName: editableName,
             onCommitName: onCommitName,
             sharedWithAvatarURLs: sharedWithAvatarURLs,

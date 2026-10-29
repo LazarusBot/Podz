@@ -37,21 +37,20 @@ struct LikeFolderPickerSheet: View {
                 .padding(.bottom, 20)
 
             ScrollView {
-                VStack(spacing: -22) {
-                    ForEach(Array(likesStore.folders.enumerated()), id: \.element.id) { index, folder in
+                VStack(spacing: 4) {
+                    ForEach(likesStore.folders) { folder in
                         LikesFolderCard(
                             country: folder.name,
+                            folderId: folder.id,
                             pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
-                            photoURLs: PodsStore.shared.primaryPhotoByPodId,
                             onTap: { saveLike(into: folder.id) },
-                            // Behind the tray's front lip (see
-                            // `incomingDropContent`'s doc), so the photo
-                            // visibly goes *into* the tray. Positioned in
-                            // fractions of the tray's width, from its
+                            // On top of the drawer: the photo lands on its
+                            // handle and shrinks away. Positioned in
+                            // fractions of the drawer's width, from its
                             // bottom-center.
                             incomingDropContent: folder.id == savingIntoFolderId ? { width in
                                 AnyView(
-                                    FolderFanPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], side: width * 0.4)
+                                    FolderFanPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], side: width * 0.24)
                                         .scaleEffect(dropStage.scale)
                                         .rotationEffect(.degrees(dropStage.rotationDegrees))
                                         .offset(x: dropStage.xFraction * width, y: dropStage.yFraction * width)
@@ -59,7 +58,6 @@ struct LikeFolderPickerSheet: View {
                                 )
                             } : nil
                         )
-                        .zIndex(Double(likesStore.folders.count - index + 1))
                         // The freshly-created folder pops in with its pod
                         // already inside instead of just silently
                         // appearing — the "put the pod in it" moment
@@ -222,19 +220,19 @@ struct LikeFolderPickerSheet: View {
 /// Fixed points the existing-folder "drop" overlay animates through: a fairly
 /// direct diagonal descent (not a wide sideways swing), rotating in one
 /// direction the whole way down (a tumble, not tilt-overshoot-settle-back).
-/// x/yFraction are fractions of the *tray's width* (handed in through
+/// x/yFraction are fractions of the *drawer's width* (handed in through
 /// `incomingDropContent`), offset from the tray's bottom-center. start (well
 /// above and left, nearly upright), midArc (partway down the same diagonal),
-/// landed (on the top sheet, a touch smaller), vanished (shrinks to nothing
-/// at that spot — the real photo then takes its place as the new top sheet).
+/// landed (on the drawer's handle, a touch smaller), vanished (shrinks to
+/// nothing at that spot).
 private struct FolderDropValues {
     var scale: CGFloat
     var rotationDegrees: Double
     var xFraction: CGFloat
     var yFraction: CGFloat
 
-    static let start = FolderDropValues(scale: 1.1, rotationDegrees: -4, xFraction: -0.3, yFraction: -1.0)
-    static let midArc = FolderDropValues(scale: 0.95, rotationDegrees: 20, xFraction: -0.1, yFraction: -0.7)
-    static let landed = FolderDropValues(scale: 0.8, rotationDegrees: 42, xFraction: 0.0, yFraction: -0.36)
-    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.0, yFraction: -0.34)
+    static let start = FolderDropValues(scale: 1.1, rotationDegrees: -4, xFraction: 0.0, yFraction: -1.0)
+    static let midArc = FolderDropValues(scale: 0.95, rotationDegrees: 20, xFraction: 0.07, yFraction: -0.5)
+    static let landed = FolderDropValues(scale: 0.8, rotationDegrees: 42, xFraction: 0.12, yFraction: -0.03)
+    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.12, yFraction: -0.03)
 }

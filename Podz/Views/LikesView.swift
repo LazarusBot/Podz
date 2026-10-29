@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// Tab content for "Likes" — liked pods grouped into flat trays
+/// Tab content for "Likes" — liked pods grouped into colored drawers
 /// "folders" by country. Tap a folder to see its pods, tap a pod for
 /// the detail screen. Same self-contained navigation pattern as
 /// HomeView/ProfileView (local @State toggles between screens).
@@ -106,11 +106,11 @@ struct LikesView: View {
                     emptyState
                 } else {
                     trayStack {
-                        ForEach(Array(likesStore.folders.enumerated()), id: \.element.id) { index, folder in
+                        ForEach(likesStore.folders) { folder in
                             LikesFolderCard(
                                 country: folder.name,
+                                folderId: folder.id,
                                 pods: pods(in: folder),
-                                photoURLs: podsStore.primaryPhotoByPodId,
                                 onTap: { selectedFolder = folder }, showDeleteBadge: isEditMode,
                                 isWiggling: isEditMode,
                                 onDelete: { folderPendingDeletion = folder },
@@ -119,26 +119,24 @@ struct LikesView: View {
                                 },
                                 sharedWithAvatarURLs: sharedWithAvatarURLs(for: folder)
                             )
-                            .zIndex(Double(likesStore.folders.count - index))
                         }
                     }
                 }
 
                 if !likesStore.foldersSharedWithMe.isEmpty {
                     trayStack {
-                        ForEach(Array(likesStore.foldersSharedWithMe.enumerated()), id: \.element.id) { index, folder in
+                        ForEach(likesStore.foldersSharedWithMe) { folder in
                             // The owner's avatar and "by X" on the lip, the
                             // same corner owner-side trays show who they're
                             // shared with.
                             LikesFolderCard(
                                 country: folder.name,
+                                folderId: folder.id,
                                 subtitle: friendsStore.profilesById[folder.ownerId].map { "by \($0.displayName)" },
                                 pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
-                                photoURLs: podsStore.primaryPhotoByPodId,
                                 onTap: { selectedSharedFolder = folder },
                                 sharedWithAvatarURLs: [friendsStore.profilesById[folder.ownerId]?.avatarURL].compactMap { $0 }
                             )
-                            .zIndex(Double(likesStore.foldersSharedWithMe.count - index))
                         }
                     }
                 }
@@ -192,11 +190,9 @@ struct LikesView: View {
             }
         }
     }
-    /// The trays in one column, each tucked a little under the one above:
-    /// the earlier tray is in front, so its lip rests on the next tray's
-    /// back wall.
+    /// The drawers in one column, close together like a cabinet.
     private func trayStack<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(spacing: -22) {
+        VStack(spacing: 4) {
             content()
         }
         .padding(.horizontal, 24)

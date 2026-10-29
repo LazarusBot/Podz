@@ -17,9 +17,9 @@ color, a button style or a pattern.** Check it before every commit/push.
   detail's photo paging vs. swipe-to-dismiss is the example), **tell the
   user before building** and propose the simpler option; remove the
   interaction that is hardest to get right.
-- Pure black / white grounds. **No accent color**: the photos carry all the color.
+- Pure black / white grounds. **No accent color**: the photos carry all the color. The one exception is the Likes folders, which wear a drawer color each.
 - Flat. No shadows, no gradients except a fade into the ground and the soft black scrim under a name on a photo tile (white text on photos is the one place text isn't a token). Nothing is glass:
-  the Likes folders are flat trays (see Patterns).
+  the Likes folders are flat colored drawers (see Patterns).
 - Dark and light are both designed. Never hard-code a color: use a token below,
   built with `Color(light:dark:)`.
 - Quiet copy: short, lower-key sentences ("Tell him where and when.").
@@ -39,6 +39,8 @@ color, a button style or a pattern.** Check it before every commit/push.
 | Pill border | `homeBackground` (the ground, so it reads as a gap) | | |
 | Welcome collage outline | `onbCollageOutline` | clear | white 25% |
 | Error text | `appBadgeRed` | | |
+| Folder drawers (Likes), the one place color is used: cream / yellow / red / green / blue / grey | `FolderColor` | #EADFC8 / #F2C230 / #D64545 / #2E8B57 / #3552B8 / #A7ADB5 | #6B624C / #B8901C / #A83535 / #236B44 / #2B418F / #5C6168 |
+| Drawer label tag (paper, ink, quiet text) | `folderTagPaper` / `folderTagInk` / `folderTagSubtitle` | white / black / grey 45% | white 93% / black / grey 45% |
 
 `home*` tokens live in `Podz/Home/HomeTheme.swift`, `onb*` in
 `Podz/Onboarding/OnboardingTheme.swift` (PR #50). They are the same palette:
@@ -87,7 +89,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 - **Search bar, two modes.** Tapping the bar is a plain search (nothing moves). Tapping the Lenny mark enters Lenny mode: the bar inverts (`homeText` fill), the mark rolls one full turn to the leading end and its disc melts into the bar so only the eyes and mouth show, the placeholder becomes "Chamonix to Zermatt in 5 days". Leaving the field rolls it back. Tap outside a field to dismiss the keyboard.
 - **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (tap anywhere between the photo and the buttons): photo shrinks to 250/852, full description and facts appear; tap the same area to return. The only swipe on this screen is paging through the photos, and the only way out is the back button (swipe-to-dismiss is off).
 - **Likes folder** (a folder opened from the Likes tab; Paper `LikesFolderView`). A two-column grid of the folder's pods: tiles 166 x 216 (radius 36, 13 apart, 12 between rows, 24 margins), the pod's name (15 semiBold, white) bottom-left on a soft black scrim. One tile is selected: full strength with a white check circle top-right (26, black 1.6 check); the others sit at 55%. Tap a tile to select it (the first one until you pick). The grid fades into the ground over its lower half, with the pills on top: back, share link (own folders only), **Open** (opens the selected pod). No title, no tab bar. The same tile is the onboarding's region picker tile.
-- **Likes folder = a paper tray** (the folder card on the Likes tab and in the picker; the word stays "folder"). Seen from the front, like a letter tray: a faint back wall in `homePill` at 55%, a stack of up to four sheets whose edges show below the top one (ground-colored with a hairline in `homeText` at 14%), the top sheet being the newest pod's photo (radius ~5% of the tray's width, a soft black scrim under the folder's name: 15 semiBold, white), and a low front lip in `homePill` carrying the shared-with avatars, a quiet "by X" on folders shared with you, and the pod count in a ground-colored dot. Trays are one column at the 24 margins, each tucked 22 under the one above (the earlier tray in front). An empty folder shows one blank sheet. Saving a like drops the photo onto the top sheet, where it shrinks away and becomes the new top sheet. Sheets on this tab (folder picker, share folder) share one header: the pill close button (44), then a 20 semiBold title, on the `homeBackground` ground. The "New folder" action is a dashed rounded tile, same width.
+- **Likes folder = a colored drawer** (the folder card on the Likes tab and in the picker; the word stays "folder"; reference: a drawer cabinet). No photos. A flat bar, 345 x 76 (radius 20% of its height, continuous), in one of six drawer colors (below), with a paper **label tag** on the left (40% of the width, 62% of the height; the name 15 semiBold, a quiet "by X" under it on folders shared with you, and the pod count 12 regular at its right end, in dark ink on paper in both modes) and a **handle** (a darker slot, black at 20%, 16% of the width, centered at 62%). Shared-with avatars sit at the right end. Drawers are one column at the 24 margins, 4 apart like a cabinet. **A tap opens the folder**; long-press switches to delete mode (wiggle). A folder keeps its color for good (picked from its id). Saving a like drops the pod's photo onto the handle, where it shrinks away and the count rolls. Sheets on this tab (folder picker, share folder) share one header: the pill close button (44), then a 20 semiBold title, on the `homeBackground` ground. The "New folder" action is a dashed rounded tile, same width.
 - **Welcome.** Photos drift behind the text, bent toward you near the screen edges; Reduce Motion freezes the drift.
 
 ## Motion
