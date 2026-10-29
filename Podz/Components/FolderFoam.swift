@@ -31,26 +31,44 @@ enum FoamLayout {
         max(56, 150 * max(0.63, 1 - 0.12 * CGFloat(max(count - 1, 0))))
     }
 
-    /// Bubbles holding more pods are bigger: between 85% and 115% of the
-    /// base, or exactly the base when all hold the same.
-    static func radii(podCounts: [Int], base: CGFloat) -> [CGFloat] {
-        guard let lo = podCounts.min(), let hi = podCounts.max(), hi > lo else {
-            return podCounts.map { _ in base }
-        }
-        return podCounts.map { base * (0.85 + 0.3 * CGFloat($0 - lo) / CGFloat(hi - lo)) }
+    /// A stable pseudo-random number in 0..<1 for a bubble, from its id, so
+    /// its look doesn't change between launches. (`hashValue` is reseeded on
+    /// every launch, so this hashes the id's text instead.)
+    static func jitter(_ id: String, salt: UInt32 = 0) -> CGFloat {
+        var hash: UInt32 = 2166136261 ^ salt
+        for byte in id.utf8 { hash = (hash ^ UInt32(byte)) &* 16777619 }
+        return CGFloat(hash % 1000) / 1000
     }
 
-    static func cells(radii: [CGFloat], width: CGFloat, top: CGFloat) -> [FoamCell] {
+    /// Sizes vary a lot, like real foam: between 58% and 130% of the base.
+    /// A folder with more pods tends to be bigger, but each bubble also gets
+    /// its own stable random size, so equal folders still differ. A lone
+    /// bubble is exactly the base.
+    static func radii(podCounts: [Int], ids: [String], base: CGFloat) -> [CGFloat] {
+        guard podCounts.count > 1 else { return podCounts.map { _ in base } }
+        let lo = podCounts.min() ?? 0, hi = podCounts.max() ?? 0
+        return zip(podCounts, ids).map { count, id in
+            let byPods: CGFloat = hi > lo ? CGFloat(count - lo) / CGFloat(hi - lo) : 0.5
+            let mix = hi > lo ? 0.45 * byPods + 0.55 * jitter(id) : jitter(id)
+            return max(40, base * (0.58 + 0.72 * mix))
+        }
+    }
+
+    /// The packed positions: a compact cluster where bubbles sink a little
+    /// into each other.
+    static func pack(radii: [CGFloat], ids: [String], width: CGFloat, top: CGFloat) -> [CGPoint] {
         let n = radii.count
         guard n > 0 else { return [] }
         let average = radii.reduce(0, +) / CGFloat(n)
 
-        // Start in a loose zig-zag down the middle, then let it settle.
+        // Start in an uneven zig-zag down the middle (each bubble nudged by
+        // its own stable amount), then let it settle.
         var centers: [CGPoint] = radii.enumerated().map { index, r in
             let side: CGFloat = index % 2 == 0 ? -1 : 1
+            let nudge = 0.4 + 1.2 * jitter(ids[index], salt: 7)
             return CGPoint(
-                x: width / 2 + side * min(width * 0.22, r * 0.6),
-                y: top + r + CGFloat(index) * average * 1.45
+                x: width / 2 + side * min(width * 0.3, r * 0.6 * nudge),
+                y: top + r + CGFloat(index) * average * (1.2 + 0.5 * jitter(ids[index], salt: 3))
             )
         }
 
@@ -96,6 +114,24 @@ enum FoamLayout {
         let topEdge = zip(centers, radii).map { $0.y - $1 }.min() ?? top
         let shift = top - topEdge
         for i in 0..<n { centers[i].y += shift }
+        return centers
+    }
+
+    /// The cells for a set of packed `centers`. `looseness` 0 is as packed;
+    /// 1 pushes the bubbles far enough apart that none touch (so they're
+    /// plain circles again), in between is a partial spread.
+    static func cells(centers packed: [CGPoint], radii: [CGFloat], width: CGFloat, top: CGFloat, looseness: CGFloat) -> [FoamCell] {
+        let n = radii.count
+        let l = min(max(looseness, 0), 1)
+        var centers = packed.map { point in
+            CGPoint(
+                x: width / 2 + (point.x - width / 2) * (1 + 0.4 * l),
+                y: top + (point.y - top) * (1 + 0.6 * l)
+            )
+        }
+        for i in 0..<n {
+            centers[i].x = min(max(centers[i].x, -radii[i] * 0.15), width + radii[i] * 0.15)
+        }
 
         return (0..<n).map { i in
             var cuts: [FoamCell.Cut] = []
