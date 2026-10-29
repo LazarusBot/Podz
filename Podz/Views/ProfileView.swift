@@ -159,7 +159,10 @@ struct ProfileView: View {
     /// matters once there's a pod behind it.
     @ViewBuilder
     private var hostingRow: some View {
-        if auth.profile?.isHost == true {
+        if !FeatureFlags.hosting {
+            // Parked: the host side is off for now.
+            EmptyView()
+        } else if auth.profile?.isHost == true {
             ProfileListRow(
                 title: appMode.mode == .host ? "Switch to traveler mode" : "Switch to host mode",
                 showsChevron: false

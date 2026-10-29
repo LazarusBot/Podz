@@ -33,7 +33,7 @@ struct OnboardingView: View {
                 LaunchLoadingView()
                     .preferredColorScheme(.light)
             } else if auth.isAuthenticated && !auth.justRegistered {
-                if auth.profile?.isHost == true && appMode.mode == .host {
+                if FeatureFlags.hosting && auth.profile?.isHost == true && appMode.mode == .host {
                     HostTabView()
                 } else {
                     MainTabView()
