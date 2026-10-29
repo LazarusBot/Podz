@@ -21,65 +21,103 @@ struct LikeFolderPickerSheet: View {
     @State private var savingIntoFolderId: UUID?
     @State private var dropStage = FolderDropValues.start
 
+    /// Zig-zag from the Paper frame: bubble centers alternate between 31% and
+    /// 85.5% of the width, 253pt apart, the first one 177pt below the top of
+    /// the scrolling area.
+    private static let step: CGFloat = 253
+    private static let firstCenterY: CGFloat = 177
+    /// Room under the last bubble for the buttons.
+    private static let bottomRoom: CGFloat = 170
+
+    /// The folders to draw, plus the one being named, if any.
+    private var bubbleCount: Int { likesStore.folders.count + (isCreatingFolder ? 1 : 0) }
+
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                CloseButton(style: .pill, size: 44, action: cancelAndDismiss)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                Text("Save to folder")
+                    .font(AppFont.semiBoldLabel(30))
+                    .tracking(-0.6)
+                    .foregroundColor(.homeText)
+                    .padding(.top, 36)
+                    .padding(.bottom, 12)
 
-            Text("Save to folder")
-                .font(AppFont.semiBoldLabel(20))
-                .foregroundColor(.homeText)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
-
-            ScrollView {
-                VStack(spacing: 4) {
-                    ForEach(likesStore.folders) { folder in
-                        LikesFolderCard(
-                            country: folder.name,
-                            folderId: folder.id,
-                            pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
-                            onTap: { saveLike(into: folder.id) },
-                            // On top of the drawer: the photo lands on its
-                            // handle and shrinks away. Positioned in
-                            // fractions of the drawer's width, from its
-                            // bottom-center.
-                            incomingDropContent: folder.id == savingIntoFolderId ? { width in
-                                AnyView(
-                                    FolderFanPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], side: width * 0.24)
-                                        .scaleEffect(dropStage.scale)
-                                        .rotationEffect(.degrees(dropStage.rotationDegrees))
-                                        .offset(x: dropStage.xFraction * width, y: dropStage.yFraction * width)
-                                        .allowsHitTesting(false)
-                                )
-                            } : nil
-                        )
-                        // The freshly-created folder pops in with its pod
-                        // already inside instead of just silently
-                        // appearing — the "put the pod in it" moment
-                        // commitNewFolder() is pausing to let play out.
-                        .transition(.scale(scale: 0.7).combined(with: .opacity))
-                    }
-
-                    if isCreatingFolder {
-                        LikesFolderCard(
-                            pods: [],
-                            editableName: $newFolderName,
-                            onCommitName: commitNewFolder
-                        )
-                        .transition(.opacity)
+                GeometryReader { proxy in
+                    ScrollView {
+                        bubbles(width: proxy.size.width)
+                            .frame(
+                                width: proxy.size.width,
+                                height: Self.firstCenterY + Self.step * CGFloat(max(bubbleCount - 1, 0))
+                                    + FolderBubble.diameter / 2 + Self.bottomRoom,
+                                alignment: .topLeading
+                            )
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
             }
 
-            // Pinned at the bottom, outside the scrolling list. Hidden while
-            // the new drawer's name is being typed.
+            actionRow
+                .padding(.bottom, 40)
+        }
+        .background(Color.homeBackground)
+    }
+
+    private func bubbles(width: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(likesStore.folders.enumerated()), id: \.element.id) { index, folder in
+                FolderBubble(
+                    name: folder.name,
+                    pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
+                    photoURLs: PodsStore.shared.primaryPhotoByPodId,
+                    mirrored: index % 2 == 1,
+                    // The photo falls onto the bubble and shrinks into it.
+                    // Positioned in fractions of the bubble's diameter,
+                    // from its center.
+                    incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
+                        AnyView(
+                            BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
+                                .scaleEffect(dropStage.scale)
+                                .rotationEffect(.degrees(dropStage.rotationDegrees))
+                                .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)
+                                .allowsHitTesting(false)
+                        )
+                    } : nil,
+                    onTap: { saveLike(into: folder.id) }
+                )
+                .position(center(forBubble: index, width: width))
+                // The freshly-created folder pops in with its pod already
+                // inside — the "put the pod in it" moment
+                // commitNewFolder() is pausing to let play out.
+                .transition(.scale(scale: 0.7).combined(with: .opacity))
+            }
+
+            if isCreatingFolder {
+                FolderBubble(
+                    name: "",
+                    pods: [],
+                    photoURLs: [:],
+                    mirrored: likesStore.folders.count % 2 == 1,
+                    editableName: $newFolderName,
+                    onCommitName: commitNewFolder
+                )
+                .position(center(forBubble: likesStore.folders.count, width: width))
+                .transition(.opacity)
+            }
+        }
+    }
+
+    private func center(forBubble index: Int, width: CGFloat) -> CGPoint {
+        CGPoint(
+            x: width * (index % 2 == 0 ? 0.31 : 0.855),
+            y: Self.firstCenterY + Self.step * CGFloat(index)
+        )
+    }
+
+    /// Back closes the sheet; "New folder" starts naming a new bubble (and
+    /// is hidden while that's going on).
+    private var actionRow: some View {
+        HStack(spacing: 13) {
+            DetailBackButton(action: cancelAndDismiss)
+
             if !isCreatingFolder {
                 DetailTextButton(title: "New folder") {
                     withAnimation(.easeOut(duration: AppMotion.snappy)) {
@@ -87,13 +125,10 @@ struct LikeFolderPickerSheet: View {
                         newFolderName = ""
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
-                .padding(.bottom, 40)
                 .transition(.opacity)
             }
         }
-        .background(Color.homeBackground)
+        .padding(.horizontal, 24)
     }
 
     private func commitNewFolder() {
@@ -200,22 +235,19 @@ struct LikeFolderPickerSheet: View {
     }
 }
 
-/// Fixed points the existing-folder "drop" overlay animates through: a fairly
-/// direct diagonal descent (not a wide sideways swing), rotating in one
-/// direction the whole way down (a tumble, not tilt-overshoot-settle-back).
-/// x/yFraction are fractions of the *drawer's width* (handed in through
-/// `incomingDropContent`), offset from the tray's bottom-center. start (well
-/// above and left, nearly upright), midArc (partway down the same diagonal),
-/// landed (on the drawer's handle, a touch smaller), vanished (shrinks to
-/// nothing at that spot).
+/// Fixed points the existing-folder "drop" overlay animates through: a
+/// diagonal descent onto the bubble, rotating in one direction the whole
+/// way (a tumble, not tilt-overshoot-settle-back), then shrinking into the
+/// bubble's middle. x/yFraction are fractions of the bubble's diameter,
+/// from its center.
 private struct FolderDropValues {
     var scale: CGFloat
     var rotationDegrees: Double
     var xFraction: CGFloat
     var yFraction: CGFloat
 
-    static let start = FolderDropValues(scale: 1.1, rotationDegrees: -4, xFraction: 0.0, yFraction: -1.0)
-    static let midArc = FolderDropValues(scale: 0.95, rotationDegrees: 20, xFraction: 0.07, yFraction: -0.5)
-    static let landed = FolderDropValues(scale: 0.8, rotationDegrees: 42, xFraction: 0.12, yFraction: -0.03)
-    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.12, yFraction: -0.03)
+    static let start = FolderDropValues(scale: 1.0, rotationDegrees: -4, xFraction: -0.25, yFraction: -1.0)
+    static let midArc = FolderDropValues(scale: 0.9, rotationDegrees: 20, xFraction: -0.1, yFraction: -0.5)
+    static let landed = FolderDropValues(scale: 0.5, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
+    static let vanished = FolderDropValues(scale: 0.1, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
 }
