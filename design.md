@@ -76,7 +76,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 ## Patterns
 
 - **Search bar, two modes.** Tapping the bar is a plain search (nothing moves). Tapping the Lenny mark enters Lenny mode: the bar inverts (`homeText` fill), the mark rolls one full turn to the leading end and its disc melts into the bar so only the eyes and mouth show, the placeholder becomes "Chamonix to Zermatt in 5 days". Leaving the field rolls it back. Tap outside a field to dismiss the keyboard.
-- **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (swipe up on the photo or title, or tap the title): photo shrinks to 250/852, full description and facts appear; swipe down or tap to return.
+- **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (swipe up on the photo or title, or tap the title): photo shrinks to 250/852, full description and facts appear; swipe down or tap to return. The only way out is the back button: swipe-to-dismiss is off because it fights the photo paging.
 - **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation. The sheet is always light. Its header: the pill close button, then the 20 title.
 - **Welcome.** Photos drift behind the text, bent toward you near the screen edges; Reduce Motion freezes the drift.
 

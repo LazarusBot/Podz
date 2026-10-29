@@ -63,6 +63,9 @@ struct MinimalPodDetailView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(Color.homeBackground.ignoresSafeArea())
+        // Back is the only way out. The zoom transition's own swipe-to-
+        // dismiss fought with paging through the photos.
+        .interactiveDismissDisabled()
         .sheet(isPresented: $showBooking) {
             ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable) { showBooking = false }
                 .background(Color.appHomeBackground)
