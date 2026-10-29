@@ -21,16 +21,22 @@ struct LikeFolderPickerSheet: View {
     @State private var savingIntoFolderId: UUID?
     @State private var dropStage = FolderDropValues.start
 
-    /// Zig-zag from the Paper frame: bubble centers alternate between 31% and
-    /// 85.5% of the width, 253pt apart, the first one 177pt below the top of
-    /// the scrolling area.
-    private static let step: CGFloat = 253
-    private static let firstCenterY: CGFloat = 177
-    /// Room under the last bubble for the buttons.
-    private static let bottomRoom: CGFloat = 170
+    /// What the canvas draws: each folder, plus the one being named.
+    private enum Slot: Identifiable {
+        case folder(LikeFolder)
+        case creating
 
-    /// The folders to draw, plus the one being named, if any.
-    private var bubbleCount: Int { likesStore.folders.count + (isCreatingFolder ? 1 : 0) }
+        var id: String {
+            switch self {
+            case .folder(let folder): folder.id.uuidString
+            case .creating: "creating"
+            }
+        }
+    }
+
+    private var slots: [Slot] {
+        likesStore.folders.map(Slot.folder) + (isCreatingFolder ? [.creating] : [])
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -44,13 +50,9 @@ struct LikeFolderPickerSheet: View {
 
                 GeometryReader { proxy in
                     ScrollView {
-                        bubbles(width: proxy.size.width)
-                            .frame(
-                                width: proxy.size.width,
-                                height: Self.firstCenterY + Self.step * CGFloat(max(bubbleCount - 1, 0))
-                                    + FolderBubble.diameter / 2 + Self.bottomRoom,
-                                alignment: .topLeading
-                            )
+                        FolderBubbleCanvas(items: slots, width: proxy.size.width, bottomRoom: 170) { slot, index, textScale in
+                            bubble(for: slot, index: index, textScale: textScale)
+                        }
                     }
                 }
             }
@@ -61,55 +63,46 @@ struct LikeFolderPickerSheet: View {
         .background(Color.homeBackground)
     }
 
-    private func bubbles(width: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            ForEach(Array(likesStore.folders.enumerated()), id: \.element.id) { index, folder in
-                FolderBubble(
-                    name: folder.name,
-                    pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
-                    photoURLs: PodsStore.shared.primaryPhotoByPodId,
-                    mirrored: index % 2 == 1,
-                    // The photo falls onto the bubble and shrinks into it.
-                    // Positioned in fractions of the bubble's diameter,
-                    // from its center.
-                    incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
-                        AnyView(
-                            BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
-                                .scaleEffect(dropStage.scale)
-                                .rotationEffect(.degrees(dropStage.rotationDegrees))
-                                .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)
-                                .allowsHitTesting(false)
-                        )
-                    } : nil,
-                    onTap: { saveLike(into: folder.id) }
-                )
-                .position(center(forBubble: index, width: width))
-                // The freshly-created folder pops in with its pod already
-                // inside — the "put the pod in it" moment
-                // commitNewFolder() is pausing to let play out.
-                .transition(.scale(scale: 0.7).combined(with: .opacity))
-            }
-
-            if isCreatingFolder {
-                FolderBubble(
-                    name: "",
-                    pods: [],
-                    photoURLs: [:],
-                    mirrored: likesStore.folders.count % 2 == 1,
-                    editableName: $newFolderName,
-                    onCommitName: commitNewFolder
-                )
-                .position(center(forBubble: likesStore.folders.count, width: width))
-                .transition(.opacity)
-            }
+    @ViewBuilder
+    private func bubble(for slot: Slot, index: Int, textScale: CGFloat) -> some View {
+        switch slot {
+        case .folder(let folder):
+            FolderBubble(
+                name: folder.name,
+                pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
+                photoURLs: PodsStore.shared.primaryPhotoByPodId,
+                mirrored: index % 2 == 1,
+                // The photo falls onto the bubble and shrinks into it.
+                // Positioned in fractions of the bubble's diameter, from
+                // its center.
+                incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
+                    AnyView(
+                        BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
+                            .scaleEffect(dropStage.scale)
+                            .rotationEffect(.degrees(dropStage.rotationDegrees))
+                            .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)
+                            .allowsHitTesting(false)
+                    )
+                } : nil,
+                onTap: { saveLike(into: folder.id) },
+                textScale: textScale
+            )
+            // The freshly-created folder pops in with its pod already
+            // inside — the "put the pod in it" moment commitNewFolder() is
+            // pausing to let play out.
+            .transition(.scale(scale: 0.7).combined(with: .opacity))
+        case .creating:
+            FolderBubble(
+                name: "",
+                pods: [],
+                photoURLs: [:],
+                mirrored: index % 2 == 1,
+                editableName: $newFolderName,
+                onCommitName: commitNewFolder,
+                textScale: textScale
+            )
+            .transition(.opacity)
         }
-    }
-
-    private func center(forBubble index: Int, width: CGFloat) -> CGPoint {
-        CGPoint(
-            x: width * (index % 2 == 0 ? 0.31 : 0.855),
-            y: Self.firstCenterY + Self.step * CGFloat(index)
-        )
     }
 
     /// Back closes the sheet; "New folder" starts naming a new bubble (and

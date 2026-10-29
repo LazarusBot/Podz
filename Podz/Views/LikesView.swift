@@ -7,7 +7,20 @@
 
 import SwiftUI
 
-/// Tab content for "Likes" — liked pods grouped into colored drawers
+/// One bubble on the Likes tab: a folder of yours, or one shared with you.
+private enum LikesItem: Identifiable {
+    case own(LikeFolder)
+    case shared(SharedFolder)
+
+    var id: UUID {
+        switch self {
+        case .own(let folder): folder.id
+        case .shared(let folder): folder.id
+        }
+    }
+}
+
+/// Tab content for "Likes" — liked pods grouped into bubbles
 /// "folders" by country. Tap a folder to see its pods, tap a pod for
 /// the detail screen. Same self-contained navigation pattern as
 /// HomeView/ProfileView (local @State toggles between screens).
@@ -102,40 +115,35 @@ struct LikesView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 25)
 
-                if likesStore.folders.isEmpty {
+                if likesItems.isEmpty {
                     emptyState
                 } else {
-                    trayStack {
-                        ForEach(likesStore.folders) { folder in
-                            LikesFolderCard(
-                                country: folder.name,
-                                folderId: folder.id,
+                    FolderBubbleCanvas(items: likesItems, width: UIScreen.main.bounds.width, bottomRoom: 100) { item, index, textScale in
+                        switch item {
+                        case .own(let folder):
+                            FolderBubble(
+                                name: folder.name,
                                 pods: pods(in: folder),
-                                onTap: { selectedFolder = folder }, showDeleteBadge: isEditMode,
+                                photoURLs: podsStore.primaryPhotoByPodId,
+                                mirrored: index % 2 == 1,
+                                sharedWithAvatarURLs: sharedWithAvatarURLs(for: folder),
+                                showDeleteBadge: isEditMode,
                                 isWiggling: isEditMode,
                                 onDelete: { folderPendingDeletion = folder },
-                                onLongPress: {
-                                    withAnimation { isEditMode = true }
-                                },
-                                sharedWithAvatarURLs: sharedWithAvatarURLs(for: folder)
+                                onLongPress: { withAnimation { isEditMode = true } },
+                                onTap: { selectedFolder = folder },
+                                textScale: textScale
                             )
-                        }
-                    }
-                }
-
-                if !likesStore.foldersSharedWithMe.isEmpty {
-                    trayStack {
-                        ForEach(likesStore.foldersSharedWithMe) { folder in
-                            // The owner's avatar and "by X" on the lip, the
-                            // same corner owner-side trays show who they're
-                            // shared with.
-                            LikesFolderCard(
-                                country: folder.name,
-                                folderId: folder.id,
+                        case .shared(let folder):
+                            // Who it came from, on the bubble itself.
+                            FolderBubble(
+                                name: folder.name,
                                 subtitle: friendsStore.profilesById[folder.ownerId].map { "by \($0.displayName)" },
                                 pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
+                                photoURLs: podsStore.primaryPhotoByPodId,
+                                mirrored: index % 2 == 1,
                                 onTap: { selectedSharedFolder = folder },
-                                sharedWithAvatarURLs: [friendsStore.profilesById[folder.ownerId]?.avatarURL].compactMap { $0 }
+                                textScale: textScale
                             )
                         }
                     }
@@ -190,12 +198,9 @@ struct LikesView: View {
             }
         }
     }
-    /// The drawers in one column, close together like a cabinet.
-    private func trayStack<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(spacing: 4) {
-            content()
-        }
-        .padding(.horizontal, 24)
+    /// Your folders, then the ones shared with you, as one run of bubbles.
+    private var likesItems: [LikesItem] {
+        likesStore.folders.map(LikesItem.own) + likesStore.foldersSharedWithMe.map(LikesItem.shared)
     }
 
     // MARK: - Inside one folder
