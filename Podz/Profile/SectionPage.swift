@@ -11,6 +11,17 @@ enum ScreenInsets {
     }
 }
 
+extension View {
+    /// Puts the bottom control stack 74 from the physical bottom edge. Only
+    /// for a container that ignores the bottom safe area (a tab's content,
+    /// or a screen that ignores all safe areas); inside a sheet the safe
+    /// area is already respected, so use `DetailLayout.controlStackGap`
+    /// alone there.
+    func controlStackPadding() -> some View {
+        padding(.bottom, DetailLayout.controlStackGap + ScreenInsets.bottom)
+    }
+}
+
 /// The page every screen Profile opens is built on (`design.md`): a big
 /// title at the top, no navigation bar, and at the bottom the same pill row
 /// as the pod detail: the round back pill, plus whatever action the page has
@@ -57,7 +68,7 @@ struct SectionPage<Content: View, Trailing: View>: View {
                 trailing()
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 40 + ScreenInsets.bottom)
+            .controlStackPadding()
         }
         .background(Color.homeBackground.ignoresSafeArea())
     }

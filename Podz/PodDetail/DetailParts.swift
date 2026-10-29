@@ -3,6 +3,11 @@ import SwiftUI
 /// The pieces the pod detail and the Likes folder view share, so the two
 /// screens look and behave the same (Paper "DetailView" frames).
 enum DetailLayout {
+    /// The control stack (back pill + the page's action) sits this far above
+    /// the home-indicator zone, i.e. `controlStackGap + 34` = 74 from the
+    /// screen's physical bottom edge on a Face ID iPhone (the Paper frames).
+    static let controlStackGap: CGFloat = 40
+
     /// Photo heights from the Paper frames, as a share of the screen.
     static let stackedPhotoShare: CGFloat = 524 / 852
     static let extendedPhotoShare: CGFloat = 250 / 852

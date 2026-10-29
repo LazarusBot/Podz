@@ -65,7 +65,7 @@ Inter, through `AppFont`. Sizes in points.
 - Pod cards: 296 x 340, radius 36 continuous, caption 12 below. A peek of the next card (card width = screen - 97).
 - Photos that bleed from the top: rounded only along the bottom, radius 75. Onboarding card photo: radius 53, inset 21.
 - Lenny mark: 40 round in the search pill; 56 round badge (3pt ground-colored border) on the detail. Photo dots: 10 round, fanned on a 42 radius arc above the badge.
-- Safe areas: bottom buttons sit 40 above the safe area.
+- **Control stack** (the row of pills at the bottom of the pod detail, the Likes folder, the save-to-folder sheet and every page Profile opens: back pill + the page's action): the pills are 83 tall, 13 apart, and the row sits **74 from the screen's physical bottom edge** on every screen, i.e. 40 above the 34pt home-indicator zone (`DetailLayout.controlStackGap` + the inset). One rule: a screen that ignores the bottom safe area (a tab's content, the pod detail) uses `.controlStackPadding()`; a sheet, which already respects it, uses `DetailLayout.controlStackGap` alone. Never hard-code another number. Side margins: 24 on the Likes folder, the save sheet and Profile's pages; 40 on the pod detail.
 
 ## Buttons
 
