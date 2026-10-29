@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// The selected tile's check, ported from the Paper "LikesFolderView" SVG.
-
-/// SVG 12 x 10.
+/// The selected tile's check, ported from the Paper "LikesFolderView" SVG
+/// (12 x 10).
 struct CheckGlyphShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
