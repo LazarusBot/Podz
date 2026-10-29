@@ -96,7 +96,7 @@ struct LikeFolderPickerSheet: View {
 
             Spacer(minLength: 0)
         }
-        .background(Color.appHomeBackground)
+        .background(Color.homeBackground)
     }
 
     /// Dashed-outline empty folder tile — tap to start creating.
@@ -123,11 +123,11 @@ struct LikeFolderPickerSheet: View {
                     let side = min(proxy.size.width, proxy.size.height)
                     RoundedRectangle(cornerRadius: AppRadius.r20)
                         .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        .foregroundColor(.appTextMuted.opacity(0.5))
+                        .foregroundColor(.homeSubtitle.opacity(0.5))
                         .overlay(
                             Image(systemName: "plus")
                                 .font(.system(size: 22, weight: .semibold))
-                                .foregroundColor(.appTextMuted)
+                                .foregroundColor(.homeSubtitle)
                         )
                         .frame(width: side, height: side * 0.74)
                         .frame(width: side, height: side, alignment: .bottom)
@@ -137,7 +137,7 @@ struct LikeFolderPickerSheet: View {
 
                 Text("New folder")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
             }
             .scaleEffect(0.8)
         }

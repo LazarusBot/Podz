@@ -217,8 +217,6 @@ struct LikesView: View {
                 // full sheet, same reasoning as PostComposerView.
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
-                // Not restyled yet.
-                .preferredColorScheme(.light)
         }
     }
 

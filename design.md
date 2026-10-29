@@ -88,7 +88,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 - **Search bar, two modes.** Tapping the bar is a plain search (nothing moves). Tapping the Lenny mark enters Lenny mode: the bar inverts (`homeText` fill), the mark rolls one full turn to the leading end and its disc melts into the bar so only the eyes and mouth show, the placeholder becomes "Chamonix to Zermatt in 5 days". Leaving the field rolls it back. Tap outside a field to dismiss the keyboard.
 - **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (tap anywhere between the photo and the buttons): photo shrinks to 250/852, full description and facts appear; tap the same area to return. The only swipe on this screen is paging through the photos, and the only way out is the back button (swipe-to-dismiss is off).
 - **Likes folder** (a folder opened from the Likes tab; Paper `LikesFolderView`). A two-column grid of the folder's pods: tiles 166 x 216 (radius 36, 13 apart, 12 between rows, 24 margins), the pod's name (15 semiBold, white) bottom-left on a soft black scrim. One tile is selected: full strength with a white check circle top-right (26, black 1.6 check); the others sit at 55%. Tap a tile to select it (the first one until you pick). The grid fades into the ground over its lower half, with the pills on top: back, share link (own folders only), **Open** (opens the selected pod). No title, no tab bar. The same tile is the onboarding's region picker tile.
-- **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation; the photos that fan out of a folder and the one that drops in use the folder tile's shape (portrait 166 x 216, radius 36, flat: no white border, no shadow), via `FolderFanPhoto`. The sheet is always light. Its header: the pill close button, then the 20 title.
+- **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation; the photos that fan out of a folder and the one that drops in use the folder tile's shape (portrait 166 x 216, radius 36, flat: no white border, no shadow), via `FolderFanPhoto`. Sheets on this tab (folder picker, share folder) share one header: the pill close button (44), then a 20 semiBold title, on the `homeBackground` ground.
 - **Welcome.** Photos drift behind the text, bent toward you near the screen edges; Reduce Motion freezes the drift.
 
 ## Motion
@@ -97,7 +97,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 ## Appearance
 
-Onboarding, Home, the Likes tab (overview and folder view) and the pod detail follow the system appearance. Everything else (Profile, the host shell, sheets such as Book, the folder picker and the share-folder sheet) has no dark palette yet and forces light with `.preferredColorScheme(.light)`.
+Onboarding, Home, the Likes tab (overview and folder view) and the pod detail follow the system appearance. The folder picker and share-folder sheets follow it too. Everything else (Profile, the host shell, the Book sheet) has no dark palette yet and forces light with `.preferredColorScheme(.light)`.
 
 ## Before you push UI
 
