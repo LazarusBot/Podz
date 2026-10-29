@@ -80,17 +80,12 @@ struct FriendsView: View {
             }
             .background(Color.appHomeBackground)
 
-            Button {
-                showAddFriend = true
-            } label: {
+            DetailRoundButton(accessibilityLabel: "Add friend", action: { showAddFriend = true }) {
                 Image(systemName: "person.badge.plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(Circle().fill(Color.black))
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundColor(.homeText)
             }
             .padding(24)
-            .accessibilityLabel("Add friend")
         }
         .background(Color.appHomeBackground.ignoresSafeArea())
         .sheet(isPresented: $showAddFriend) {
@@ -135,21 +130,26 @@ private struct FriendRequestRow: View {
                 }
             }
             Spacer()
+            // Decline is the quiet flat pill; Accept is the highlighted one
+            // (ground and ink swapped), like "Get started".
             Button(action: onDecline) {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.appTextMuted)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.appIconButtonBackground))
+                    .foregroundColor(.homeText.opacity(0.35))
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color.homePill.opacity(0.95)))
+                    .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1))
             }
+            .buttonStyle(TapScaleButtonStyle())
             .accessibilityLabel("Decline")
             Button(action: onAccept) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.appAccentBlack))
+                    .foregroundColor(.homeBackground)
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color.homeText))
             }
+            .buttonStyle(TapScaleButtonStyle())
             .accessibilityLabel("Accept")
         }
         .padding(.horizontal, 24)

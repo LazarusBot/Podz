@@ -1,75 +1,26 @@
 import SwiftUI
 
-/// Generic settings row: icon + label + trailing chevron
-/// (node pattern repeated for Personal information / Payments and
-/// payouts / Login and security / Accessibility, 3827:1402 etc).
-/// Padding: 24 horizontal / 18 vertical, gap 11 between icon and label —
-/// distinct from ProfileAccountRow's 31pt vertical padding, keep exact.
+/// A row on the screens Profile opens (login and security, accessibility…):
+/// the same flat list row as Profile's own, see `ProfileListRow`. `icon` is
+/// kept so existing call sites still compile; the design has no row icons.
 struct ProfileMenuRow: View {
     let icon: String
     let title: String
     var isDestructive: Bool = false
-    /// Nil or 0 hides the pill entirely — a badge reading "0" would read
-    /// as "there's something, but it's nothing," which is worse than no
-    /// badge at all.
     var badgeCount: Int? = nil
-    /// Defaults to `!isDestructive` (every non-destructive row used to
-    /// always show one) — override to `false` for a row that performs an
-    /// action right here (e.g. LoginSecurityView's "Send password reset
-    /// email") rather than navigating to another screen. The chevron
-    /// promises "this goes somewhere else"; showing it on an action row
-    /// was a leftover inconsistency, not a deliberate choice.
+    /// Defaults to `!isDestructive`; pass `false` for a row that acts right
+    /// here (e.g. "Send password reset email") instead of opening a screen.
     var showsChevron: Bool? = nil
     var onTap: () -> Void = {}
 
-    private var tint: Color { isDestructive ? .red : .black }
-    private var resolvedShowsChevron: Bool { showsChevron ?? !isDestructive }
-
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 11) {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(tint)
-                    .frame(width: 17)
-
-                Text(title)
-                    // Real Inter, Regular weight — see
-                    // `ProfileAccountRow`'s own subtitle for why.
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(tint)
-
-                Spacer()
-
-                if let badgeCount, badgeCount > 0 {
-                    // Same shape/weight as BottomTabBar's own Mailbox
-                    // unread pill — one shared "new activity" style
-                    // across the app, not a one-off for this row.
-                    Text(badgeCount > 9 ? "9+" : "\(badgeCount)")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .frame(minWidth: 20)
-                        .background(Capsule().fill(Color.appMessageBlue))
-                }
-
-                if resolvedShowsChevron {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.black)
-                }
-            }
-            // Same missing-hit-area issue as `ProfileAccountRow` — see
-            // its own comment.
-            .contentShape(Rectangle())
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 18)
-        .background(Color.appHomeBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
-        }
+        ProfileListRow(
+            title: title,
+            badgeCount: badgeCount,
+            isDestructive: isDestructive,
+            showsChevron: showsChevron,
+            action: onTap
+        )
     }
 }
 

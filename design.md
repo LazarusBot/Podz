@@ -80,6 +80,8 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 - **Search pill**: capsule in `homePill`, 14 regular text, placeholder in `homeSubtitle`, Lenny mark at the trailing end.
 - **Tab bar**: floating capsule, three line icons (home, heart, person), 22 / 1.6 stroke. Active icon at full strength, others at 45%.
 - **Field pill** (onboarding): same capsule, 14 regular, caret in `homeText`.
+- **Top-bar buttons** on the screens Profile opens (back, trailing action): the 44 round version of the flat pill, with the same thin glyph (back chevron or an SF symbol at 35%). **Small action pills** inside a row ("Add" a friend, accept a request): the highlighted pill, ground and ink swapped (`homeText` fill, `homeBackground` label), 38-40 tall; the quiet counterpart (decline, "Cancel") is the flat `homePill` with the label in `homeText` or `appBadgeRed`. The pencil on a profile photo is the flat round pill too. The Add-a-pod form's footer is the highlighted "Next" / "Create pod" pill beside a flat "Back" pill, 56 tall (a plain pill while a step is incomplete). A search field is a `homePill` capsule.
+- **Avatars** are flat: round, no ring, no shadow.
 - Placing a new button: reuse one of these. Do not add glass or shadows.
 
 ## Patterns

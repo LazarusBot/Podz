@@ -136,9 +136,14 @@ private struct ReservationRow: View {
             if let onCancel {
                 Button(action: onCancel) {
                     Text("Cancel")
-                        .font(AppFont.mediumLabel(13))
-                        .foregroundColor(.red)
+                        .font(AppFont.regularLabel(13))
+                        .foregroundColor(.appBadgeRed)
+                        .padding(.horizontal, 16)
+                        .frame(height: 38)
+                        .background(Capsule().fill(Color.homePill.opacity(0.95)))
+                        .overlay(Capsule().strokeBorder(Color.homeBackground, lineWidth: 1))
                 }
+                .buttonStyle(TapScaleButtonStyle())
             }
         }
         .padding(.horizontal, 24)

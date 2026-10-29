@@ -34,7 +34,7 @@ struct PostsActivityView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                CloseButton(action: { dismiss() })
+                CloseButton(style: .pill, size: 44, action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)
