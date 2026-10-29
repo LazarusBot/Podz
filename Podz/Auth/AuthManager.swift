@@ -2,9 +2,8 @@ import Foundation
 import Supabase
 import Combine
 
-/// Central place for all auth logic. Your views never call `supabase.auth`
-/// directly — they call methods here, which keeps `LoginView` / `RegisterView`
-/// / etc. exactly as they are today, just swapping their TODOs for real calls.
+/// Central place for all auth logic. Views never call `supabase.auth`
+/// directly — they call methods here.
 ///
 /// Session persistence (staying logged in between app launches) is handled
 /// automatically by the Supabase SDK via the Keychain — you don't need to
@@ -18,8 +17,8 @@ final class AuthManager: ObservableObject {
     @Published var lastError: String?
     @Published private(set) var profile: Profile?
     @Published private(set) var isInitializing = true
-    /// Set on a successful `signUp`, cleared once the post-register
-    /// onboarding has been shown. In-memory only (not @AppStorage) — this
+    /// Set while a brand-new account is still in the onboarding intro steps,
+    /// cleared once they're done. In-memory only (not @AppStorage) — this
     /// is intentional, see the PodzApp.swift routing note about the old
     /// hasSeenOnboarding bug.
     @Published private(set) var justRegistered = false
@@ -174,68 +173,70 @@ final class AuthManager: ObservableObject {
         }
     }
 
-    // MARK: - Email / password
-    
-    func signUp(name: String, username: String, email: String, password: String) async {
-        isLoading = true
-        lastError = nil
-        defer { isLoading = false }
-        
-        do {
-            try await supabase.auth.signUp(
-                email: email,
-                password: password,
-                data: [
-                    "full_name": .string(name),
-                    "username": .string(username)
-                ]
-            )
-            justRegistered = true
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    /// Call once the post-register onboarding has been shown/dismissed.
+    /// Call once the onboarding intro steps have been shown/dismissed.
     func finishPostRegisterOnboarding() {
         justRegistered = false
     }
-    
-    /// `identifier` is whatever's typed into Login's single field — an
-    /// email straight through, or a username resolved server-side first
-    /// (see SQL/get_email_for_username.sql) to the email Supabase Auth
-    /// actually signs in with. Auth itself only ever knows email/password;
-    /// this is the one place username gets translated into that.
-    func signIn(identifier: String, password: String) async {
+
+    // MARK: - Email code (passwordless)
+
+    /// How recently an account must have been created for the code
+    /// sign-in to count as a registration. Supabase creates the user when
+    /// the code is *requested*, not when it's verified, so this has to
+    /// outlast the wait for the email.
+    private static let newAccountWindow: TimeInterval = 30 * 60
+
+    /// Emails a one-time code. Unknown emails get an account created
+    /// automatically (`shouldCreateUser` defaults to true), so the same
+    /// two screens serve both sign-up and sign-in. Needs the project's
+    /// "Magic Link" email template to include `{{ .Token }}`.
+    @discardableResult
+    func sendEmailCode(to email: String) async -> Bool {
         isLoading = true
         lastError = nil
         defer { isLoading = false }
 
         do {
-            let email = try await resolvedEmail(for: identifier)
-            try await supabase.auth.signIn(email: email, password: password)
+            try await supabase.auth.signInWithOTP(email: email)
+            return true
         } catch {
             lastError = error.localizedDescription
+            return false
         }
     }
 
-    /// A bare heuristic ("@" present) is enough here — this only decides
-    /// whether to skip the username lookup, not whether the string is a
-    /// well-formed email; an actually-malformed email still reaches
-    /// `supabase.auth.signIn` unchanged and fails there with its own
-    /// normal error, same as always.
-    private func resolvedEmail(for identifier: String) async throws -> String {
-        guard !identifier.contains("@") else { return identifier }
-        let email: String? = try await supabase
-            .rpc("get_email_for_username", params: ["p_username": identifier])
-            .execute()
-            .value
-        guard let email else {
-            throw UsernameLookupError.notFound
-        }
-        return email
-    }
+    /// Exchanges the emailed code for a session. Returns `.newAccount` for
+    /// a brand-new user, who then continues through the intro steps.
+    enum CodeVerification { case failed, existingAccount, newAccount }
 
+    func verifyEmailCode(email: String, code: String) async -> CodeVerification {
+        isLoading = true
+        lastError = nil
+        defer { isLoading = false }
+
+        // Set *before* verifying, not after: the session lands (and the
+        // root view re-renders) as part of the verify call itself, and
+        // flagging afterward would flash the app for a frame before the
+        // intro steps took over. Undone below for everyone but a new user.
+        justRegistered = true
+        do {
+            let response = try await supabase.auth.verifyOTP(email: email, token: code, type: .email)
+            let user: User = switch response {
+            case .session(let session): session.user
+            case .user(let user): user
+            }
+            guard Date().timeIntervalSince(user.createdAt) < Self.newAccountWindow else {
+                justRegistered = false
+                return .existingAccount
+            }
+            return .newAccount
+        } catch {
+            justRegistered = false
+            lastError = error.localizedDescription
+            return .failed
+        }
+    }
+    
     /// Sends a password reset email. Returns whether it succeeded so the
     /// caller can show a confirmation — failure is already surfaced via
     /// `lastError`.
@@ -251,25 +252,6 @@ final class AuthManager: ObservableObject {
         }
     }
 
-    // MARK: - Sign in with Apple
-    
-    /// Called from `AppleSignInCoordinator.onSuccess` with the identity
-    /// token Apple returned, plus the raw nonce you generated before
-    /// starting the Apple request (see `AppleNonce.swift`).
-    func signInWithApple(idToken: String, rawNonce: String) async {
-        isLoading = true
-        lastError = nil
-        defer { isLoading = false }
-        
-        do {
-            try await supabase.auth.signInWithIdToken(
-                credentials: .init(provider: .apple, idToken: idToken, nonce: rawNonce)
-            )
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-    
     // MARK: - Delete / sign out
     
     func signOut() async {
@@ -293,16 +275,6 @@ final class AuthManager: ObservableObject {
             try await supabase.auth.signOut()
         } catch {
             lastError = error.localizedDescription
-        }
-    }
-}
-
-private enum UsernameLookupError: LocalizedError {
-    case notFound
-
-    var errorDescription: String? {
-        switch self {
-        case .notFound: "No account found for that username."
         }
     }
 }

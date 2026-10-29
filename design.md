@@ -41,8 +41,8 @@ color, a button style or a pattern.** Check it before every commit/push.
 | Error text | `appBadgeRed` | | |
 
 `home*` tokens live in `Podz/Home/HomeTheme.swift`, `onb*` in
-`Podz/Onboarding/OnboardingTheme.swift` (PR #50). They are the same palette:
-merge them into one set when both are on `main`.
+`Podz/Onboarding/OnboardingTheme.swift`. They are the same palette: merge them
+into one set (a cleanup for later).
 
 ## Type
 
