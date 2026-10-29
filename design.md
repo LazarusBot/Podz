@@ -71,10 +71,11 @@ Inter, through `AppFont`. Sizes in points.
 
 All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colored border, and use `TapScaleButtonStyle` for the press.
 
-- **Text pill** ("Book", "Continue", "Touch to start"): 14 regular label in `homeText`.
+- **Text pill** ("Book", "Open", "Continue", "Touch to start"): 14 regular label in `homeText`.
 - **Highlighted pill** (last onboarding step): ground and text swap, `onbHighlight` fill, 14 semiBold label.
 - **Back**: 83 x 83 pill, chevron 8 x 12, 1.5 stroke, round caps, `homeText` at 45%.
 - **Close** (`CloseButton(style: .pill, size: 44)`): round pill, same fill and 1pt border as back, thin 12pt "x" (1.5 stroke, round caps) in `homeText` at 45%. Only the Likes folder sheet uses it so far; other sheets still use the classic gray circle until they are restyled.
+- **Share** (folder view): round 83 pill like Back, the SF "link" glyph (20 regular) in `homeText` at 45%.
 - **Like**: 83 x 83 pill, the tab bar's heart (22, 1.6 stroke): outline at 45% when not liked, filled at full strength when liked, with a quick bounce. Tapping when liked removes the like; otherwise it opens the folder picker.
 - **Search pill**: capsule in `homePill`, 14 regular text, placeholder in `homeSubtitle`, Lenny mark at the trailing end.
 - **Tab bar**: floating capsule, three line icons (home, heart, person), 22 / 1.6 stroke. Active icon at full strength, others at 45%.
@@ -85,6 +86,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 - **Search bar, two modes.** Tapping the bar is a plain search (nothing moves). Tapping the Lenny mark enters Lenny mode: the bar inverts (`homeText` fill), the mark rolls one full turn to the leading end and its disc melts into the bar so only the eyes and mouth show, the placeholder becomes "Chamonix to Zermatt in 5 days". Leaving the field rolls it back. Tap outside a field to dismiss the keyboard.
 - **Pod detail.** *Stack*: photo 524/852 of the screen height, name + altitude, two-line teaser, back / like / Book. *Extended* (tap anywhere between the photo and the buttons): photo shrinks to 250/852, full description and facts appear; tap the same area to return. The only swipe on this screen is paging through the photos, and the only way out is the back button (swipe-to-dismiss is off).
+- **Likes folder (a folder opened from the Likes tab).** Same layout as the pod detail, with the folder's pods as the photo pages: title "Folder  -  N pods", teaser naming the pod on screen, back / share (own folders only) / Open. Tap the area under the photo to extend into the list of every pod (tap a row to open it, tap the title to collapse). Same shared pieces as the pod detail (`DetailParts.swift`); the tab bar is hidden while it's open. The old two-column grid and top bar are gone.
 - **Likes.** The folder picker sheet keeps its frosted folders and the photo-drops-into-a-folder animation. The sheet is always light. Its header: the pill close button, then the 20 title.
 - **Welcome.** Photos drift behind the text, bent toward you near the screen edges; Reduce Motion freezes the drift.
 

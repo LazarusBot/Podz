@@ -7,18 +7,6 @@
 
 import SwiftUI
 
-/// Reports the width actually proposed to a folder's content screen —
-/// same background-GeometryReader-plus-preference trick `PodCard.swift`'s
-/// own `SectionWidthPreferenceKey` uses, for the same reason: `likesCardSize`
-/// needs the real available width (correct in Slide Over/Split View),
-/// not `UIScreen.main.bounds.width`.
-private struct LikesContentWidthPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = UIScreen.main.bounds.width
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 /// Tab content for "Likes" — liked pods grouped into transparent glass
 /// "folders" by country. Tap a folder to see its pods, tap a pod for
 /// the detail screen. Same self-contained navigation pattern as
@@ -36,15 +24,9 @@ struct LikesView: View {
     @State private var selectedFolder: LikeFolder?
     @State private var selectedSharedFolder: SharedFolder?
     @State private var selectedPod: Pod?
-    @Namespace private var podZoomNamespace
     @State private var isEditMode = false
     @State private var folderPendingDeletion: LikeFolder?
     @State private var folderPendingShare: LikeFolder?
-    // Seeded from UIScreen so the very first frame (before the
-    // GeometryReader below reports back) is still correctly sized rather
-    // than starting at 0 — same reasoning as PodSection's own
-    // `availableWidth`.
-    @State private var folderContentWidth: CGFloat = UIScreen.main.bounds.width
 
     private var likedPods: [Pod] {
         podsStore.pods.filter { likesStore.isLiked($0) }
@@ -94,7 +76,6 @@ struct LikesView: View {
         // grid stays mounted underneath (scroll position kept).
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
-                .navigationTransition(.zoom(sourceID: pod.id, in: podZoomNamespace))
         }
     }
     
@@ -221,82 +202,16 @@ struct LikesView: View {
     }
     // MARK: - Inside one folder
 
-    // 44 (back button) + 31pt padding top/bottom — matches ProfileTopBar's
-    // own metrics exactly, since it copies its visual style.
-    private let folderTopBarHeight: CGFloat = 106
-
-    private let folderContentHorizontalPadding: CGFloat = 24
-    private let likesCardSpacing: CGFloat = 20
-
-    /// Two `LikesPodCard`s per row, inside a folder's own contents — was a
-    /// single-column stack of wide `LennyResultCard` rows. `.fixed`, not
-    /// `.flexible` — a flexible column still leaves each card's own photo
-    /// to size itself against the row's proposed (effectively unbounded)
-    /// height; `.fixed(likesCardSize)` pins the column itself to the
-    /// exact width `LikesPodCard` is told to render at, so the two can
-    /// never disagree.
-    private var likesCardSize: CGFloat {
-        (folderContentWidth - folderContentHorizontalPadding * 2 - likesCardSpacing) / 2
-    }
-
-    private var likesGridColumns: [GridItem] {
-        [GridItem(.fixed(likesCardSize)), GridItem(.fixed(likesCardSize))]
-    }
-
     private func folderContentView(folder: LikeFolder) -> some View {
-        let folderPods = pods(in: folder)
-
-        return ZStack(alignment: .top) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Room for the persistent top bar below to float over
-                    // — without this, a folder with enough pods to scroll
-                    // carried the back button away with the rest of the
-                    // content instead of keeping it reachable.
-                    Color.clear.frame(height: folderTopBarHeight)
-
-                    LazyVGrid(columns: likesGridColumns, spacing: likesCardSpacing) {
-                        ForEach(folderPods) { pod in
-                            LikesPodCard(
-                                pod: pod,
-                                photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                                size: likesCardSize,
-                                onUnlike: { Task { await likesStore.removeLike(pod) } },
-                                onTap: { selectedPod = pod },
-                                zoomNamespace: podZoomNamespace
-                            )
-                        }
-                    }
-                    .padding(.horizontal, folderContentHorizontalPadding)
-                    .padding(.top, 10)
-
-                    Color.clear.frame(height: 100)
-                }
-            }
-            .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                geometry.contentOffset.y
-            } action: { _, newValue in
-                scrollState.updateOffset(newValue)
-            }
-            .background(Color.appHomeBackground)
-            .background(
-                GeometryReader { geo in
-                    Color.clear.preference(key: LikesContentWidthPreferenceKey.self, value: geo.size.width)
-                }
-            )
-            .onPreferenceChange(LikesContentWidthPreferenceKey.self) { folderContentWidth = $0 }
-
-            ProfileTopBar(
-                title: folder.name,
-                onBack: { selectedFolder = nil },
-                // Opens ShareFolderSheet's per-friend access toggle
-                // list, not the native share sheet — "link" reads as
-                // "manage sharing access" instead of "export/send".
-                trailingIcon: "link",
-                onTrailingTap: { folderPendingShare = folder },
-                trailingAccessibilityLabel: "Share folder"
-            )
-        }
+        MinimalFolderView(
+            name: folder.name,
+            pods: pods(in: folder),
+            photoURLs: podsStore.primaryPhotoByPodId,
+            onBack: { selectedFolder = nil },
+            onOpenPod: { selectedPod = $0 },
+            // Opens ShareFolderSheet's per-friend access toggle list.
+            onShare: { folderPendingShare = folder }
+        )
         .sheet(item: $folderPendingShare) { folder in
             ShareFolderSheet(folder: folder)
                 // Short toggle list, no search field — doesn't need the
@@ -306,55 +221,15 @@ struct LikesView: View {
         }
     }
 
-    // MARK: - Inside a folder shared with you (read-only)
-
+    /// A folder shared with you: the same screen, read-only (no share).
     private func sharedFolderContentView(folder: SharedFolder) -> some View {
-        let folderPods = likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods)
-
-        return ZStack(alignment: .top) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Same persistent-top-bar reasoning as folderContentView.
-                    Color.clear.frame(height: folderTopBarHeight)
-
-                    LazyVGrid(columns: likesGridColumns, spacing: likesCardSpacing) {
-                        ForEach(folderPods) { pod in
-                            // No `onUnlike` — this isn't your like to
-                            // remove, read-only for now. `LikesPodCard`
-                            // hides the heart button entirely rather than
-                            // showing a no-op one.
-                            LikesPodCard(
-                                pod: pod,
-                                photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                                size: likesCardSize,
-                                onTap: { selectedPod = pod },
-                                zoomNamespace: podZoomNamespace
-                            )
-                        }
-                    }
-                    .padding(.horizontal, folderContentHorizontalPadding)
-                    .padding(.top, 10)
-
-                    Color.clear.frame(height: 100)
-                }
-            }
-            .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                geometry.contentOffset.y
-            } action: { _, newValue in
-                scrollState.updateOffset(newValue)
-            }
-            .background(Color.appHomeBackground)
-            .background(
-                GeometryReader { geo in
-                    Color.clear.preference(key: LikesContentWidthPreferenceKey.self, value: geo.size.width)
-                }
-            )
-            .onPreferenceChange(LikesContentWidthPreferenceKey.self) { folderContentWidth = $0 }
-
-            // No trailing share icon — you can't re-share a folder that
-            // isn't yours.
-            ProfileTopBar(title: folder.name, onBack: { selectedSharedFolder = nil })
-        }
+        MinimalFolderView(
+            name: folder.name,
+            pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
+            photoURLs: podsStore.primaryPhotoByPodId,
+            onBack: { selectedSharedFolder = nil },
+            onOpenPod: { selectedPod = $0 }
+        )
     }
 
     // MARK: - Empty state

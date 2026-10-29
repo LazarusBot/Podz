@@ -22,10 +22,6 @@ struct MinimalPodDetailView: View {
     @State private var showFolderPicker = false
     @ObservedObject private var likesStore = LikesStore.shared
 
-    /// Photo heights from the Paper frames, as a share of the screen.
-    private static let stackedPhotoShare: CGFloat = 524 / 852
-    private static let extendedPhotoShare: CGFloat = 250 / 852
-
     /// Seeded from the Home card's already-fetched photo so the first frame
     /// isn't empty; the full ordered set arrives from `photos(forPodId:)`.
     init(pod: Pod, onBack: @escaping () -> Void) {
@@ -38,10 +34,10 @@ struct MinimalPodDetailView: View {
     var body: some View {
         GeometryReader { proxy in
             let screenHeight = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
-            let photoHeight = screenHeight * (isExtended ? Self.extendedPhotoShare : Self.stackedPhotoShare)
+            let photoHeight = DetailLayout.photoHeight(screenHeight: screenHeight, isExtended: isExtended)
 
             VStack(spacing: 0) {
-                photoPager(width: proxy.size.width, height: photoHeight)
+                DetailPhotoPager(slots: photoURLs.map { Optional($0) }, pageIndex: $pageIndex, width: proxy.size.width, height: photoHeight)
 
                 // Everything between the photo and the buttons is one tap
                 // target: a tap anywhere here extends or collapses.
@@ -87,37 +83,6 @@ struct MinimalPodDetailView: View {
         }
     }
 
-    // MARK: - Photo
-
-    private func photoPager(width: CGFloat, height: CGFloat) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 0) {
-                ForEach(Array(pagerURLs.enumerated()), id: \.offset) { index, url in
-                    PodPhoto(url: url)
-                        .frame(width: width, height: height)
-                        .clipped()
-                        .id(index)
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $pageIndex)
-        .frame(width: width, height: height)
-        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 75, bottomTrailingRadius: 75, style: .continuous))
-        .overlay(alignment: .bottom) {
-            PodDetailBadge(photoCount: photoURLs.count, currentIndex: pageIndex ?? 0)
-                .offset(y: 28)
-        }
-        .zIndex(1)
-    }
-
-    /// One empty slot when there are no photos yet, so the pager still
-    /// shows the placeholder.
-    private var pagerURLs: [String?] {
-        photoURLs.isEmpty ? [nil] : photoURLs.map { Optional($0) }
-    }
-
     // MARK: - Like
 
     private var isLiked: Bool { likesStore.isLiked(pod) }
@@ -126,13 +91,16 @@ struct MinimalPodDetailView: View {
     /// Unliked, a tap opens the folder picker (the frosted folders and the
     /// photo dropping into one); liked, a tap removes the like.
     private var likeButton: some View {
-        Button {
-            if isLiked {
-                Task { await likesStore.removeLike(pod) }
-            } else {
-                showFolderPicker = true
+        DetailRoundButton(
+            accessibilityLabel: isLiked ? "Remove from likes" : "Add to likes",
+            action: {
+                if isLiked {
+                    Task { await likesStore.removeLike(pod) }
+                } else {
+                    showFolderPicker = true
+                }
             }
-        } label: {
+        ) {
             ZStack {
                 if isLiked { HeartIconShape().fill(Color.homeText) }
                 HeartIconShape()
@@ -145,12 +113,8 @@ struct MinimalPodDetailView: View {
                 SpringKeyframe(1.3, duration: 0.15)
                 SpringKeyframe(1.0, spring: .bouncy)
             }
-            .frame(width: 83, height: 83)
-            .background(pill)
         }
-        .buttonStyle(TapScaleButtonStyle())
         .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
-        .accessibilityLabel(isLiked ? "Remove from likes" : "Add to likes")
     }
 
     // MARK: - Text
@@ -164,10 +128,7 @@ struct MinimalPodDetailView: View {
     }
 
     private var titleText: Text {
-        let name = Text(pod.name).font(AppFont.semiBoldLabel(20))
-        guard let altitude = pod.altitudeM else { return name }
-        let altitudeText = Text("  -  \(altitude)m").font(AppFont.semiBoldLabel(14))
-        return Text("\(name)\(altitudeText)")
+        detailTitle(pod.name, detail: pod.altitudeM.map { "\($0)m" })
     }
 
     private var teaser: some View {
@@ -230,52 +191,17 @@ struct MinimalPodDetailView: View {
 
     private var actionRow: some View {
         HStack(spacing: 13) {
-            Button(action: onBack) {
-                BackChevron()
-                    .stroke(Color.homeText.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                    .frame(width: 8, height: 12)
-                    .frame(width: 83, height: 83)
-                    .background(pill)
-            }
-            .buttonStyle(TapScaleButtonStyle())
-            .accessibilityLabel("Back")
-
+            DetailBackButton(action: onBack)
             likeButton
-
-            Button { showBooking = true } label: {
-                Text("Book")
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(.homeText)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 83)
-                    .background(pill)
-            }
-            .buttonStyle(TapScaleButtonStyle())
+            DetailTextButton(title: "Book") { showBooking = true }
         }
         .padding(.horizontal, 40)
         .padding(.top, 24)
-    }
-
-    private var pill: some View {
-        Capsule()
-            .fill(Color.homePill.opacity(0.95))
-            .overlay(Capsule().strokeBorder(Color.homeBackground, lineWidth: 1))
     }
 
     // MARK: - Expand / collapse
 
     private func toggleExtended() {
         withAnimation(.smooth(duration: 0.45)) { isExtended.toggle() }
-    }
-}
-
-/// The back pill's "<" glyph from the Paper frames (8x12).
-private struct BackChevron: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX + rect.width * 0.75, y: rect.minY + rect.height * 0.125))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.1875, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.75, y: rect.minY + rect.height * 0.875))
-        return path
     }
 }
