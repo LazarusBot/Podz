@@ -9,6 +9,14 @@ color, a button style or a pattern.** Check it before every commit/push.
 
 ## Principles
 
+- **UX comes first.** Ease of use beats visual polish and beats adding
+  features. Before building, check how many gestures and controls share one
+  screen: horizontal paging, vertical swipes, edge swipes, taps on the same
+  area and system gestures (swipe-to-dismiss, keyboard dismiss) all compete.
+  If a screen is getting crowded or two interactions could fight (the pod
+  detail's photo paging vs. swipe-to-dismiss is the example), **tell the
+  user before building** and propose the simpler option; remove the
+  interaction that is hardest to get right.
 - Pure black / white grounds. **No accent color**: the photos carry all the color.
 - Flat. No shadows, no gradients except a fade into the ground. The one frosted
   material is the like-folder picker (see Patterns).
