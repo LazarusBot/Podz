@@ -24,37 +24,24 @@ struct ProfileMenuRow: View {
     }
 }
 
-/// Quiet, uppercase small-caps label above a group of rows — standard
-/// iOS Settings weight. Shared by ProfileView (Social / Account / Danger
-/// zone) and FriendsView (Requests / Accepted friends), which previously
-/// had two different section-header styles (this quiet one vs. a bold
-/// 18pt Darker Grotesque one) one tap apart in the same navigation flow.
+/// A quiet label above a group of rows, optionally with a right-aligned
+/// note (used by the host Pods screen). The screens Profile opens use
+/// `SectionHeading`.
 struct SectionLabel: View {
     let title: String
-    /// Optional right-aligned text on the same row as the title — e.g.
-    /// ProfileView's mountain-height gag culminating in its Danger zone
-    /// section. `nil` for every other call site (Requests, Accepted
-    /// friends…), which keeps just the title.
     var trailing: String? = nil
 
     var body: some View {
         HStack {
-            Text(title.uppercased())
-                // Real Inter, Regular weight — see `ProfileAccountRow`'s
-                // own subtitle for why this isn't `AppFont.itemTitle`
-                // (Bold read heavier than this quiet section label
-                // wants; the uppercase + tracking already gives it
-                // enough presence).
-                .font(AppFont.regularLabel(12))
-                .tracking(0.5)
-                .foregroundColor(.appTextMuted)
+            Text(title)
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.homeSubtitle)
 
             if let trailing {
                 Spacer()
                 Text(trailing)
-                    .font(AppFont.regularLabel(12))
-                    .tracking(0.5)
-                    .foregroundColor(.appTextMuted)
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

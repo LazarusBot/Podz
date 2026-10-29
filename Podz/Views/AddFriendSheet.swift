@@ -37,15 +37,14 @@ struct AddFriendSheet: View {
             .padding(.top, 16)
 
             Text("Add a friend")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
-                .foregroundColor(.black)
+                .font(AppFont.semiBoldLabel(20))
+                .foregroundColor(.homeText)
                 .padding(.top, 8)
                 .padding(.bottom, 16)
 
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
                 TextField("Search by username", text: $query)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
@@ -74,7 +73,7 @@ struct AddFriendSheet: View {
 
             Spacer(minLength: 0)
         }
-        .background(Color.appHomeBackground)
+        .background(Color.homeBackground)
         .errorAlert($errorMessage, title: "Couldn't send request")
     }
 
@@ -83,14 +82,14 @@ struct AddFriendSheet: View {
             AvatarView(imageName: profile.avatarURL, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text(profile.displayName)
-                    .font(AppFont.pillLabelBold(15))
-                    .foregroundColor(.black)
+                    .font(AppFont.semiBoldLabel(15))
+                    .foregroundColor(.homeText)
                 if let username = profile.username {
                     Text("@\(username)")
                         // Same Darker-Grotesque-vs-Inter size mismatch as
                         // FriendsView's `FriendRequestRow` — see there.
-                        .font(AppFont.regularLabel(11))
-                        .foregroundColor(.appTextMuted)
+                        .font(AppFont.regularLabel(12))
+                        .foregroundColor(.homeSubtitle)
                 }
             }
             Spacer()
@@ -108,19 +107,19 @@ struct AddFriendSheet: View {
         case .accepted:
             Text("Friends")
                 .font(AppFont.regularLabel(13))
-                .foregroundColor(.appTextMuted)
+                .foregroundColor(.homeSubtitle)
         case .pending:
             if existing?.requesterId == auth.session?.user.id {
                 Text("Requested")
                     .font(AppFont.regularLabel(13))
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
                     .padding(.trailing, 8)
             } else {
                 // They already sent *you* one — nudge to respond from
                 // FriendsView rather than duplicating Accept/Decline here.
                 Text("Respond in Friends")
                     .font(AppFont.regularLabel(13))
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
             }
         case .declined, nil:
             Button {

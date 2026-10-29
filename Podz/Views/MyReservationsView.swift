@@ -26,58 +26,43 @@ struct MyReservationsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ProfileTopBar(title: "Reservations", onBack: onBack)
-
+        SectionPage(title: "Reservations", onBack: onBack) {
             if reservationsStore.reservations.isEmpty {
-                Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 32))
-                        .foregroundColor(.appTextMuted)
-                    Text("No reservations yet.")
-                        .font(AppFont.regularLabel(14))
-                        .foregroundColor(.appTextMuted)
-                }
-                Spacer()
+                Text("No reservations yet.")
+                    .font(AppFont.regularLabel(14))
+                    .foregroundColor(.homeSubtitle)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
             } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        if !upcoming.isEmpty {
-                            SectionLabel(title: "Upcoming")
-                            VStack(spacing: 0) {
-                                ForEach(upcoming) { reservation in
-                                    ReservationRow(
-                                        reservation: reservation,
-                                        pod: podsStore.pods.first { $0.id == reservation.podId },
-                                        photoURL: podsStore.primaryPhotoByPodId[reservation.podId],
-                                        onCancel: { pendingCancellation = reservation }
-                                    )
-                                }
-                            }
+                if !upcoming.isEmpty {
+                    SectionHeading(title: "Upcoming")
+                    VStack(spacing: 0) {
+                        ForEach(upcoming) { reservation in
+                            ReservationRow(
+                                reservation: reservation,
+                                pod: podsStore.pods.first { $0.id == reservation.podId },
+                                photoURL: podsStore.primaryPhotoByPodId[reservation.podId],
+                                onCancel: { pendingCancellation = reservation }
+                            )
                         }
+                    }
+                }
 
-                        if !past.isEmpty {
-                            SectionLabel(title: "Past")
-                            VStack(spacing: 0) {
-                                ForEach(past) { reservation in
-                                    ReservationRow(
-                                        reservation: reservation,
-                                        pod: podsStore.pods.first { $0.id == reservation.podId },
-                                        photoURL: podsStore.primaryPhotoByPodId[reservation.podId],
-                                        onCancel: nil
-                                    )
-                                }
-                            }
+                if !past.isEmpty {
+                    SectionHeading(title: "Past")
+                    VStack(spacing: 0) {
+                        ForEach(past) { reservation in
+                            ReservationRow(
+                                reservation: reservation,
+                                pod: podsStore.pods.first { $0.id == reservation.podId },
+                                photoURL: podsStore.primaryPhotoByPodId[reservation.podId],
+                                onCancel: nil
+                            )
                         }
-
-                        Color.clear.frame(height: 40)
                     }
                 }
             }
         }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(Color.appHomeBackground)
         .task { await reservationsStore.fetchMine() }
         .alert("Cancel this reservation?", isPresented: Binding(
             get: { pendingCancellation != nil },
@@ -121,14 +106,14 @@ private struct ReservationRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(pod?.name ?? "Pod")
-                    .font(AppFont.pillLabelBold(15))
-                    .foregroundColor(.black)
+                    .font(AppFont.semiBoldLabel(16))
+                    .foregroundColor(.homeText)
                 Text(dateRange)
                     .font(AppFont.regularLabel(13))
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
                 Text("\(reservation.guests) guest\(reservation.guests == 1 ? "" : "s")" + (reservation.status == "cancelled" ? " · Cancelled" : ""))
                     .font(AppFont.regularLabel(12))
-                    .foregroundColor(reservation.status == "cancelled" ? .red : .appTextMuted)
+                    .foregroundColor(reservation.status == "cancelled" ? .appBadgeRed : .homeSubtitle)
             }
 
             Spacer()
@@ -148,8 +133,6 @@ private struct ReservationRow: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 12)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.black.opacity(0.06)).frame(height: 0.5)
-        }
+        .overlay(alignment: .bottom) { Hairline() }
     }
 }

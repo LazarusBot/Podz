@@ -53,7 +53,7 @@ struct MinimalFolderView: View {
             .allowsHitTesting(false)
 
             actionRow
-                .padding(.bottom, 40)
+                .padding(.bottom, 40 + ScreenInsets.bottom)
         }
         .background(Color.homeBackground.ignoresSafeArea())
         // This screen replaces the tab's content, so the floating tab bar

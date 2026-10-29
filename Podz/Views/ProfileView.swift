@@ -10,8 +10,7 @@ internal import Auth
 
 /// The minimalist Profile: a big title, who you are, one pill to edit it, a
 /// short list of where else to go, and log out / delete account at the end.
-/// The older screens it leads to (friends, posts, edit profile…) still have
-/// their own look and stay light for now.
+/// The pages it leads to are built on `SectionPage`.
 struct ProfileView: View {
     @StateObject private var auth = AuthManager.shared
     @StateObject private var postsStore = PostsStore.shared
@@ -45,12 +44,29 @@ struct ProfileView: View {
                 main
             }
         }
-        .background(Color.appHomeBackground.ignoresSafeArea())
+        .background(Color.homeBackground.ignoresSafeArea())
         // A sheet, not another full-screen push: this is a multi-step form
         // (see AddPodView's own `step`), "a focused task on top of Profile".
+        // It has no dark palette yet.
         .sheet(isPresented: $showAddPod) {
             AddPodView()
+                .preferredColorScheme(.light)
         }
+        // Everything under Profile follows the system appearance, and the
+        // pages it opens have their own bottom bar, so the tab bar steps
+        // aside while one is showing.
+        .onAppear { AppearanceState.shared.followsSystem = true }
+        .onDisappear {
+            AppearanceState.shared.followsSystem = false
+            TabBarVisibilityState.shared.isHidden = false
+        }
+        .onChange(of: isShowingSection) { _, showing in
+            TabBarVisibilityState.shared.isHidden = showing
+        }
+    }
+
+    private var isShowingSection: Bool {
+        showEditProfile || showFriends || showMyPosts || showReservations || showLoginSecurity || showAccessibility
     }
 
     // MARK: - Main screen
@@ -100,10 +116,6 @@ struct ProfileView: View {
         .background(Color.homeBackground)
         .task { await friendsStore.fetchAll() }
         .task { await likesStore.fetchAll() }
-        // This screen follows the system appearance; the older ones it
-        // opens don't yet (see `MainTabView`).
-        .onAppear { AppearanceState.shared.followsSystem = true }
-        .onDisappear { AppearanceState.shared.followsSystem = false }
         .alert("Delete your account?", isPresented: $showDeleteAccountConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
