@@ -40,17 +40,17 @@ enum FoamLayout {
         return CGFloat(hash % 1000) / 1000
     }
 
-    /// Sizes vary a lot, like real foam: between 58% and 130% of the base.
-    /// A folder with more pods tends to be bigger, but each bubble also gets
-    /// its own stable random size, so equal folders still differ. A lone
-    /// bubble is exactly the base.
-    static func radii(podCounts: [Int], ids: [String], base: CGFloat) -> [CGFloat] {
+    /// A bubble's size follows the number of pods inside it: its *area* is
+    /// proportional to the count, relative to the average, so a folder with
+    /// four times the pods of another is twice as wide. Equal folders are
+    /// equal; an empty one is small but never vanishes; none is wider than
+    /// `maxRadius`. A lone bubble is exactly the base.
+    static func radii(podCounts: [Int], base: CGFloat, maxRadius: CGFloat) -> [CGFloat] {
         guard podCounts.count > 1 else { return podCounts.map { _ in base } }
-        let lo = podCounts.min() ?? 0, hi = podCounts.max() ?? 0
-        return zip(podCounts, ids).map { count, id in
-            let byPods: CGFloat = hi > lo ? CGFloat(count - lo) / CGFloat(hi - lo) : 0.5
-            let mix = hi > lo ? 0.45 * byPods + 0.55 * jitter(id) : jitter(id)
-            return max(40, base * (0.58 + 0.72 * mix))
+        let mean = max(CGFloat(podCounts.reduce(0, +)) / CGFloat(podCounts.count), 1)
+        return podCounts.map { count in
+            let factor = min(max(sqrt(max(CGFloat(count), 0.5) / mean), 0.55), 1.6)
+            return min(base * factor, maxRadius)
         }
     }
 

@@ -2,12 +2,12 @@ import SwiftUI
 
 /// Packs folder bubbles into a foam: compact, slightly overlapping, with flat
 /// edges where they touch (see `FoamLayout`). The bubbles shrink as folders
-/// are added so several still fit, vary a lot in size, and a folder holding
-/// more pods tends to be bigger. **Pinch out** to unpack them (they drift
+/// are added so several still fit, and each bubble's size follows the number
+/// of pods inside it. **Pinch out** to unpack them (they drift
 /// apart into plain circles); **pinch in** to pack them again.
 struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
     let items: [Item]
-    /// How many pods each item holds; nudges its size.
+    /// How many pods each item holds; sets its size.
     let podCount: (Item) -> Int
     let width: CGFloat
     /// Room under the last bubble, e.g. for a row of buttons.
@@ -43,7 +43,11 @@ struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
         let counts = items.map(podCount)
         let key = "\(ids)|\(counts)|\(Int(width))"
         if packCache.key != key {
-            let radii = FoamLayout.radii(podCounts: counts, ids: ids, base: FoamLayout.baseRadius(count: items.count))
+            let radii = FoamLayout.radii(
+                podCounts: counts,
+                base: FoamLayout.baseRadius(count: items.count),
+                maxRadius: width * 0.475
+            )
             packCache.radii = radii
             packCache.centers = FoamLayout.pack(radii: radii, ids: ids, width: width, top: Self.topInset)
             packCache.key = key
@@ -73,6 +77,8 @@ struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
         // not while the fingers are moving, so the bubbles follow them.
         .animation(.smooth(duration: 0.5), value: items.map { String(describing: $0.id) })
         .animation(.smooth(duration: 0.5), value: isLoose)
+        // A bubble grows as a pod is added to it.
+        .animation(.smooth(duration: 0.5), value: items.map(podCount))
         .simultaneousGesture(
             MagnifyGesture()
                 .updating($pinch) { value, state, _ in state = value.magnification }
