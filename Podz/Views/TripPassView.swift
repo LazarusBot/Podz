@@ -67,7 +67,7 @@ struct TripPassView: View {
 
     var body: some View {
         if let matchedPod, showPodDetail {
-            PodDetailView(pod: matchedPod, onBack: { showPodDetail = false })
+            MinimalPodDetailView(pod: matchedPod, onBack: { showPodDetail = false })
         } else {
             content
         }

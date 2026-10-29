@@ -61,6 +61,8 @@ struct HostTabView: View {
             }
         }
         .background(Color.appHomeBackground.ignoresSafeArea())
+        // The host shell has no dark palette yet.
+        .preferredColorScheme(.light)
     }
 }
 

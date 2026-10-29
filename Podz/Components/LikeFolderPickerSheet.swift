@@ -21,141 +21,125 @@ struct LikeFolderPickerSheet: View {
     @State private var savingIntoFolderId: UUID?
     @State private var dropStage = FolderDropValues.start
 
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                CloseButton(action: cancelAndDismiss)
-                Spacer()
+    /// What the canvas draws: each folder, plus the one being named.
+    private enum Slot: Identifiable {
+        case folder(LikeFolder)
+        case creating
+
+        var id: String {
+            switch self {
+            case .folder(let folder): folder.id.uuidString
+            case .creating: "creating"
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-
-            Text("Save to folder")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
-                .foregroundColor(.black)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
-
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(likesStore.folders) { folder in
-                        LikesFolderCard(
-                            country: folder.name,
-                            pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
-                            photoURLs: PodsStore.shared.primaryPhotoByPodId,
-                            scale: 0.8,
-                            nameFontSize: 25,
-                            onTap: { saveLike(into: folder.id) },
-                            // Genuinely behind LikesFolderCard's own
-                            // front panel (see its `incomingDropContent`
-                            // doc) — an external .overlay() on the whole
-                            // card, tried previously, can only ever draw
-                            // on top of everything, which is why the
-                            // photo used to visibly land above/on the
-                            // folder instead of appearing to enter it.
-                            // Positioned in fractions of `side`, the same
-                            // coordinate system LikesFolderCard's own
-                            // fanned photos use (offset from the icon's
-                            // bottom-center) — landed's y sits inside the
-                            // zone the front panel actually covers, so
-                            // the panel drawn after this in z-order hides
-                            // it there for free, no manual occlusion.
-                            incomingDropContent: folder.id == savingIntoFolderId ? { side in
-                                AnyView(
-                                    PodPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
-                                        .frame(width: side * 0.5, height: side * 0.5)
-                                        .clipShape(RoundedRectangle(cornerRadius: side * 0.06, style: .continuous))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: side * 0.06, style: .continuous)
-                                                .strokeBorder(Color.white, lineWidth: 2)
-                                        )
-                                        .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
-                                        .scaleEffect(dropStage.scale)
-                                        .rotationEffect(.degrees(dropStage.rotationDegrees))
-                                        .offset(x: dropStage.xFraction * side, y: dropStage.yFraction * side)
-                                        .allowsHitTesting(false)
-                                )
-                            } : nil
-                        )
-                        // The freshly-created folder pops in with its pod
-                        // already inside instead of just silently
-                        // appearing — the "put the pod in it" moment
-                        // commitNewFolder() is pausing to let play out.
-                        .transition(.scale(scale: 0.7).combined(with: .opacity))
-                    }
-
-                    if isCreatingFolder {
-                        LikesFolderCard(
-                            pods: [],
-                            scale: 0.8,
-                            nameFontSize: 25,
-                            editableName: $newFolderName,
-                            onCommitName: commitNewFolder
-                        )
-                        .transition(.opacity)
-                    } else {
-                        newFolderTile
-                            .transition(.opacity)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-
-            Spacer(minLength: 0)
         }
-        .background(Color.appHomeBackground)
     }
 
-    /// Dashed-outline empty folder tile — tap to start creating.
-    private var newFolderTile: some View {
-        Button {
-            withAnimation(.easeOut(duration: AppMotion.snappy)) {
-                isCreatingFolder = true
-                newFolderName = ""
-            }
-        } label: {
-            VStack(spacing: 10) {
-                // Outer footprint stays a plain square (aspectRatio 1,
-                // same as LikesFolderCard's own GeometryReader square) —
-                // shrinking the *outer* frame to the landscape ratio (the
-                // previous attempt) desynced this tile's row height from
-                // a real folder's whenever they land in the same grid
-                // row, since LazyVGrid rows size to their tallest cell.
-                // Bottom-anchoring a shorter, landscape dashed rect
-                // inside the same square footprint gets the folder-like
-                // proportions without disturbing that shared height —
-                // exactly how LikesFolderCard bottom-anchors its own
-                // 0.74x-tall back panel inside its square.
-                GeometryReader { proxy in
-                    let side = min(proxy.size.width, proxy.size.height)
-                    RoundedRectangle(cornerRadius: AppRadius.r20)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        .foregroundColor(.appTextMuted.opacity(0.5))
-                        .overlay(
-                            Image(systemName: "plus")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundColor(.appTextMuted)
-                        )
-                        .frame(width: side, height: side * 0.74)
-                        .frame(width: side, height: side, alignment: .bottom)
-                }
-                .aspectRatio(1, contentMode: .fit)
-                .padding(.top, 8)
-
-                Text("New folder")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.appTextMuted)
-            }
-            .scaleEffect(0.8)
+    private func podCount(of slot: Slot) -> Int {
+        switch slot {
+        case .folder(let folder): likesStore.pods(in: folder.id, from: PodsStore.shared.pods).count
+        case .creating: 0
         }
-        .buttonStyle(.plain)
+    }
+
+    private var slots: [Slot] {
+        likesStore.folders.map(Slot.folder) + (isCreatingFolder ? [.creating] : [])
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                Text("Save to folder")
+                    .font(AppFont.semiBoldLabel(30))
+                    .tracking(-0.6)
+                    .foregroundColor(.homeText)
+                    .padding(.top, 36)
+                    .padding(.bottom, 12)
+
+                GeometryReader { proxy in
+                    ScrollView {
+                        FolderBubbleCanvas(
+                            items: slots,
+                            podCount: podCount(of:),
+                            width: proxy.size.width,
+                            bottomRoom: 170
+                        ) { slot, index, cell in
+                            bubble(for: slot, index: index, cell: cell)
+                        }
+                    }
+                }
+            }
+
+            actionRow
+                .padding(.bottom, 40)
+        }
+        .background(Color.homeBackground)
+    }
+
+    @ViewBuilder
+    private func bubble(for slot: Slot, index: Int, cell: FoamCell) -> some View {
+        switch slot {
+        case .folder(let folder):
+            FolderBubble(
+                cell: cell,
+                name: folder.name,
+                pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
+                photoURLs: PodsStore.shared.primaryPhotoByPodId,
+                mirrored: index % 2 == 1,
+                // The photo falls onto the bubble and shrinks into it.
+                // Positioned in fractions of the bubble's diameter, from
+                // its center.
+                incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
+                    AnyView(
+                        BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
+                            .scaleEffect(dropStage.scale * diameter / (FolderBubble.referenceRadius * 2))
+                            .rotationEffect(.degrees(dropStage.rotationDegrees))
+                            .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)
+                            .allowsHitTesting(false)
+                    )
+                } : nil,
+                onTap: { saveLike(into: folder.id) }
+            )
+            // The freshly-created folder pops in with its pod already
+            // inside — the "put the pod in it" moment commitNewFolder() is
+            // pausing to let play out.
+            .transition(.scale(scale: 0.7).combined(with: .opacity))
+        case .creating:
+            FolderBubble(
+                cell: cell,
+                name: "",
+                pods: [],
+                photoURLs: [:],
+                mirrored: index % 2 == 1,
+                editableName: $newFolderName,
+                onCommitName: commitNewFolder
+            )
+            .transition(.opacity)
+        }
+    }
+
+    /// Back closes the sheet; "New folder" starts naming a new bubble (and
+    /// is hidden while that's going on).
+    private var actionRow: some View {
+        HStack(spacing: 13) {
+            DetailBackButton(action: cancelAndDismiss)
+
+            if !isCreatingFolder {
+                DetailTextButton(title: "New folder") {
+                    withAnimation(.easeOut(duration: AppMotion.snappy)) {
+                        isCreatingFolder = true
+                        newFolderName = ""
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 24)
     }
 
     private func commitNewFolder() {
         let trimmed = newFolderName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
-            // Empty name on submit — cancel, back to the normal grid.
+            // Empty name on submit — cancel, back to the bubbles.
             withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 isCreatingFolder = false
             }
@@ -182,13 +166,6 @@ struct LikeFolderPickerSheet: View {
             }
             try? await Task.sleep(nanoseconds: 650_000_000)
             onDismiss()
-            // The sheet's own dismiss transition still has to play out
-            // after `onDismiss()` flips `isPresented` — waiting out that
-            // system animation before flashing is what makes the badge
-            // start once the sheet is actually gone, not while it's still
-            // sliding down over the tab bar.
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            likesStore.flashRecentLikeBadge()
         }
     }
 
@@ -234,15 +211,6 @@ struct LikeFolderPickerSheet: View {
                             // the sheet dismisses.
                             try? await Task.sleep(nanoseconds: 1_500_000_000)
                             onDismiss()
-                            // The sheet's own dismiss transition still has
-                            // to play out after `onDismiss()` flips
-                            // `isPresented` — waiting out that system
-                            // animation before flashing is what makes the
-                            // badge start once the sheet is actually gone,
-                            // not while it's still sliding down over the
-                            // tab bar.
-                            try? await Task.sleep(nanoseconds: 350_000_000)
-                            likesStore.flashRecentLikeBadge()
                         }
                     }
                 }
@@ -256,30 +224,19 @@ struct LikeFolderPickerSheet: View {
     }
 }
 
-/// Fixed points the existing-folder "drop" overlay animates through, per
-/// the user's own sketch: a fairly direct diagonal descent (not a wide
-/// sideways swing), rotating consistently in one direction the whole way
-/// down (a tumble, not tilt-overshoot-settle-back), passing behind the
-/// folder's front panel as it lands. x/yFraction are fractions of `side`
-/// (LikesFolderCard's own measured icon size, handed in via
-/// `incomingDropContent`) in the *same* coordinate system its real
-/// fanned photos use — offset from the icon's bottom-center, where the
-/// front panel covers roughly y: -0.56×side (its top edge) down to 0
-/// (the bottom). start (well above and left, nearly upright, roughly
-/// actual size), midArc (partway down the same diagonal, still above the
-/// panel's top edge), landed (inside the zone the front panel covers —
-/// -0.28×side is well past -0.56×side — so it's the panel itself, drawn
-/// after this in z-order, that hides it here, not any fade/shrink of
-/// ours), vanished (shrinks further at that same spot, purely for a
-/// settled feel — it's already hidden by then).
+/// Fixed points the existing-folder "drop" overlay animates through: a
+/// diagonal descent onto the bubble, rotating in one direction the whole
+/// way (a tumble, not tilt-overshoot-settle-back), then shrinking into the
+/// bubble's middle. x/yFraction are fractions of the bubble's diameter,
+/// from its center.
 private struct FolderDropValues {
     var scale: CGFloat
     var rotationDegrees: Double
     var xFraction: CGFloat
     var yFraction: CGFloat
 
-    static let start = FolderDropValues(scale: 1.1, rotationDegrees: -4, xFraction: -0.35, yFraction: -1.35)
-    static let midArc = FolderDropValues(scale: 0.95, rotationDegrees: 20, xFraction: -0.12, yFraction: -0.78)
-    static let landed = FolderDropValues(scale: 0.75, rotationDegrees: 42, xFraction: 0.02, yFraction: -0.28)
-    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.02, yFraction: -0.22)
+    static let start = FolderDropValues(scale: 1.0, rotationDegrees: -4, xFraction: -0.25, yFraction: -1.0)
+    static let midArc = FolderDropValues(scale: 0.9, rotationDegrees: 20, xFraction: -0.1, yFraction: -0.5)
+    static let landed = FolderDropValues(scale: 0.5, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
+    static let vanished = FolderDropValues(scale: 0.1, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
 }

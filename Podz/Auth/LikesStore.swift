@@ -19,13 +19,6 @@ final class LikesStore: ObservableObject {
     @Published private(set) var likes: [UUID: UUID?] = [:]
     @Published private(set) var folders: [LikeFolder] = []
     @Published var lastError: String?
-    /// Drives a transient "+1" badge on the Likes tab (BottomTabBar)
-    /// right after a pod is liked — a lightweight "yes, that landed"
-    /// signal for the common case where the like happens from a PodCard
-    /// on Home, not from the Likes screen itself, so there's otherwise
-    /// nothing on screen confirming it once the folder sheet dismisses.
-    @Published private(set) var showRecentLikeBadge = false
-    private var recentLikeBadgeTask: Task<Void, Never>?
     /// Every folder-share you (as owner) currently grant — not the ones
     /// shared *with* you, this store only manages your own folders.
     @Published private(set) var folderShares: [LikeFolderShare] = []
@@ -264,29 +257,6 @@ final class LikesStore: ObservableObject {
         } catch {
             likes.removeValue(forKey: pod.id)
             lastError = error.localizedDescription
-        }
-    }
-
-    /// Kicks off the transient "+1" badge on the Likes tab. Callers that
-    /// present a dismissible sheet over the tab bar (LikeFolderPickerSheet)
-    /// should call this only once that sheet has actually closed — firing
-    /// it right after `like()` resolves let the badge play (and, at 1.6s,
-    /// often finish) while the sheet still covered the tab bar, so it went
-    /// unseen.
-    func flashRecentLikeBadge() {
-        recentLikeBadgeTask?.cancel()
-        // Low damping fraction on purpose — lets the spring overshoot
-        // past its resting scale before settling, which reads as an
-        // actual "pop" rather than a plain fade/grow-in.
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.45)) {
-            showRecentLikeBadge = true
-        }
-        recentLikeBadgeTask = Task {
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: AppMotion.standard)) {
-                showRecentLikeBadge = false
-            }
         }
     }
 

@@ -31,3 +31,11 @@ that's grown into several unrelated things.
   into an unreviewable pile covering five unrelated features. One
   branch/PR per feature, not stacked.
 - Never merge `main` without being asked to.
+
+## Design
+
+- **Follow `design.md`** for any UI change — its colors, button styles,
+  type, spacing and patterns come from the Paper frames. Check it before
+  every commit/push, and update it in the same change if you add a token,
+  a button style or a pattern.
+- Never hard-code a color: use the tokens in `design.md`.

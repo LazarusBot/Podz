@@ -2,7 +2,7 @@ import SwiftUI
 
 extension View {
     /// Marks a pod card's photo as the source of the zoom transition into
-    /// `PodDetailView` (paired with `.navigationTransition(.zoom)` on the
+    /// `MinimalPodDetailView` (paired with `.navigationTransition(.zoom)` on the
     /// `fullScreenCover` that presents it). The clip shape has to match the
     /// photo's own rounding so the zoom starts from the real rounded rect
     /// instead of a square that snaps rounded. A `nil` namespace is a

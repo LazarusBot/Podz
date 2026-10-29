@@ -23,7 +23,7 @@ struct ShareFolderSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                CloseButton(action: { dismiss() })
+                CloseButton(style: .pill, size: 44, action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -31,12 +31,11 @@ struct ShareFolderSheet: View {
 
             VStack(spacing: 4) {
                 Text("Share \"\(folder.name)\"")
-                    .font(AppFont.pillLabel(20))
-                    .fontWeight(.bold)
-                    .foregroundColor(.black)
+                    .font(AppFont.semiBoldLabel(20))
+                    .foregroundColor(.homeText)
                 Text("Friends you turn on can view this folder, read-only.")
                     .font(AppFont.regularLabel(13))
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
@@ -46,7 +45,7 @@ struct ShareFolderSheet: View {
             if friendsStore.friends.isEmpty {
                 Text("Add some friends first — nobody to share with yet.")
                     .font(AppFont.regularLabel(14))
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
                 Spacer()
@@ -62,7 +61,7 @@ struct ShareFolderSheet: View {
                 }
             }
         }
-        .background(Color.appHomeBackground)
+        .background(Color.homeBackground)
         .task { await friendsStore.fetchAll() }
         .alert("Couldn't update sharing", isPresented: Binding(
             get: { errorMessage != nil },
@@ -82,12 +81,12 @@ struct ShareFolderSheet: View {
             AvatarView(imageName: profile?.avatarURL, size: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(profile?.displayName ?? "Someone")
-                    .font(AppFont.pillLabelBold(15))
-                    .foregroundColor(.black)
+                    .font(AppFont.semiBoldLabel(15))
+                    .foregroundColor(.homeText)
                 if let username = profile?.username {
                     Text("@\(username)")
                         .font(AppFont.regularLabel(13))
-                        .foregroundColor(.appTextMuted)
+                        .foregroundColor(.homeSubtitle)
                 }
             }
             Spacer()
@@ -101,7 +100,7 @@ struct ShareFolderSheet: View {
                     set: { newValue in toggleAccess(for: friendId, grant: newValue) }
                 ))
                 .labelsHidden()
-                .tint(.black)
+                .tint(.homeText)
             }
         }
         .padding(.horizontal, 24)
