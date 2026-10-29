@@ -120,11 +120,11 @@ struct LikesFolderCard: View {
                         .fill(.ultraThinMaterial)
                         .overlay(
                             FolderShape(tabHeightRatio: 0.10, cornerRadius: side * 0.12)
-                                .fill(Color.appAccentBlack.opacity(0.06))
+                                .fill(Color.homeText.opacity(0.06))
                         )
                         .overlay(
                             FolderShape(tabHeightRatio: 0.10, cornerRadius: side * 0.12)
-                                .stroke(Color.white.opacity(0.7), lineWidth: 0.5)
+                                .stroke(Color.homeFrostRimBack, lineWidth: 0.5)
                         )
                         .frame(height: backPanelHeight)
 
@@ -171,11 +171,11 @@ struct LikesFolderCard: View {
                             .fill(.ultraThinMaterial)
                             .overlay(
                                 RoundedRectangle(cornerRadius: side * 0.12)
-                                    .fill(Color.white.opacity(0.18))
+                                    .fill(Color.homeFrostFill)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: side * 0.12)
-                                    .strokeBorder(Color.white.opacity(0.5), lineWidth: 0.5)
+                                    .strokeBorder(Color.homeFrostRim, lineWidth: 0.5)
                             )
                             .shadow(color: .black.opacity(0.08), radius: 3, y: 2)
                         
@@ -210,8 +210,8 @@ struct LikesFolderCard: View {
                                         // behind it blocks that bleed-
                                         // through regardless of what's
                                         // mid-transition on top.
-                                        .background(Circle().fill(Color.white))
-                                        .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                                        .background(Circle().fill(Color.homeBackground))
+                                        .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
                                         .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                 }
                             }
@@ -228,7 +228,7 @@ struct LikesFolderCard: View {
                                 .foregroundColor(.white)
                                 .frame(width: 22, height: 22)
                                 .background(Circle().fill(Color.red))
-                                .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                                .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
                                 .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                         }
                         .accessibilityLabel("Remove folder")
@@ -251,7 +251,7 @@ struct LikesFolderCard: View {
                 TextField("Folder name", text: editableName)
                     .font(AppFont.pillLabel(nameFontSize * scale))
                     .fontWeight(.semibold)
-                    .foregroundColor(.black)
+                    .foregroundColor(.homeText)
                     .multilineTextAlignment(.center)
                     .focused($isNameFocused)
                     .submitLabel(.done)
@@ -261,7 +261,7 @@ struct LikesFolderCard: View {
                 Text(country ?? "")
                     .font(AppFont.pillLabel(nameFontSize * scale))
                     .fontWeight(.semibold)
-                    .foregroundColor(.black)
+                    .foregroundColor(.homeText)
                     .lineLimit(1)
             }
         }
@@ -290,11 +290,11 @@ private struct PodCountBadge: View {
         // their own otherwise.
         Text("\(count)")
             .font(.system(size: 11, weight: .bold))
-            .foregroundColor(.white)
+            .foregroundColor(.homeBackground)
             .contentTransition(.numericText(value: Double(count)))
             .frame(minWidth: 22, minHeight: 22)
-            .background(Circle().fill(Color.appAccentBlack))
-            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+            .background(Circle().fill(Color.homeText))
+            .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
             .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
     }
 }

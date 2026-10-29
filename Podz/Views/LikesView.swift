@@ -96,7 +96,7 @@ struct LikesView: View {
                             withAnimation { isEditMode = false }
                         }
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.appAccentBlack)
+                        .foregroundColor(.homeText)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -159,7 +159,7 @@ struct LikesView: View {
         } action: { _, newValue in
             scrollState.updateOffset(newValue)
         }
-        .background(Color.appHomeBackground)
+        .background(Color.homeBackground)
         // Needed to resolve friendIdsWithAccess into actual avatar URLs
         // for LikesFolderCard's shared-with stack — nothing else in this
         // view's own reachable path guarantees FriendsStore has loaded.
@@ -217,6 +217,8 @@ struct LikesView: View {
                 // full sheet, same reasoning as PostComposerView.
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+                // Not restyled yet.
+                .preferredColorScheme(.light)
         }
     }
 

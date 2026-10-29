@@ -39,6 +39,7 @@ color, a button style or a pattern.** Check it before every commit/push.
 | Pill border | `homeBackground` (the ground, so it reads as a gap) | | |
 | Welcome collage outline | `onbCollageOutline` | clear | white 25% |
 | Error text | `appBadgeRed` | | |
+| Frosted folders (Likes): milky fill / front rim / back rim | `homeFrostFill` / `homeFrostRim` / `homeFrostRimBack` | white 18% / 50% / 70% | white 7% / 20% / 22% |
 
 `home*` tokens live in `Podz/Home/HomeTheme.swift`, `onb*` in
 `Podz/Onboarding/OnboardingTheme.swift` (PR #50). They are the same palette:
@@ -96,7 +97,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 ## Appearance
 
-Onboarding, Home, the pod detail and the Likes folder view follow the system appearance. Everything else (the Likes overview, Profile, the host shell, sheets such as Book and the folder picker) has no dark palette yet and forces light with `.preferredColorScheme(.light)`. A screen inside a light-forced tab opts in to dark through `AppearanceState` (the Likes folder view does, so the pod detail opened from it is dark too).
+Onboarding, Home, the Likes tab (overview and folder view) and the pod detail follow the system appearance. Everything else (Profile, the host shell, sheets such as Book, the folder picker and the share-folder sheet) has no dark palette yet and forces light with `.preferredColorScheme(.light)`.
 
 ## Before you push UI
 

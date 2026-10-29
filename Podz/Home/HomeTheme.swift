@@ -37,3 +37,11 @@ extension Color {
         dark: Color.white.opacity(0.88)
     )
 }
+
+extension Color {
+    /// The frosted-glass folders of the Likes tab: the milky fill over the
+    /// material, and the thin rims (front panel / back panel).
+    static let homeFrostFill = Color(light: Color.white.opacity(0.18), dark: Color.white.opacity(0.07))
+    static let homeFrostRim = Color(light: Color.white.opacity(0.5), dark: Color.white.opacity(0.2))
+    static let homeFrostRimBack = Color(light: Color.white.opacity(0.7), dark: Color.white.opacity(0.22))
+}
