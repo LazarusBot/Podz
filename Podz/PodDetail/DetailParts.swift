@@ -17,6 +17,21 @@ enum DetailLayout {
     }
 }
 
+/// The fade into the ground that content scrolls under, behind the control
+/// stack: clear over the top half, solid `homeBackground` at the bottom edge.
+/// Used by the Likes folder view, the Likes tab and the save-to-folder sheet.
+struct BottomFade: View {
+    var body: some View {
+        LinearGradient(
+            stops: [.init(color: .clear, location: 0.5), .init(color: .homeBackground, location: 1)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
 /// The swipeable photo on top: rounded only along the bottom, Lenny's badge
 /// half over its bottom edge, the pager dots fanned above the badge. One
 /// slot per page (`nil` draws the placeholder).
