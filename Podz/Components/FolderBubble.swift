@@ -1,17 +1,18 @@
 import SwiftUI
 
-/// One folder as a bubble (Paper "LikesFolderSheet"): a big flat circle in
-/// the pill color with the folder's name in the middle, and up to two of its
-/// pods' photos tucked against its edge at half strength. Laid out 300 across;
-/// `FolderBubbleCanvas` scales it down when there are several.
+/// One folder as a bubble (Paper "LikesFolderSheet"): a flat shape in the
+/// pill color with the folder's name in the middle, and up to two of its
+/// pods' photos tucked inside its edge at half strength. Its size and the
+/// flat cuts where neighbors press in come from its `FoamCell`
+/// (`FolderBubbleCanvas` packs them).
 struct FolderBubble: View {
+    let cell: FoamCell
     let name: String
     /// A quiet line under the name, e.g. "by Léa" on a folder shared with you.
     var subtitle: String? = nil
     let pods: [Pod]
     let photoURLs: [UUID: String]
-    /// Bubbles on the right of the zig-zag mirror their photos, so the
-    /// photos stay toward the middle of the screen.
+    /// Alternate bubbles mirror their photos, so the photos don't line up.
     var mirrored = false
     /// Avatars of friends the folder is shared with, under the name.
     var sharedWithAvatarURLs: [String] = []
@@ -26,15 +27,15 @@ struct FolderBubble: View {
     var onDelete: () -> Void = {}
     var onLongPress: () -> Void = {}
     var onTap: () -> Void = {}
-    /// Cancels the canvas's scaling for the text and badges, so they keep
-    /// their real size on a shrunken bubble.
-    var textScale: CGFloat = 1
 
-    static let diameter: CGFloat = 300
+    /// The Paper frame's full-size bubble: 300 across.
+    static let referenceRadius: CGFloat = 150
     static let photoSize = CGSize(width: 119, height: 141)
 
-    /// Where the photos sit, from the circle's center, in points.
+    /// Where the photos sit at full size, from the center, in points.
     private static let photoOffsets: [CGSize] = [CGSize(width: 79, height: -89), CGSize(width: -71, height: 97)]
+
+    private var scale: CGFloat { cell.radius / Self.referenceRadius }
 
     @FocusState private var nameFocused: Bool
     @State private var isPressed = false
@@ -42,27 +43,31 @@ struct FolderBubble: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(Color.homePill)
+            FoamCellView(cell: cell)
 
-            ForEach(Array(pods.prefix(2).enumerated()), id: \.element.id) { index, pod in
-                let offset = Self.photoOffsets[index]
-                BubblePhoto(url: photoURLs[pod.id])
-                    .opacity(0.55)
-                    .offset(x: mirrored ? -offset.width : offset.width, y: offset.height)
-                    // A newly added pod pops in rather than swapping
-                    // silently.
-                    .transition(.scale(scale: 0.4).combined(with: .opacity))
+            // Photos stay inside the bubble: cut off at its edges.
+            ZStack {
+                ForEach(Array(pods.prefix(2).enumerated()), id: \.element.id) { index, pod in
+                    let offset = Self.photoOffsets[index]
+                    BubblePhoto(url: photoURLs[pod.id])
+                        .scaleEffect(scale)
+                        .opacity(0.55)
+                        .offset(x: (mirrored ? -offset.width : offset.width) * scale, y: offset.height * scale)
+                        // A newly added pod pops in rather than swapping
+                        // silently.
+                        .transition(.scale(scale: 0.4).combined(with: .opacity))
+                }
             }
+            .mask(FoamCellView(cell: cell, color: .black))
 
             label
-                .scaleEffect(textScale)
 
             if let incomingDropContent {
-                incomingDropContent(Self.diameter)
+                incomingDropContent(cell.radius * 2)
             }
         }
-        .frame(width: Self.diameter, height: Self.diameter)
-        .overlay(alignment: .topTrailing) { deleteBadge }
+        .frame(width: cell.radius * 2, height: cell.radius * 2)
+        .overlay { deleteBadge }
         .contentShape(Circle())
         .scaleEffect(isPressed ? 0.98 : 1)
         .rotationEffect(.degrees(isWiggling ? wiggleAngle : 0))
@@ -105,14 +110,14 @@ struct FolderBubble: View {
                 .submitLabel(.done)
                 .onSubmit { onCommitName?() }
                 .onAppear { nameFocused = true }
-                .frame(width: 170)
+                .frame(width: min(170, cell.radius * 1.5))
         } else {
             VStack(spacing: 6) {
                 Text(name)
                     .font(AppFont.semiBoldLabel(15))
                     .foregroundColor(.homeText)
                     .lineLimit(1)
-                    .frame(maxWidth: 200)
+                    .frame(maxWidth: cell.radius * 1.5)
 
                 if let subtitle {
                     Text(subtitle)
@@ -151,9 +156,8 @@ struct FolderBubble: View {
                     .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
             }
             .accessibilityLabel("Remove folder")
-            .scaleEffect(textScale)
             // On the rim, at about two o'clock.
-            .offset(x: -Self.diameter * 0.1, y: Self.diameter * 0.1)
+            .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
             .transition(.scale.combined(with: .opacity))
         }
     }

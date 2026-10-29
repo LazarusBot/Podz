@@ -118,10 +118,16 @@ struct LikesView: View {
                 if likesItems.isEmpty {
                     emptyState
                 } else {
-                    FolderBubbleCanvas(items: likesItems, width: UIScreen.main.bounds.width, bottomRoom: 100) { item, index, textScale in
+                    FolderBubbleCanvas(
+                        items: likesItems,
+                        podCount: podCount(of:),
+                        width: UIScreen.main.bounds.width,
+                        bottomRoom: 100
+                    ) { item, index, cell in
                         switch item {
                         case .own(let folder):
                             FolderBubble(
+                                cell: cell,
                                 name: folder.name,
                                 pods: pods(in: folder),
                                 photoURLs: podsStore.primaryPhotoByPodId,
@@ -131,19 +137,18 @@ struct LikesView: View {
                                 isWiggling: isEditMode,
                                 onDelete: { folderPendingDeletion = folder },
                                 onLongPress: { withAnimation { isEditMode = true } },
-                                onTap: { selectedFolder = folder },
-                                textScale: textScale
+                                onTap: { selectedFolder = folder }
                             )
                         case .shared(let folder):
                             // Who it came from, on the bubble itself.
                             FolderBubble(
+                                cell: cell,
                                 name: folder.name,
                                 subtitle: friendsStore.profilesById[folder.ownerId].map { "by \($0.displayName)" },
                                 pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
                                 photoURLs: podsStore.primaryPhotoByPodId,
                                 mirrored: index % 2 == 1,
-                                onTap: { selectedSharedFolder = folder },
-                                textScale: textScale
+                                onTap: { selectedSharedFolder = folder }
                             )
                         }
                     }
@@ -198,6 +203,13 @@ struct LikesView: View {
             }
         }
     }
+    private func podCount(of item: LikesItem) -> Int {
+        switch item {
+        case .own(let folder): pods(in: folder).count
+        case .shared(let folder): likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods).count
+        }
+    }
+
     /// Your folders, then the ones shared with you, as one run of bubbles.
     private var likesItems: [LikesItem] {
         likesStore.folders.map(LikesItem.own) + likesStore.foldersSharedWithMe.map(LikesItem.shared)

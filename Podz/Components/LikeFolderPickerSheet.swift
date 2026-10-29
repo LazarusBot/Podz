@@ -34,6 +34,13 @@ struct LikeFolderPickerSheet: View {
         }
     }
 
+    private func podCount(of slot: Slot) -> Int {
+        switch slot {
+        case .folder(let folder): likesStore.pods(in: folder.id, from: PodsStore.shared.pods).count
+        case .creating: 0
+        }
+    }
+
     private var slots: [Slot] {
         likesStore.folders.map(Slot.folder) + (isCreatingFolder ? [.creating] : [])
     }
@@ -50,8 +57,13 @@ struct LikeFolderPickerSheet: View {
 
                 GeometryReader { proxy in
                     ScrollView {
-                        FolderBubbleCanvas(items: slots, width: proxy.size.width, bottomRoom: 170) { slot, index, textScale in
-                            bubble(for: slot, index: index, textScale: textScale)
+                        FolderBubbleCanvas(
+                            items: slots,
+                            podCount: podCount(of:),
+                            width: proxy.size.width,
+                            bottomRoom: 170
+                        ) { slot, index, cell in
+                            bubble(for: slot, index: index, cell: cell)
                         }
                     }
                 }
@@ -64,10 +76,11 @@ struct LikeFolderPickerSheet: View {
     }
 
     @ViewBuilder
-    private func bubble(for slot: Slot, index: Int, textScale: CGFloat) -> some View {
+    private func bubble(for slot: Slot, index: Int, cell: FoamCell) -> some View {
         switch slot {
         case .folder(let folder):
             FolderBubble(
+                cell: cell,
                 name: folder.name,
                 pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
                 photoURLs: PodsStore.shared.primaryPhotoByPodId,
@@ -78,14 +91,13 @@ struct LikeFolderPickerSheet: View {
                 incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
                     AnyView(
                         BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
-                            .scaleEffect(dropStage.scale)
+                            .scaleEffect(dropStage.scale * diameter / (FolderBubble.referenceRadius * 2))
                             .rotationEffect(.degrees(dropStage.rotationDegrees))
                             .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)
                             .allowsHitTesting(false)
                     )
                 } : nil,
-                onTap: { saveLike(into: folder.id) },
-                textScale: textScale
+                onTap: { saveLike(into: folder.id) }
             )
             // The freshly-created folder pops in with its pod already
             // inside — the "put the pod in it" moment commitNewFolder() is
@@ -93,13 +105,13 @@ struct LikeFolderPickerSheet: View {
             .transition(.scale(scale: 0.7).combined(with: .opacity))
         case .creating:
             FolderBubble(
+                cell: cell,
                 name: "",
                 pods: [],
                 photoURLs: [:],
                 mirrored: index % 2 == 1,
                 editableName: $newFolderName,
-                onCommitName: commitNewFolder,
-                textScale: textScale
+                onCommitName: commitNewFolder
             )
             .transition(.opacity)
         }
