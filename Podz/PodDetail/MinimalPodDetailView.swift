@@ -5,9 +5,10 @@ import SwiftUI
 /// **Stack:** a tall photo you swipe through (its pager dots fan out above
 /// Lenny's badge), the pod's name and altitude, a two-line teaser and the
 /// back / Book pills.
-/// **Extended:** swipe up on the photo or title (or tap the title) and the
+/// **Extended:** tap anywhere between the photo and the buttons and the
 /// photo shrinks to make room for the full description and the pod's
-/// details; swipe down or tap again to go back.
+/// details; tap again to go back. Paging through the photos is the only
+/// swipe on this screen.
 struct MinimalPodDetailView: View {
     let pod: Pod
     var onBack: () -> Void
@@ -40,21 +41,25 @@ struct MinimalPodDetailView: View {
             let photoHeight = screenHeight * (isExtended ? Self.extendedPhotoShare : Self.stackedPhotoShare)
 
             VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    photoPager(width: proxy.size.width, height: photoHeight)
-                    titleBlock
-                }
-                .contentShape(Rectangle())
-                .simultaneousGesture(expandGesture)
+                photoPager(width: proxy.size.width, height: photoHeight)
 
-                if isExtended {
-                    details
-                        .transition(.opacity)
-                } else {
-                    teaser
-                        .transition(.opacity)
-                    Spacer(minLength: 0)
+                // Everything between the photo and the buttons is one tap
+                // target: a tap anywhere here extends or collapses.
+                VStack(spacing: 0) {
+                    titleBlock
+
+                    if isExtended {
+                        details
+                            .transition(.opacity)
+                    } else {
+                        teaser
+                            .transition(.opacity)
+                        Spacer(minLength: 0)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture { toggleExtended() }
 
                 actionRow
                     .padding(.bottom, proxy.safeAreaInsets.bottom + 40)
@@ -156,8 +161,6 @@ struct MinimalPodDetailView: View {
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
             .padding(.top, 50)
-            .contentShape(Rectangle())
-            .onTapGesture { toggleExtended() }
     }
 
     private var titleText: Text {
@@ -263,18 +266,6 @@ struct MinimalPodDetailView: View {
 
     private func toggleExtended() {
         withAnimation(.smooth(duration: 0.45)) { isExtended.toggle() }
-    }
-
-    /// Mostly-vertical swipes only, so paging through photos is untouched.
-    private var expandGesture: some Gesture {
-        DragGesture(minimumDistance: 24)
-            .onEnded { value in
-                let vertical = value.translation.height
-                guard abs(vertical) > abs(value.translation.width) * 1.5 else { return }
-                let wantsExtended = vertical < 0
-                guard wantsExtended != isExtended else { return }
-                withAnimation(.smooth(duration: 0.45)) { isExtended = wantsExtended }
-            }
     }
 }
 
