@@ -62,14 +62,7 @@ struct LikeFolderPickerSheet: View {
                             // it there for free, no manual occlusion.
                             incomingDropContent: folder.id == savingIntoFolderId ? { side in
                                 AnyView(
-                                    PodPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
-                                        .frame(width: side * 0.5, height: side * 0.5)
-                                        .clipShape(RoundedRectangle(cornerRadius: side * 0.06, style: .continuous))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: side * 0.06, style: .continuous)
-                                                .strokeBorder(Color.white, lineWidth: 2)
-                                        )
-                                        .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+                                    FolderFanPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], side: side)
                                         .scaleEffect(dropStage.scale)
                                         .rotationEffect(.degrees(dropStage.rotationDegrees))
                                         .offset(x: dropStage.xFraction * side, y: dropStage.yFraction * side)

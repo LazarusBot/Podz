@@ -132,14 +132,7 @@ struct LikesFolderCard: View {
                     // back panel's top edge so they read as "coming
                     // out of" the folder rather than floating above it.
                     ForEach(Array(previewPods.enumerated()), id: \.element.id) { index, pod in
-                        PodPhoto(url: photoURLs[pod.id])
-                            .frame(width: side * 0.58, height: side * 0.58)
-                            .clipShape(RoundedRectangle(cornerRadius: side * 0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: side * 0.06)
-                                    .strokeBorder(Color.white, lineWidth: 2)
-                            )
-                            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                        FolderFanPhoto(url: photoURLs[pod.id], side: side)
                             // Temporarily disabled (commented, not
                             // removed) to see the new like-drop animation
                             // without the press animation competing —
@@ -151,7 +144,9 @@ struct LikesFolderCard: View {
                             // .scaleEffect(isPressed ? 0.85 : 1)
                             // .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
                             .rotationEffect(.degrees(rotation(for: index)))
-                            .offset(x: xOffset(for: index, side: side), y: -side * 0.22)
+                            // Taller photos than the old squares, so sit lower: the tops still
+                            // clear the back panel by the same margin.
+                            .offset(x: xOffset(for: index, side: side), y: -side * 0.15)
                             // Without this, a newly-added photo (the
                             // `pods` this card was given just grew by
                             // one) just silently appears in the fan —
