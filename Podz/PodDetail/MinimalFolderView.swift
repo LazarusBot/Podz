@@ -58,8 +58,14 @@ struct MinimalFolderView: View {
         .background(Color.homeBackground.ignoresSafeArea())
         // This screen replaces the tab's content, so the floating tab bar
         // would sit on top of the buttons.
-        .onAppear { TabBarVisibilityState.shared.isHidden = true }
-        .onDisappear { TabBarVisibilityState.shared.isHidden = false }
+        .onAppear {
+            TabBarVisibilityState.shared.isHidden = true
+            AppearanceState.shared.followsSystem = true
+        }
+        .onDisappear {
+            TabBarVisibilityState.shared.isHidden = false
+            AppearanceState.shared.followsSystem = false
+        }
     }
 
     private var actionRow: some View {

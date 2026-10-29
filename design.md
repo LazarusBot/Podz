@@ -96,7 +96,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 ## Appearance
 
-Onboarding, Home and the pod detail follow the system appearance. Everything else (Likes, Profile, the host shell, sheets such as Book and the folder picker) has no dark palette yet and forces light with `.preferredColorScheme(.light)`.
+Onboarding, Home, the pod detail and the Likes folder view follow the system appearance. Everything else (the Likes overview, Profile, the host shell, sheets such as Book and the folder picker) has no dark palette yet and forces light with `.preferredColorScheme(.light)`. A screen inside a light-forced tab opts in to dark through `AppearanceState` (the Likes folder view does, so the pod detail opened from it is dark too).
 
 ## Before you push UI
 

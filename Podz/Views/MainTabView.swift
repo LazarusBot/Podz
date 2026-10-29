@@ -6,6 +6,7 @@ struct MainTabView: View {
     @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
     @StateObject private var tabBarVisibility = TabBarVisibilityState.shared
+    @StateObject private var appearance = AppearanceState.shared
     // Loaded here, not just from MailboxView's own `.task` — the tab
     // bar's unread badge needs to be accurate from the moment the app
     // opens, not only after the user has visited Mailbox at least once
@@ -80,8 +81,9 @@ struct MainTabView: View {
         .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())
         // Home follows the system appearance; the other tabs have no dark
-        // palette yet, so they (and the tab bar over them) stay light.
-        .preferredColorScheme(selectedTab == .feed ? nil : .light)
+        // palette yet, so they (and the tab bar over them) stay light —
+        // except a screen that has opted in (the Likes folder view).
+        .preferredColorScheme(selectedTab == .feed || appearance.followsSystem ? nil : .light)
         .task {
             await messagesStore.fetchAll()
             messagesStore.startRealtimeIfNeeded()
