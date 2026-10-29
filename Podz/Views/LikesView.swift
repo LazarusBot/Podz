@@ -105,8 +105,8 @@ struct LikesView: View {
                 if likesStore.folders.isEmpty {
                     emptyState
                 } else {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                        ForEach(likesStore.folders) { folder in
+                    trayStack {
+                        ForEach(Array(likesStore.folders.enumerated()), id: \.element.id) { index, folder in
                             LikesFolderCard(
                                 country: folder.name,
                                 pods: pods(in: folder),
@@ -119,36 +119,28 @@ struct LikesView: View {
                                 },
                                 sharedWithAvatarURLs: sharedWithAvatarURLs(for: folder)
                             )
+                            .zIndex(Double(likesStore.folders.count - index))
                         }
                     }
-                    .padding(.horizontal, 24)
                 }
 
                 if !likesStore.foldersSharedWithMe.isEmpty {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                        ForEach(likesStore.foldersSharedWithMe) { folder in
-                            VStack(spacing: 2) {
-                                // Owner's avatar in the same bottom-left
-                                // spot owner-side cards show the friend
-                                // they shared with — same visual language
-                                // either direction, plus the "by X" caption
-                                // underneath for the actual name.
-                                LikesFolderCard(
-                                    country: folder.name,
-                                    pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
-                                    photoURLs: podsStore.primaryPhotoByPodId,
-                                    onTap: { selectedSharedFolder = folder },
-                                    sharedWithAvatarURLs: [friendsStore.profilesById[folder.ownerId]?.avatarURL].compactMap { $0 }
-                                )
-                                if let owner = friendsStore.profilesById[folder.ownerId] {
-                                    Text("by \(owner.displayName)")
-                                        .font(AppFont.regularLabel(12))
-                                        .foregroundColor(.appTextMuted)
-                                }
-                            }
+                    trayStack {
+                        ForEach(Array(likesStore.foldersSharedWithMe.enumerated()), id: \.element.id) { index, folder in
+                            // The owner's avatar and "by X" on the lip, the
+                            // same corner owner-side trays show who they're
+                            // shared with.
+                            LikesFolderCard(
+                                country: folder.name,
+                                subtitle: friendsStore.profilesById[folder.ownerId].map { "by \($0.displayName)" },
+                                pods: likesStore.pods(inSharedFolder: folder.id, from: podsStore.pods),
+                                photoURLs: podsStore.primaryPhotoByPodId,
+                                onTap: { selectedSharedFolder = folder },
+                                sharedWithAvatarURLs: [friendsStore.profilesById[folder.ownerId]?.avatarURL].compactMap { $0 }
+                            )
+                            .zIndex(Double(likesStore.foldersSharedWithMe.count - index))
                         }
                     }
-                    .padding(.horizontal, 24)
                 }
 
                 Color.clear.frame(height: 100)
@@ -200,6 +192,16 @@ struct LikesView: View {
             }
         }
     }
+    /// The trays in one column, each tucked a little under the one above:
+    /// the earlier tray is in front, so its lip rests on the next tray's
+    /// back wall.
+    private func trayStack<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: -22) {
+            content()
+        }
+        .padding(.horizontal, 24)
+    }
+
     // MARK: - Inside one folder
 
     private func folderContentView(folder: LikeFolder) -> some View {

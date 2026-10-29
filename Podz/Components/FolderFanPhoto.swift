@@ -1,10 +1,8 @@
 import SwiftUI
 
-/// The photo that fans out of a Likes folder and the one that drops into it
-/// while you save a like. Same shape as the folder screen's tiles (portrait
+/// The photo that drops into a Likes folder while you save a like. Same shape as the folder screen's tiles (portrait
 /// 166 x 216, radius 36 continuous), flat: no white border, no shadow
-/// (`design.md`). `side` is the folder icon's own side, which everything on
-/// the card is measured from.
+/// (`design.md`). `side` is twice the width it is drawn at.
 struct FolderFanPhoto: View {
     let url: String?
     let side: CGFloat

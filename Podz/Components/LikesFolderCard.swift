@@ -7,52 +7,39 @@
 
 import SwiftUI
 
-/// A Likes folder: a flat tray (see `FolderTray`) with the pod photos
-/// standing in it, and the folder's name below.
+/// A Likes folder as a paper tray (see `PaperTray`), with the tap, press,
+/// long-press and edit-mode wiggle behavior the folder cards always had.
 struct LikesFolderCard: View {
     var country: String? = nil
+    var subtitle: String? = nil
     let pods: [Pod]
     var photoURLs: [UUID: String] = [:]
-    var scale: CGFloat = 1
-    /// Base point size for the folder name label/field, before `scale`.
-    /// Overridable per call site — LikeFolderPickerSheet wants it larger
-    /// than the default LikesView grid does.
-    var nameFontSize: CGFloat = 16
     var onTap: () -> Void = {}
-    /// When set, the caption becomes an editable, auto-focused TextField
-    /// instead of static text — used for the "creating a new folder"
-    /// state in LikeFolderPickerSheet.
+    /// When set, the top sheet becomes an editable, auto-focused name field
+    /// — the "creating a new folder" state in LikeFolderPickerSheet.
     var editableName: Binding<String>? = nil
     var onCommitName: (() -> Void)? = nil
     var showDeleteBadge: Bool = false
     var isWiggling: Bool = false
     var onDelete: () -> Void = {}
     var onLongPress: () -> Void = {}
-    /// Extra content layered between the fanned photos and the opaque
-    /// front panel — i.e. genuinely *behind* the front panel, not just
-    /// drawn on top of this whole card from outside. Takes this view's
-    /// own measured `side` (the icon's square size) so a caller can
-    /// position/size things correctly without re-measuring or guessing
-    /// it externally. Used by LikeFolderPickerSheet's "drop a pod into
-    /// this folder" animation, which needs to visually duck behind the
-    /// front panel as it lands — nil for every other call site.
+    /// Extra content layered between the sheets and the front lip — i.e.
+    /// genuinely *behind* the lip, not drawn on top of the whole card. Takes
+    /// the tray's width. Used by LikeFolderPickerSheet's "drop a pod into
+    /// this folder" animation; nil for every other call site.
     var incomingDropContent: ((CGFloat) -> AnyView)? = nil
-    /// Avatars of friends this folder is currently shared with (read-only
-    /// access, see ShareFolderSheet) — shown as a small overlapping stack
-    /// on the front panel's bottom-leading corner, mirroring the count
-    /// badge's own bottom-trailing corner.
+    /// Avatars of friends this folder is shared with (or its owner, when it
+    /// was shared with you), on the lip's leading corner.
     var sharedWithAvatarURLs: [String] = []
     @State private var isPressed = false
     @State private var wiggleAngle: Double = 0
-    @FocusState private var isNameFocused: Bool
-    
-    private var previewPods: [Pod] { Array(pods.prefix(3)) }
+
     private var isEditing: Bool { editableName != nil }
-    
+
     var body: some View {
         Group {
             if isEditing {
-                folderVisual
+                tray
             } else {
                 Button {
                     guard !showDeleteBadge else { return }
@@ -64,7 +51,7 @@ struct LikesFolderCard: View {
                         onTap()
                     }
                 } label: {
-                    folderVisual
+                    tray
                 }
                 .buttonStyle(NoFadeButtonStyle())
                 .simultaneousGesture(
@@ -86,11 +73,12 @@ struct LikesFolderCard: View {
                 )
             }
         }
+        .scaleEffect(isPressed ? 0.98 : 1)
         .rotationEffect(.degrees(isWiggling ? wiggleAngle : 0))
         .onChange(of: isWiggling) { _, wiggling in
             if wiggling {
                 withAnimation(.easeInOut(duration: 0.12).repeatForever(autoreverses: true)) {
-                    wiggleAngle = Double.random(in: 1.2...1.8)
+                    wiggleAngle = Double.random(in: 0.8...1.2)
                 }
             } else {
                 withAnimation(.linear(duration: 0)) { wiggleAngle = 0 }
@@ -104,47 +92,27 @@ struct LikesFolderCard: View {
             }
         }
     }
-    private var folderVisual: some View {
-        VStack(spacing: 10) {
-            FolderTray(
-                previewPods: previewPods,
-                photoURLs: photoURLs,
-                totalCount: pods.count,
-                sharedWithAvatarURLs: sharedWithAvatarURLs,
-                incomingDropContent: incomingDropContent,
-                showDeleteBadge: showDeleteBadge,
-                scale: scale,
-                onDelete: onDelete
-            )
-            .padding(.top, 8)
-            
-            if let editableName {
-                TextField("Folder name", text: editableName)
-                    .font(AppFont.pillLabel(nameFontSize * scale))
-                    .fontWeight(.semibold)
-                    .foregroundColor(.homeText)
-                    .multilineTextAlignment(.center)
-                    .focused($isNameFocused)
-                    .submitLabel(.done)
-                    .onSubmit { onCommitName?() }
-                    .onAppear { isNameFocused = true }
-            } else {
-                Text(country ?? "")
-                    .font(AppFont.pillLabel(nameFontSize * scale))
-                    .fontWeight(.semibold)
-                    .foregroundColor(.homeText)
-                    .lineLimit(1)
-            }
-        }
-        .scaleEffect(scale)
+
+    private var tray: some View {
+        PaperTray(
+            name: country ?? "",
+            subtitle: subtitle,
+            pods: pods,
+            photoURLs: photoURLs,
+            editableName: editableName,
+            onCommitName: onCommitName,
+            sharedWithAvatarURLs: sharedWithAvatarURLs,
+            incomingDropContent: incomingDropContent,
+            showDeleteBadge: showDeleteBadge,
+            onDelete: onDelete
+        )
     }
 }
 
 /// Same as .plain, but explicitly locks opacity to 1 regardless of
 /// press state — some system button styles subtly dim content on press
-/// even with .plain, which fought against the folder's own base
-/// transparency. The photo/panel animations already provide press
-/// feedback, so no extra dimming is needed on top.
+/// even with .plain. The press scale already provides feedback, so no
+/// extra dimming is needed on top.
 private struct NoFadeButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.opacity(1)

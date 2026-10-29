@@ -37,39 +37,29 @@ struct LikeFolderPickerSheet: View {
                 .padding(.bottom, 20)
 
             ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(likesStore.folders) { folder in
+                VStack(spacing: -22) {
+                    ForEach(Array(likesStore.folders.enumerated()), id: \.element.id) { index, folder in
                         LikesFolderCard(
                             country: folder.name,
                             pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
                             photoURLs: PodsStore.shared.primaryPhotoByPodId,
-                            scale: 0.8,
-                            nameFontSize: 25,
                             onTap: { saveLike(into: folder.id) },
-                            // Genuinely behind LikesFolderCard's own
-                            // front panel (see its `incomingDropContent`
-                            // doc) — an external .overlay() on the whole
-                            // card, tried previously, can only ever draw
-                            // on top of everything, which is why the
-                            // photo used to visibly land above/on the
-                            // folder instead of appearing to enter it.
-                            // Positioned in fractions of `side`, the same
-                            // coordinate system LikesFolderCard's own
-                            // fanned photos use (offset from the icon's
-                            // bottom-center) — landed's y sits inside the
-                            // zone the front panel actually covers, so
-                            // the panel drawn after this in z-order hides
-                            // it there for free, no manual occlusion.
-                            incomingDropContent: folder.id == savingIntoFolderId ? { side in
+                            // Behind the tray's front lip (see
+                            // `incomingDropContent`'s doc), so the photo
+                            // visibly goes *into* the tray. Positioned in
+                            // fractions of the tray's width, from its
+                            // bottom-center.
+                            incomingDropContent: folder.id == savingIntoFolderId ? { width in
                                 AnyView(
-                                    FolderFanPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], side: side)
+                                    FolderFanPhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], side: width * 0.4)
                                         .scaleEffect(dropStage.scale)
                                         .rotationEffect(.degrees(dropStage.rotationDegrees))
-                                        .offset(x: dropStage.xFraction * side, y: dropStage.yFraction * side)
+                                        .offset(x: dropStage.xFraction * width, y: dropStage.yFraction * width)
                                         .allowsHitTesting(false)
                                 )
                             } : nil
                         )
+                        .zIndex(Double(likesStore.folders.count - index + 1))
                         // The freshly-created folder pops in with its pod
                         // already inside instead of just silently
                         // appearing — the "put the pod in it" moment
@@ -80,18 +70,18 @@ struct LikeFolderPickerSheet: View {
                     if isCreatingFolder {
                         LikesFolderCard(
                             pods: [],
-                            scale: 0.8,
-                            nameFontSize: 25,
                             editableName: $newFolderName,
                             onCommitName: commitNewFolder
                         )
                         .transition(.opacity)
                     } else {
                         newFolderTile
+                            .padding(.top, 22)
                             .transition(.opacity)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
             }
 
             Spacer(minLength: 0)
@@ -99,7 +89,7 @@ struct LikeFolderPickerSheet: View {
         .background(Color.homeBackground)
     }
 
-    /// Dashed-outline empty folder tile — tap to start creating.
+    /// Dashed-outline empty tile — tap to start creating.
     private var newFolderTile: some View {
         Button {
             withAnimation(.easeOut(duration: AppMotion.snappy)) {
@@ -107,39 +97,20 @@ struct LikeFolderPickerSheet: View {
                 newFolderName = ""
             }
         } label: {
-            VStack(spacing: 10) {
-                // Outer footprint stays a plain square (aspectRatio 1,
-                // same as LikesFolderCard's own GeometryReader square) —
-                // shrinking the *outer* frame to the landscape ratio (the
-                // previous attempt) desynced this tile's row height from
-                // a real folder's whenever they land in the same grid
-                // row, since LazyVGrid rows size to their tallest cell.
-                // Bottom-anchoring a shorter, landscape dashed rect
-                // inside the same square footprint gets the folder-like
-                // proportions without disturbing that shared height —
-                // exactly how LikesFolderCard bottom-anchors its own
-                // 0.74x-tall back panel inside its square.
-                GeometryReader { proxy in
-                    let side = min(proxy.size.width, proxy.size.height)
-                    RoundedRectangle(cornerRadius: AppRadius.r20)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        .foregroundColor(.homeSubtitle.opacity(0.5))
-                        .overlay(
-                            Image(systemName: "plus")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundColor(.homeSubtitle)
-                        )
-                        .frame(width: side, height: side * 0.74)
-                        .frame(width: side, height: side, alignment: .bottom)
-                }
-                .aspectRatio(1, contentMode: .fit)
-                .padding(.top, 8)
-
-                Text("New folder")
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.homeSubtitle)
+                Text("New folder")
+                    .font(AppFont.semiBoldLabel(14))
             }
-            .scaleEffect(0.8)
+            .foregroundColor(.homeSubtitle)
+            .frame(maxWidth: .infinity)
+            .frame(height: 64)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                    .foregroundColor(.homeSubtitle.opacity(0.5))
+            )
         }
         .buttonStyle(.plain)
     }
@@ -248,30 +219,22 @@ struct LikeFolderPickerSheet: View {
     }
 }
 
-/// Fixed points the existing-folder "drop" overlay animates through, per
-/// the user's own sketch: a fairly direct diagonal descent (not a wide
-/// sideways swing), rotating consistently in one direction the whole way
-/// down (a tumble, not tilt-overshoot-settle-back), passing behind the
-/// folder's front panel as it lands. x/yFraction are fractions of `side`
-/// (LikesFolderCard's own measured icon size, handed in via
-/// `incomingDropContent`) in the *same* coordinate system its real
-/// fanned photos use — offset from the icon's bottom-center, where the
-/// front panel covers roughly y: -0.56×side (its top edge) down to 0
-/// (the bottom). start (well above and left, nearly upright, roughly
-/// actual size), midArc (partway down the same diagonal, still above the
-/// panel's top edge), landed (inside the zone the front panel covers —
-/// -0.28×side is well past -0.56×side — so it's the panel itself, drawn
-/// after this in z-order, that hides it here, not any fade/shrink of
-/// ours), vanished (shrinks further at that same spot, purely for a
-/// settled feel — it's already hidden by then).
+/// Fixed points the existing-folder "drop" overlay animates through: a fairly
+/// direct diagonal descent (not a wide sideways swing), rotating in one
+/// direction the whole way down (a tumble, not tilt-overshoot-settle-back).
+/// x/yFraction are fractions of the *tray's width* (handed in through
+/// `incomingDropContent`), offset from the tray's bottom-center. start (well
+/// above and left, nearly upright), midArc (partway down the same diagonal),
+/// landed (on the top sheet, a touch smaller), vanished (shrinks to nothing
+/// at that spot — the real photo then takes its place as the new top sheet).
 private struct FolderDropValues {
     var scale: CGFloat
     var rotationDegrees: Double
     var xFraction: CGFloat
     var yFraction: CGFloat
 
-    static let start = FolderDropValues(scale: 1.1, rotationDegrees: -4, xFraction: -0.35, yFraction: -1.35)
-    static let midArc = FolderDropValues(scale: 0.95, rotationDegrees: 20, xFraction: -0.12, yFraction: -0.78)
-    static let landed = FolderDropValues(scale: 0.7, rotationDegrees: 42, xFraction: 0.02, yFraction: 0.05)
-    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.02, yFraction: 0.08)
+    static let start = FolderDropValues(scale: 1.1, rotationDegrees: -4, xFraction: -0.3, yFraction: -1.0)
+    static let midArc = FolderDropValues(scale: 0.95, rotationDegrees: 20, xFraction: -0.1, yFraction: -0.7)
+    static let landed = FolderDropValues(scale: 0.8, rotationDegrees: 42, xFraction: 0.0, yFraction: -0.36)
+    static let vanished = FolderDropValues(scale: 0.15, rotationDegrees: 42, xFraction: 0.0, yFraction: -0.34)
 }
