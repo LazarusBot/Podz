@@ -10,6 +10,10 @@ struct ProfileListRow: View {
     var isDestructive = false
     /// Rows that act right here instead of opening a screen have no chevron.
     var showsChevron: Bool? = nil
+    /// A quiet note at the trailing end, e.g. "Coming soon".
+    var caption: String? = nil
+    /// Greyed out and not tappable.
+    var isDisabled = false
     var action: () -> Void
 
     private var hasChevron: Bool { showsChevron ?? !isDestructive }
@@ -22,6 +26,12 @@ struct ProfileListRow: View {
                     .foregroundColor(isDestructive ? .appBadgeRed : .homeText)
 
                 Spacer()
+
+                if let caption {
+                    Text(caption)
+                        .font(AppFont.regularLabel(13))
+                        .foregroundColor(.homeSubtitle)
+                }
 
                 if let badgeCount, badgeCount > 0 {
                     Text(badgeCount > 9 ? "9+" : "\(badgeCount)")
@@ -42,6 +52,8 @@ struct ProfileListRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.45 : 1)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.homeText.opacity(0.08)).frame(height: 0.5)
         }

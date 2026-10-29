@@ -160,8 +160,14 @@ struct ProfileView: View {
     @ViewBuilder
     private var hostingRow: some View {
         if !FeatureFlags.hosting {
-            // Parked: the host side is off for now.
-            EmptyView()
+            // Parked: shown greyed, with a caption, until the host side is
+            // ready.
+            ProfileListRow(
+                title: "Switch to host mode",
+                showsChevron: false,
+                caption: "Coming soon",
+                isDisabled: true
+            ) {}
         } else if auth.profile?.isHost == true {
             ProfileListRow(
                 title: appMode.mode == .host ? "Switch to traveler mode" : "Switch to host mode",
