@@ -72,45 +72,28 @@ struct LikeFolderPickerSheet: View {
                             onCommitName: commitNewFolder
                         )
                         .transition(.opacity)
-                    } else {
-                        newFolderTile
-                            .padding(.top, 22)
-                            .transition(.opacity)
                     }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
 
-            Spacer(minLength: 0)
+            // Pinned at the bottom, outside the scrolling list. Hidden while
+            // the new drawer's name is being typed.
+            if !isCreatingFolder {
+                DetailTextButton(title: "New folder") {
+                    withAnimation(.easeOut(duration: AppMotion.snappy)) {
+                        isCreatingFolder = true
+                        newFolderName = ""
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 40)
+                .transition(.opacity)
+            }
         }
         .background(Color.homeBackground)
-    }
-
-    /// Dashed-outline empty tile — tap to start creating.
-    private var newFolderTile: some View {
-        Button {
-            withAnimation(.easeOut(duration: AppMotion.snappy)) {
-                isCreatingFolder = true
-                newFolderName = ""
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .semibold))
-                Text("New folder")
-                    .font(AppFont.semiBoldLabel(14))
-            }
-            .foregroundColor(.homeSubtitle)
-            .frame(maxWidth: .infinity)
-            .frame(height: 64)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                    .foregroundColor(.homeSubtitle.opacity(0.5))
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     private func commitNewFolder() {
