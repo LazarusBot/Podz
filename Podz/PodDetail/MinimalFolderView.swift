@@ -68,9 +68,10 @@ struct MinimalFolderView: View {
 
             if let onShare {
                 DetailRoundButton(accessibilityLabel: "Share folder", action: onShare) {
-                    LinkGlyphShape()
-                        .stroke(Color.homeText.opacity(0.35), style: StrokeStyle(lineWidth: 0.96, lineCap: .round))
-                        .frame(width: 18, height: 18)
+                    // The app's own "link" symbol, as the old folder top bar had.
+                    Image(systemName: "link")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.homeText.opacity(0.35))
                 }
             }
 

@@ -75,7 +75,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 - **Highlighted pill** (last onboarding step): ground and text swap, `onbHighlight` fill, 14 semiBold label.
 - **Back**: 83 x 83 pill, chevron 8 x 12, 1.5 stroke, round caps, `homeText` at 35%.
 - **Close** (`CloseButton(style: .pill, size: 44)`): round pill, same fill and 1pt border as back, thin 12pt "x" (1.5 stroke, round caps) in `homeText` at 45%. Only the Likes folder sheet uses it so far; other sheets still use the classic gray circle until they are restyled.
-- **Share** (Likes folder): round 83 pill like Back, the link glyph from Paper (`LinkGlyphShape`, 18pt, 0.96 stroke, round caps) in `homeText` at 35%.
+- **Share** (Likes folder): round 83 pill like Back, the app's SF Symbol `link` (16 semibold) in `homeText` at 35%. Not the vector from the Paper example, which wasn't right.
 - **Like**: 83 x 83 pill, the tab bar's heart (22, 1.6 stroke): outline at 45% when not liked, filled at full strength when liked, with a quick bounce. Tapping when liked removes the like; otherwise it opens the folder picker.
 - **Search pill**: capsule in `homePill`, 14 regular text, placeholder in `homeSubtitle`, Lenny mark at the trailing end.
 - **Tab bar**: floating capsule, three line icons (home, heart, person), 22 / 1.6 stroke. Active icon at full strength, others at 45%.
