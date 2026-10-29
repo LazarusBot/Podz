@@ -4,7 +4,7 @@ import SwiftUI
 /// plain `Button` with custom content) with a small scale-down and a
 /// light haptic tick instead. `configuration.isPressed` is what any
 /// `Button`'s style already tracks, no manual gesture needed (unlike
-/// LikesFolderCard's own press handling, which needs a raw `DragGesture`
+/// the Likes bubbles' own press handling, which needs a raw gesture
 /// because it also drives a separate long-press/wiggle state most
 /// buttons don't have).
 ///

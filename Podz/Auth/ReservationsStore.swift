@@ -31,9 +31,8 @@ final class ReservationsStore: ObservableObject {
     /// batch-fetch-only-what's-missing pattern as `PostsStore.profilesById`.
     @Published private(set) var profilesById: [UUID: Profile] = [:]
     @Published var lastError: String?
-    /// Transient "+1" badge on the Pods tab — same self-clearing
-    /// confirmation `LikesStore.showRecentLikeBadge` uses, not a
-    /// persistent unread-style count, since there's nothing ongoing to
+    /// Transient "+1" badge on the Pods tab — a self-clearing
+    /// confirmation, not a persistent unread-style count, since there's nothing ongoing to
     /// track here (just "a reservation was made, go look").
     @Published private(set) var showRecentReservationBadge = false
     private var recentReservationBadgeTask: Task<Void, Never>?
@@ -141,8 +140,7 @@ final class ReservationsStore: ObservableObject {
         }
     }
 
-    /// Kicks off the transient "+1" badge on the Pods tab — same visual
-    /// treatment as `LikesStore.flashRecentLikeBadge`. Unlike that one,
+    /// Kicks off the transient "+1" badge on the Pods tab.
     /// `ReservationSheet` never actually covers the tab bar (it grows in
     /// place inside `PodDetailView`, which doesn't hide it), so the call
     /// site (`ReservationSheet.submit()`) fires this once its own

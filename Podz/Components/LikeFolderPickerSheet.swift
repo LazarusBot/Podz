@@ -139,7 +139,7 @@ struct LikeFolderPickerSheet: View {
     private func commitNewFolder() {
         let trimmed = newFolderName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
-            // Empty name on submit — cancel, back to the normal grid.
+            // Empty name on submit — cancel, back to the bubbles.
             withAnimation(.easeOut(duration: AppMotion.snappy)) {
                 isCreatingFolder = false
             }
@@ -166,13 +166,6 @@ struct LikeFolderPickerSheet: View {
             }
             try? await Task.sleep(nanoseconds: 650_000_000)
             onDismiss()
-            // The sheet's own dismiss transition still has to play out
-            // after `onDismiss()` flips `isPresented` — waiting out that
-            // system animation before flashing is what makes the badge
-            // start once the sheet is actually gone, not while it's still
-            // sliding down over the tab bar.
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            likesStore.flashRecentLikeBadge()
         }
     }
 
@@ -218,15 +211,6 @@ struct LikeFolderPickerSheet: View {
                             // the sheet dismisses.
                             try? await Task.sleep(nanoseconds: 1_500_000_000)
                             onDismiss()
-                            // The sheet's own dismiss transition still has
-                            // to play out after `onDismiss()` flips
-                            // `isPresented` — waiting out that system
-                            // animation before flashing is what makes the
-                            // badge start once the sheet is actually gone,
-                            // not while it's still sliding down over the
-                            // tab bar.
-                            try? await Task.sleep(nanoseconds: 350_000_000)
-                            likesStore.flashRecentLikeBadge()
                         }
                     }
                 }

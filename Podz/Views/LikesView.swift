@@ -164,7 +164,7 @@ struct LikesView: View {
         }
         .background(Color.homeBackground)
         // Needed to resolve friendIdsWithAccess into actual avatar URLs
-        // for LikesFolderCard's shared-with stack — nothing else in this
+        // for the bubbles' shared-with avatars — nothing else in this
         // view's own reachable path guarantees FriendsStore has loaded.
         .task { await friendsStore.fetchAll() }
         .onAppear {
