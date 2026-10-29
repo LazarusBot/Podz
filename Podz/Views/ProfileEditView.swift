@@ -24,9 +24,8 @@ struct ProfileEditView: View {
     @State private var selectedHeaderItem: PhotosPickerItem?
     @State private var isUploadingHeader = false
 
-    /// Falls back to the same generic alpine photo `PostRegisterOnboardingView`/
-    /// `OnboardingView` already use for decorative chrome, until a user
-    /// sets their own via the header's "Edit header photo" menu item.
+    /// Falls back to a generic alpine photo for decorative chrome, until a
+    /// user sets their own via the header's "Edit header photo" menu item.
     private let headerPhotoHeight: CGFloat = 320
     private let avatarSize: CGFloat = 94
 
