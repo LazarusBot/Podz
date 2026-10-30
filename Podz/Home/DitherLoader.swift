@@ -60,7 +60,7 @@ struct DitherLoader: View {
                         }
                     }
                 }
-                graphics.fill(path, with: .color(Color.homeText.opacity(0.035)))
+                graphics.fill(path, with: .color(Color.homeText.opacity(0.02)))
             }
         }
         .accessibilityHidden(true)

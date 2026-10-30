@@ -16,8 +16,9 @@ struct LennyTimeline: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let dotSize: CGFloat = 24
-    /// Dot to dot.
-    private let rowHeight: CGFloat = 72
+    /// 30 of line between one dot and the next.
+    private let dotGap: CGFloat = 30
+    private var rowHeight: CGFloat { dotSize + dotGap }
 
     /// What a step says while it's running, by step. The last one is the long
     /// wait, so it has the most to say.
