@@ -33,7 +33,7 @@ struct LennySearchScreen: View {
                 .transition(.opacity)
             } else {
                 // The texture is behind everything, edge to edge.
-                DitherLoader()
+                PlanetLoader()
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
                     .opacity(lenny.phase == .results ? 0 : 1)
