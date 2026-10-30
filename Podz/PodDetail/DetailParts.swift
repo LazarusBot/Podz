@@ -108,19 +108,28 @@ struct DetailBackButton: View {
     }
 }
 
-/// The wide pill ("Book", "Open"): 14 regular label, fills the row.
+/// The wide pill ("Book", "Open"): 14 regular label, fills the row. When
+/// `isHighlighted` it inverts (`homeText` fill, `homeBackground` label): the
+/// action that's now the one to take.
 struct DetailTextButton: View {
     let title: String
+    var isHighlighted = false
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(AppFont.regularLabel(14))
-                .foregroundColor(.homeText)
+                .foregroundColor(isHighlighted ? .homeBackground : .homeText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 83)
-                .background(DetailPill())
+                .background {
+                    if isHighlighted {
+                        Capsule().fill(Color.homeText)
+                    } else {
+                        DetailPill()
+                    }
+                }
         }
         .buttonStyle(TapScaleButtonStyle())
     }

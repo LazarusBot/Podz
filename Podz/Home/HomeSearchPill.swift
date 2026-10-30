@@ -15,6 +15,8 @@ struct HomeSearchPill: View {
     @Binding var isLennyMode: Bool
     /// Owned by the screen, so a tap outside can drop focus from there.
     var isFocused: FocusState<Bool>.Binding
+    /// Called on the keyboard's Search key.
+    var onSubmit: () -> Void = {}
 
     private let buttonSize: CGFloat = 40
     private let inset: CGFloat = 9
@@ -48,6 +50,7 @@ struct HomeSearchPill: View {
         .autocorrectionDisabled()
         .submitLabel(.search)
         .focused(isFocused)
+        .onSubmit(onSubmit)
         // Room for the mark on whichever side it's on, plus the gap.
         .padding(.leading, isLennyMode ? inset + buttonSize + 20 : 28)
         .padding(.trailing, isLennyMode ? 28 : inset + buttonSize + 8)

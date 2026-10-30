@@ -17,6 +17,7 @@ struct MinimalHomeView: View {
     @FocusState private var searchFocused: Bool
     @State private var selectedPod: Pod?
     @State private var showAllPods = false
+    @State private var showLenny = false
     @Namespace private var zoomNamespace
 
     /// One card plus a 73pt peek of the next (24 margin + 12 gap + 61 peek).
@@ -69,6 +70,10 @@ struct MinimalHomeView: View {
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
         }
+        // A route sent to Lenny opens its search screen.
+        .fullScreenCover(isPresented: $showLenny) {
+            LennySearchScreen(onClose: closeLenny)
+        }
         .task { await podsStore.fetchPods() }
         .task { await likesStore.fetchAll() }
         .onChange(of: homeSearch.feedReselected) { _, _ in
@@ -104,7 +109,8 @@ struct MinimalHomeView: View {
         HomeSearchPill(
             text: isLennyMode ? $lennyQuery : $query,
             isLennyMode: $isLennyMode,
-            isFocused: $searchFocused
+            isFocused: $searchFocused,
+            onSubmit: submitSearch
         )
             .padding(.horizontal, 24)
             .padding(.top, 20)
@@ -171,6 +177,22 @@ struct MinimalHomeView: View {
         .padding(.leading, 24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .clipped()
+    }
+
+    /// Search key: in Lenny mode the route goes to Lenny; in classic mode the
+    /// cards are already filtered, so it just closes the keyboard.
+    private func submitSearch() {
+        searchFocused = false
+        let route = lennyQuery.trimmingCharacters(in: .whitespaces)
+        guard isLennyMode, !route.isEmpty else { return }
+        LennySearchViewModel.shared.start(route)
+        showLenny = true
+    }
+
+    private func closeLenny() {
+        showLenny = false
+        lennyQuery = ""
+        LennySearchViewModel.shared.forceReset()
     }
 
     /// Opens `MinimalPodDetailView` for whatever pod `DeepLinkRouter` is holding,

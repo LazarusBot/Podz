@@ -17,6 +17,7 @@ struct ProfileView: View {
     @StateObject private var friendsStore = FriendsStore.shared
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var appMode = AppModeStore.shared
+    @StateObject private var router = ProfileRouter.shared
     @State private var showEditProfile = false
     @State private var showFriends = false
     @State private var showMyPosts = false
@@ -55,7 +56,11 @@ struct ProfileView: View {
         // Everything under Profile follows the system appearance, and the
         // pages it opens have their own bottom bar, so the tab bar steps
         // aside while one is showing.
-        .onAppear { AppearanceState.shared.followsSystem = true }
+        .onAppear {
+            AppearanceState.shared.followsSystem = true
+            openRequestedPage()
+        }
+        .onChange(of: router.showsReservationsRequested) { _, _ in openRequestedPage() }
         .onDisappear {
             AppearanceState.shared.followsSystem = false
             TabBarVisibilityState.shared.isHidden = false
@@ -63,6 +68,13 @@ struct ProfileView: View {
         .onChange(of: isShowingSection) { _, showing in
             TabBarVisibilityState.shared.isHidden = showing
         }
+    }
+
+    /// A page another screen asked for (Lenny's plan: your reservations).
+    private func openRequestedPage() {
+        guard router.showsReservationsRequested else { return }
+        router.showsReservationsRequested = false
+        showReservations = true
     }
 
     private var isShowingSection: Bool {
