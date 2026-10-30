@@ -145,7 +145,8 @@ struct LennySummaryView: View {
                 decrease: { if guests > 1 { guests -= 1 } },
                 increase: { if guests < maxGuests { guests += 1 } },
                 decreaseLabel: "Fewer guests",
-                increaseLabel: "More guests"
+                increaseLabel: "More guests",
+                circleSize: 63
             ) {
                 Text("\(guests) \(guests == 1 ? "guest" : "guests")")
                     .font(AppFont.semiBoldLabel(14))
@@ -156,7 +157,8 @@ struct LennySummaryView: View {
                 decrease: { if canGoEarlier { startDate = shifted(startDate, by: -1) } },
                 increase: { startDate = shifted(startDate, by: 1) },
                 decreaseLabel: "Day earlier",
-                increaseLabel: "Day later"
+                increaseLabel: "Day later",
+                circleSize: 38
             ) {
                 // Tap the date for the calendar, to jump further.
                 Button { showsDatePicker = true } label: {
@@ -179,15 +181,16 @@ struct LennySummaryView: View {
         increase: @escaping () -> Void,
         decreaseLabel: String,
         increaseLabel: String,
+        circleSize: CGFloat,
         @ViewBuilder answer: () -> Answer
     ) -> some View {
         HStack(spacing: 4) {
-            stepButton(systemImage: "minus", label: decreaseLabel, action: decrease)
+            stepButton(systemImage: "minus", label: decreaseLabel, size: circleSize, action: decrease)
             answer()
                 .frame(maxWidth: .infinity)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
-            stepButton(systemImage: "plus", label: increaseLabel, action: increase)
+            stepButton(systemImage: "plus", label: increaseLabel, size: circleSize, action: increase)
         }
         .padding(.horizontal, 10)
         .frame(maxWidth: .infinity)
@@ -226,13 +229,16 @@ struct LennySummaryView: View {
     /// Everywhere but while the guest picker is open.
     private var showsBack: Bool { !(stage == .guests && isPickingGuests) }
 
-    private func stepButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+    /// A − or + circle: the classic pill grey with a 0.5pt edge so it reads
+    /// against the pill it sits on.
+    private func stepButton(systemImage: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: size > 50 ? 16 : 12, weight: .semibold))
                 .foregroundColor(.homeText)
-                .frame(width: 38, height: 38)
-                .background(Color.homeBackground, in: Circle())
+                .frame(width: size, height: size)
+                .background(Color.homePill, in: Circle())
+                .overlay(Circle().strokeBorder(Color.homeText.opacity(0.25), lineWidth: 0.5))
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(label)
