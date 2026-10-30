@@ -12,6 +12,8 @@ import SwiftUI
 /// looping motion.
 struct LennyTimeline: View {
     let steps: [LennySearchViewModel.StepInfo]
+    /// The search is over: whatever step was running stops breathing.
+    var isStopped = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -37,7 +39,7 @@ struct LennyTimeline: View {
     ]
 
     /// The step in progress: the first one not done.
-    private var activeID: Int? { steps.first { !$0.isDone }?.id }
+    private var activeID: Int? { isStopped ? nil : steps.first { !$0.isDone }?.id }
     private var doneCount: Int { steps.filter(\.isDone).count }
 
     var body: some View {

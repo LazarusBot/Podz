@@ -4,10 +4,14 @@ import SwiftUI
 /// pill above is what you said, and this is its answer. While Lenny works the
 /// bubble shows three bouncing dots; when the search is over the message
 /// types itself out. Flat, in the design system's `homePill`, with Lenny's
-/// mark as its avatar. Reduce Motion drops the bounce and the typing.
+/// mark as its avatar, which reacts to how the search went (a hop when it
+/// found something, a shake of the head when it couldn't). Errors are said
+/// here, by Lenny. Reduce Motion drops the bounce, the typing and the moves.
 struct LennyReply: View {
     /// `nil` while Lenny is still working.
     let message: String?
+    /// The face on the avatar.
+    var mood: LennyMood = .working
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var typed = ""
@@ -25,10 +29,7 @@ struct LennyReply: View {
     }
 
     private var avatar: some View {
-        Image("lenny")
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
+        LennyMark(mood: mood)
             .frame(width: 15, height: 15)
             .foregroundColor(.homeBackground)
             .frame(width: 30, height: 30)

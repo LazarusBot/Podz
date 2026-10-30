@@ -130,6 +130,17 @@ final class LennySearchViewModel: ObservableObject {
         guard !itineraryText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         dismissTask?.cancel()
         let trimmedInput = itineraryText.trimmingCharacters(in: .whitespaces)
+
+        // Nothing loaded to search in (offline, or still starting up).
+        if PodsStore.shared.pods.isEmpty {
+            phase = .searching
+            steps = Self.initialSteps()
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            guard !Task.isCancelled else { return }
+            errorMessage = "I can't see any pods right now. Check your connection and try again."
+            phase = .results
+            return
+        }
         
         // Fast path: the input is literally a country we already have
         // pods for ("Slovenia", "France"...) — skip NLP/geocoding
@@ -159,9 +170,10 @@ final class LennySearchViewModel: ObservableObject {
             let reason = byBeds.first?.bedsTotal.map { "Most beds in \(matchedCountry), \($0)" }
             journeyStops = [JourneyStop(name: matchedCountry, pods: byBeds, isResolved: true, pickReason: reason)]
             steps[2].subtitle = "Your plan is ready"
-        steps[2].isDone = true
+            steps[2].isDone = true
             try? await Task.sleep(nanoseconds: 500_000_000)
             guard !Task.isCancelled else { return }
+            if found.isEmpty { errorMessage = "I don't have any pods in \(matchedCountry) yet." }
             phase = .results
             return
         }
@@ -183,8 +195,8 @@ final class LennySearchViewModel: ObservableObject {
             placeNames = [trimmedInput]
         }
         guard !placeNames.isEmpty else {
-            errorMessage = "Couldn't find any place names in that — try naming a peak, lake, or town."
-            phase = .editing
+            errorMessage = "I couldn't make out a place in that. Try a town, a lake or a peak."
+            phase = .results
             return
         }
         steps[0].title = "Extracting \(Self.stopCount(placeNames.count))."
@@ -227,7 +239,7 @@ final class LennySearchViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
 
         if journeyStops.allSatisfy({ $0.pods.isEmpty }) {
-            errorMessage = "Couldn't find any podz along that route."
+            errorMessage = "I couldn't find any pods along that route. Try another stop, or a wider area."
         }
         phase = .results
     }

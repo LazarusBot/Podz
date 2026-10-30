@@ -43,7 +43,7 @@ struct LennySearchScreen: View {
                     .transition(.opacity)
 
                 // Lenny's answer to the route: typing, then the result.
-                LennyReply(message: replyMessage)
+                LennyReply(message: replyMessage, mood: mood)
                     .padding(.horizontal, 24)
                     // Just above the pill row (83 high, 40 + safe area up).
                     .padding(.bottom, 40 + 83 + 20)
@@ -91,17 +91,9 @@ struct LennySearchScreen: View {
 
             // Positions from the Paper frame: the first dot sits 71 under the
             // pill, 45 from the left edge.
-            LennyTimeline(steps: lenny.steps)
+            LennyTimeline(steps: lenny.steps, isStopped: lenny.phase == .results)
                 .padding(.horizontal, 33)
                 .padding(.top, 59)
-
-            if let message = lenny.errorMessage {
-                Text(message)
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(.appBadgeRed)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 24)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -138,9 +130,19 @@ struct LennySearchScreen: View {
         }
     }
 
+    /// Whether the search came back empty-handed: Lenny says why, in its own
+    /// words, and its face says sorry.
+    private var failed: Bool { lenny.phase == .results && (lenny.errorMessage != nil || foundCount == 0) }
+
+    private var mood: LennyMood {
+        guard lenny.phase == .results else { return .working }
+        return failed ? .sorry : .happy
+    }
+
     /// What Lenny says when it's done; `nil` while it's still working.
     private var replyMessage: String? {
         guard lenny.phase == .results else { return nil }
+        if let error = lenny.errorMessage { return error }
         switch foundCount {
         case 0: return "I couldn't find any pods on that route."
         case 1: return "I found 1 pod along your route. Want to take a look?"
@@ -152,17 +154,10 @@ struct LennySearchScreen: View {
     /// Lenny's disc melted into it so only the eyes and mouth show.
     private var routePill: some View {
         HStack(spacing: 20) {
-            Image("lenny")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
+            LennyMark(mood: mood)
                 .frame(width: 20, height: 20)
                 .foregroundColor(.homeBackground)
                 .frame(width: 40, height: 40)
-                // Lenny sways while it searches.
-                .phaseAnimator(reduceMotion || lenny.phase == .results ? [0.0] : [-9.0, 9.0]) { view, angle in
-                    view.rotationEffect(.degrees(angle))
-                } animation: { _ in .easeInOut(duration: 0.7) }
 
             Text(lenny.itineraryText)
                 .font(AppFont.regularLabel(16))
