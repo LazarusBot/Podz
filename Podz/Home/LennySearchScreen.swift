@@ -28,7 +28,10 @@ struct LennySearchScreen: View {
                     photoURLs: podsStore.primaryPhotoByPodId,
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
                     onOpenPod: { selectedPod = $0 },
-                    onFinish: onClose
+                    onFinish: {
+                        ProfileRouter.shared.showsReservationsRequested = true
+                        onClose()
+                    }
                 )
                 .transition(.opacity)
             } else {

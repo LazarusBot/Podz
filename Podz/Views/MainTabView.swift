@@ -17,6 +17,7 @@ struct MainTabView: View {
     // visit) happens to run first.
     @StateObject private var postsStore = PostsStore.shared
     @State private var selectedTab: HomeTab = .feed
+    @StateObject private var profileRouter = ProfileRouter.shared
 
     /// Distance from the bar's bottom edge to the true screen edge —
     /// not from the system's own ~34pt home-indicator safe area.
@@ -83,6 +84,10 @@ struct MainTabView: View {
         // Home and Likes follow the system appearance; the other tabs have
         // no dark palette yet, so they (and the tab bar over them) stay
         // light — except a screen that has opted in (Profile's main one).
+        // Something (Lenny's plan) asked Profile to open a page.
+        .onChange(of: profileRouter.showsReservationsRequested) { _, requested in
+            if requested { selectedTab = .profile }
+        }
         .preferredColorScheme(selectedTab == .feed || selectedTab == .likes || appearance.followsSystem ? nil : .light)
         .task {
             await messagesStore.fetchAll()

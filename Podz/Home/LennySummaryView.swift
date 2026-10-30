@@ -5,6 +5,12 @@ import SwiftUI
 /// the pages Profile opens (`design.md`): a 30 semiBold title, the list
 /// behind a fade into the ground, and the back pill with the page's action
 /// beside it. Tap a row to look at that pod.
+///
+/// It's also where the plan gets booked: a start date and a guest count, one
+/// night per stop in route order, and **Reserve** books them all. Lenny
+/// answers in its bubble above the pills (typing while it books, a happy
+/// "booked" or a sorry "couldn't"), and once they're booked the pill becomes
+/// **View reservations**.
 struct LennySummaryView: View {
     struct Entry: Identifiable {
         let stopName: String
@@ -19,10 +25,24 @@ struct LennySummaryView: View {
     let photoURLs: [UUID: String]
     var onBack: () -> Void
     var onOpenPod: (Pod) -> Void
-    var onDone: () -> Void
+    /// After booking: go look at the reservations.
+    var onViewReservations: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var reservationsStore = ReservationsStore.shared
     @State private var appeared = false
+    @State private var startDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+    @State private var guests = 1
+    @State private var status = BookingStatus.idle
+    /// Stops already booked, so a retry only books what's left.
+    @State private var bookedPodIDs: Set<UUID> = []
+
+    private enum BookingStatus: Equatable {
+        case idle
+        case booking
+        case booked
+        case failed(String)
+    }
 
     private let dotSize: CGFloat = 24
     private let photoSize: CGFloat = 88
@@ -43,25 +63,39 @@ struct LennySummaryView: View {
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
                         .padding(.top, 6)
-                        .padding(.bottom, 28)
+                        .padding(.bottom, 12)
+
+                    bookingRows
+                        .padding(.bottom, 24)
 
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        row(entry, number: index + 1, isLast: index == entries.count - 1)
+                        row(entry, number: index + 1, isLast: index == entries.count - 1, date: date(forStop: index))
                             // Each stop settles in a beat after the one before.
                             .opacity(appeared || reduceMotion ? 1 : 0)
                             .offset(y: appeared || reduceMotion ? 0 : 14)
                             .animation(.smooth(duration: 0.5).delay(0.08 * Double(index)), value: appeared)
                     }
 
-                    Color.clear.frame(height: 190)
+                    // Room under the list for the pills (and Lenny's bubble).
+                    Color.clear.frame(height: status == .idle ? 190 : 250)
                 }
             }
 
             BottomFade()
 
+            if status != .idle {
+                LennyReply(message: replyMessage, mood: mood)
+                    .padding(.horizontal, 24)
+                    // Just above the pill row (83 high, 40 up).
+                    .padding(.bottom, 40 + 83 + 20)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
             HStack(spacing: 13) {
                 DetailBackButton(action: onBack)
-                DetailTextButton(title: "Done", isHighlighted: true, action: onDone)
+                DetailTextButton(title: buttonTitle, isHighlighted: status != .booking, action: buttonTapped)
+                    .disabled(status == .booking)
+                    .opacity(status == .booking ? 0.45 : 1)
             }
             .padding(.horizontal, 24)
             // The cover respects the safe area, so 40 here is the 74 from
@@ -69,7 +103,125 @@ struct LennySummaryView: View {
             .padding(.bottom, 40)
         }
         .background(Color.homeBackground.ignoresSafeArea())
+        .animation(.smooth(duration: 0.35), value: status)
         .onAppear { appeared = true }
+    }
+
+    // MARK: - Booking
+
+    /// Start date and guests, as flat rows; the stops below take their dates
+    /// from them.
+    private var bookingRows: some View {
+        VStack(spacing: 0) {
+            bookingRow(title: "Starts") {
+                DatePicker("", selection: $startDate, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
+                    .labelsHidden()
+                    .tint(.homeText)
+            }
+            bookingRow(title: "Guests") {
+                HStack(spacing: 14) {
+                    stepButton(systemImage: "minus", label: "Fewer guests") { if guests > 1 { guests -= 1 } }
+                    Text("\(guests)")
+                        .font(AppFont.semiBoldLabel(16))
+                        .foregroundColor(.homeText)
+                        .frame(minWidth: 18)
+                    stepButton(systemImage: "plus", label: "More guests") { if guests < maxGuests { guests += 1 } }
+                }
+            }
+        }
+        // Not editable once it's booked (or while it books).
+        .disabled(status == .booking || status == .booked)
+        .opacity(status == .booked ? 0.55 : 1)
+    }
+
+    private func bookingRow<Trailing: View>(title: String, @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack {
+            Text(title)
+                .font(AppFont.regularLabel(15))
+                .foregroundColor(.homeText)
+            Spacer()
+            trailing()
+        }
+        .padding(.horizontal, 24)
+        .frame(height: 56)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Color.homeText.opacity(0.08)).frame(height: 1).padding(.horizontal, 24)
+        }
+    }
+
+    private func stepButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.homeText)
+                .frame(width: 36, height: 36)
+                .background(Color.homePill, in: Circle())
+        }
+        .buttonStyle(TapScaleButtonStyle())
+        .accessibilityLabel(label)
+    }
+
+    /// The tightest bed count among the picked pods.
+    private var maxGuests: Int {
+        max(1, min(8, entries.compactMap(\.pod.bedsTotal).min() ?? 8))
+    }
+
+    /// One night per stop, in route order.
+    private func date(forStop index: Int) -> Date {
+        Calendar.current.date(byAdding: .day, value: index, to: startDate) ?? startDate
+    }
+
+    private var buttonTitle: String {
+        switch status {
+        case .idle, .failed: "Reserve"
+        case .booking: "Reserving…"
+        case .booked: "View reservations"
+        }
+    }
+
+    private func buttonTapped() {
+        if status == .booked { onViewReservations() } else { reserve() }
+    }
+
+    private var mood: LennyMood {
+        switch status {
+        case .booked: .happy
+        case .failed: .sorry
+        case .idle, .booking: .working
+        }
+    }
+
+    /// `nil` (typing dots) while it books.
+    private var replyMessage: String? {
+        switch status {
+        case .idle, .booking: nil
+        case .booked:
+            "Booked! \(entries.count) \(entries.count == 1 ? "night" : "nights") for \(guests) \(guests == 1 ? "guest" : "guests"), all set."
+        case .failed(let message): message
+        }
+    }
+
+    /// Books each stop that isn't booked yet, in order, and stops at the
+    /// first one that doesn't go through.
+    private func reserve() {
+        status = .booking
+        Task {
+            // A beat of typing dots, so it reads as Lenny doing it.
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            for (index, entry) in entries.enumerated() where !bookedPodIDs.contains(entry.pod.id) {
+                let checkIn = date(forStop: index)
+                let checkOut = Calendar.current.date(byAdding: .day, value: 1, to: checkIn) ?? checkIn
+                let success = await reservationsStore.create(podId: entry.pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests)
+                guard success else {
+                    let booked = bookedPodIDs.count
+                    let started = booked == 0 ? "" : "I booked \(booked) of \(entries.count). "
+                    status = .failed("\(started)I couldn't book \(entry.pod.name) for \(checkIn.formatted(.dateTime.day().month(.abbreviated))). It may be full, so try other dates.")
+                    return
+                }
+                bookedPodIDs.insert(entry.pod.id)
+            }
+            status = .booked
+        }
     }
 
     private var subtitle: String {
@@ -78,7 +230,7 @@ struct LennySummaryView: View {
     }
 
     /// A numbered dot on the line, then the stop, the pod and its photo.
-    private func row(_ entry: Entry, number: Int, isLast: Bool) -> some View {
+    private func row(_ entry: Entry, number: Int, isLast: Bool, date: Date) -> some View {
         Button { onOpenPod(entry.pod) } label: {
             HStack(alignment: .top, spacing: 14) {
                 VStack(spacing: 0) {
@@ -104,7 +256,7 @@ struct LennySummaryView: View {
                 .frame(width: dotSize)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(entry.stopName)
+                    Text("\(entry.stopName)  ·  \(date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)

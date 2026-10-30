@@ -11,7 +11,7 @@ struct LennyPlanView: View {
     /// Back from the first stop leaves the plan.
     var onLeave: () -> Void
     var onOpenPod: (Pod) -> Void
-    /// Leaves the plan altogether (the summary's Done).
+    /// After the plan is booked: leaves Lenny for the reservations.
     var onFinish: () -> Void
 
     @State private var stopIndex = 0
@@ -48,7 +48,7 @@ struct LennyPlanView: View {
                 photoURLs: photoURLs,
                 onBack: { withAnimation(.easeInOut(duration: 0.3)) { showsSummary = false } },
                 onOpenPod: onOpenPod,
-                onDone: onFinish
+                onViewReservations: onFinish
             )
             .transition(.opacity)
         } else {
