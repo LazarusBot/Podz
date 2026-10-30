@@ -154,8 +154,8 @@ struct LennySummaryView: View {
     }
 
     /// The picker, across the whole stack: one big pill holding a round minus,
-    /// the answer and a round plus (the two buttons are 83, the stack's size,
-    /// flush with the pill's ends), then continue beside it.
+    /// the answer and a round plus (the two buttons are 75, 4 in from the
+    /// pill's edge all round), then continue beside it.
     private var picker: some View {
         HStack(spacing: 13) {
             HStack(spacing: 0) {
@@ -197,6 +197,8 @@ struct LennySummaryView: View {
                     PlusGlyph()
                 }
             }
+            // 4 all round, so the 75 circles sit evenly inside the 83 pill.
+            .padding(.horizontal, 4)
             .frame(maxWidth: .infinity)
             .frame(height: 83)
             .background(DetailPill())
@@ -205,7 +207,7 @@ struct LennySummaryView: View {
         }
     }
 
-    /// A − or + at the end of the picker pill: an 83 circle in the classic
+    /// A − or + at the end of the picker pill: a 75 circle in the classic
     /// pill grey with a 0.5pt edge so it reads against the pill, and a thin
     /// vector like the back chevron's.
     private func pickerButton<Glyph: Shape>(
@@ -217,7 +219,7 @@ struct LennySummaryView: View {
             glyph()
                 .stroke(Color.homeText, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
                 .frame(width: 12, height: 12)
-                .frame(width: 83, height: 83)
+                .frame(width: 75, height: 75)
                 .background(Color.homePill, in: Circle())
                 .overlay(Circle().strokeBorder(Color.homeText.opacity(0.25), lineWidth: 0.5))
         }
