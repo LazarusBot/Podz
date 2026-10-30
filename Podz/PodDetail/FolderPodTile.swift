@@ -7,8 +7,8 @@ struct FolderPodTile: View {
     let pod: Pod
     let photoURL: String?
     let isSelected: Bool
-    /// Tints the selected check (white circle by default).
-    var checkAccent: Color?
+    /// Lenny chose this pod: its mark sits beside the check, stacked.
+    var isLennysPick = false
     var onTap: () -> Void
 
     var body: some View {
@@ -31,13 +31,26 @@ struct FolderPodTile: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
-                        CheckGlyphShape()
-                            .stroke(checkAccent == nil ? Color.black : Color.white, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-                            .frame(width: 12, height: 10)
-                            .frame(width: 26, height: 26)
-                            .background(checkAccent ?? Color.white, in: Circle())
-                            .padding(14)
-                            .transition(.scale.combined(with: .opacity))
+                        // Lenny's mark behind, the check on top, overlapping.
+                        HStack(spacing: -8) {
+                            if isLennysPick {
+                                Image("lenny")
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 14, height: 14)
+                                    .foregroundColor(.white)
+                                    .frame(width: 26, height: 26)
+                                    .background(Color.black, in: Circle())
+                            }
+                            CheckGlyphShape()
+                                .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                                .frame(width: 12, height: 10)
+                                .frame(width: 26, height: 26)
+                                .background(Color.white, in: Circle())
+                        }
+                        .padding(14)
+                        .transition(.scale.combined(with: .opacity))
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))

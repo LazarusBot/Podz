@@ -74,8 +74,7 @@ struct LennyPlanView: View {
                                 pod: pod,
                                 photoURL: photoURLs[pod.id],
                                 isSelected: pod.id == pickedPod?.id,
-                                // Lenny's own pick carries the app's one color.
-                                checkAccent: isLennysPick(pod) ? .lennyAccent : nil,
+                                isLennysPick: isLennysPick(pod),
                                 onTap: { tap(pod) }
                             )
                         }
@@ -116,13 +115,13 @@ struct LennyPlanView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 11, height: 11)
-                    .foregroundColor(.white)
+                    .foregroundColor(.homeBackground)
                     .frame(width: 20, height: 20)
-                    .background(Color.lennyAccent, in: Circle())
+                    .background(Color.homeText, in: Circle())
             }
             Group {
                 if isPick, let reason = stop.pickReason {
-                    Text("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.lennyAccent)
+                    Text("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.homeText)
                         + Text("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
                 } else if let pod, let distance = stop.distanceCaption(for: pod) {
                     Text(distance).font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
