@@ -18,6 +18,12 @@ struct LennySearchScreen: View {
     @Namespace private var zoomNamespace
 
     /// Ready once the search is done and found something to plan with.
+    /// The share of steps done, for the dither.
+    private var progress: Double {
+        guard !lenny.steps.isEmpty else { return 0 }
+        return Double(lenny.steps.filter(\.isDone).count) / Double(lenny.steps.count)
+    }
+
     private var canOpenPlan: Bool { lenny.phase == .results && !planStops.isEmpty }
 
     var body: some View {
@@ -37,11 +43,14 @@ struct LennySearchScreen: View {
 
                 HStack(spacing: 13) {
                     DetailBackButton(action: onClose)
-                    DetailTextButton(title: "View selected pods") {
+                    DetailTextButton(title: "View selected pods", isHighlighted: canOpenPlan) {
                         withAnimation(.easeInOut(duration: 0.3)) { showsPlan = true }
                     }
                     .disabled(!canOpenPlan)
                     .opacity(canOpenPlan ? 1 : 0.45)
+                    .scaleEffect(canOpenPlan ? 1 : 0.97)
+                    .animation(.bouncy(duration: 0.5), value: canOpenPlan)
+                    .sensoryFeedback(.success, trigger: canOpenPlan) { _, ready in ready }
                 }
                 .padding(.horizontal, 24)
                 // The cover respects the safe area, so 40 here is the 74 from
@@ -72,9 +81,17 @@ struct LennySearchScreen: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
 
+            // The dither fills the open space and shows how far along the
+            // search is; the steps sit right above the control stack.
+            DitherLoader(progress: progress)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .opacity(lenny.phase == .results ? 0.35 : 1)
+                .animation(.easeOut(duration: 0.5), value: lenny.phase)
+
             LennyTimeline(steps: lenny.steps)
                 .padding(.horizontal, 36)
-                .padding(.top, 52)
 
             if let message = lenny.errorMessage {
                 Text(message)
@@ -83,9 +100,9 @@ struct LennySearchScreen: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
             }
-
-            Spacer(minLength: 0)
         }
+        // Clear of the control stack (83 high, 40 + safe area from the edge).
+        .padding(.bottom, 83 + 40 + 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 

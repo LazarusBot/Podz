@@ -79,28 +79,8 @@ struct LennyTimeline: View {
         return step.isDone ? [] : Array(lines.prefix(1))
     }
 
-    /// A ring that's always there, with a solid dot inside: quiet while the
-    /// step waits, breathing while it runs, popped to full when it's done.
     private func dot(isDone: Bool, isActive: Bool) -> some View {
-        ZStack {
-            Circle().fill(Color.homeText.opacity(0.12))
-            if isActive && !reduceMotion {
-                Circle()
-                    .fill(Color.homeText.opacity(0.12))
-                    .phaseAnimator([false, true]) { view, grown in
-                        view
-                            .scaleEffect(grown ? 1.9 : 1)
-                            .opacity(grown ? 0 : 1)
-                    } animation: { _ in .easeOut(duration: 1.1) }
-            }
-            Circle()
-                .fill(Color.homeText.opacity(isDone ? 1 : isActive ? 0.6 : 0.3))
-                .padding(4)
-                .scaleEffect(isDone ? 1 : 0.8)
-        }
-        .frame(width: dotSize, height: dotSize)
-        .animation(.bouncy(duration: 0.45), value: isDone)
-        .animation(.easeOut(duration: 0.3), value: isActive)
+        StepDot(isDone: isDone, isActive: isActive, size: dotSize, reduceMotion: reduceMotion)
     }
 
     /// The dotted line down to the next step; a solid line draws over it
@@ -163,5 +143,60 @@ private struct VLine: Shape {
         path.move(to: CGPoint(x: rect.midX, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
         return path
+    }
+}
+
+/// A step's dot. Quiet while the step waits, breathing while it runs. When it
+/// finishes it reacts: the dot swells to fill its ring with a check drawing
+/// itself inside, and a ring ripples out once.
+private struct StepDot: View {
+    let isDone: Bool
+    let isActive: Bool
+    let size: CGFloat
+    let reduceMotion: Bool
+
+    @State private var rippleOut = false
+    @State private var rippleID = 0
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Color.homeText.opacity(0.12))
+
+            if isActive && !reduceMotion {
+                Circle()
+                    .fill(Color.homeText.opacity(0.12))
+                    .phaseAnimator([false, true]) { view, grown in
+                        view
+                            .scaleEffect(grown ? 1.9 : 1)
+                            .opacity(grown ? 0 : 1)
+                    } animation: { _ in .easeOut(duration: 1.1) }
+            }
+
+            // The one-time ripple on finishing.
+            Circle()
+                .strokeBorder(Color.homeText.opacity(0.5), lineWidth: 1)
+                .scaleEffect(rippleOut ? 2.6 : 1)
+                .opacity(rippleOut ? 0 : (rippleID == 0 ? 0 : 1))
+                .id(rippleID)
+
+            Circle()
+                .fill(Color.homeText.opacity(isDone ? 1 : isActive ? 0.6 : 0.3))
+                .padding(isDone ? 1 : 4)
+                .scaleEffect(isDone ? 1 : 0.8)
+
+            CheckGlyphShape()
+                .trim(from: 0, to: isDone ? 1 : 0)
+                .stroke(Color.homeBackground, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                .frame(width: 8, height: 6.5)
+        }
+        .frame(width: size, height: size)
+        .animation(.bouncy(duration: 0.5), value: isDone)
+        .animation(.easeOut(duration: 0.3), value: isActive)
+        .onChange(of: isDone) { _, done in
+            guard done else { return }
+            rippleOut = false
+            rippleID += 1
+            withAnimation(.easeOut(duration: 0.7).delay(0.05)) { rippleOut = true }
+        }
     }
 }
