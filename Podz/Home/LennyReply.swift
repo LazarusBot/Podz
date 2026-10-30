@@ -28,12 +28,16 @@ struct LennyReply: View {
         .accessibilityLabel(message ?? "Lenny is typing")
     }
 
+    /// An error is the one thing that turns red: Lenny's disc and the bubble.
+    private var isError: Bool { mood == .sorry }
+
     private var avatar: some View {
         LennyMark(mood: mood)
             .frame(width: 15, height: 15)
-            .foregroundColor(.homeBackground)
+            .foregroundColor(isError ? .white : .homeBackground)
             .frame(width: 30, height: 30)
-            .background(Color.homeText, in: Circle())
+            .background(isError ? Color.appBadgeRed : Color.homeText, in: Circle())
+            .animation(.smooth(duration: 0.3), value: isError)
     }
 
     private var bubble: some View {
@@ -43,7 +47,7 @@ struct LennyReply: View {
             } else {
                 Text(typed)
                     .font(AppFont.regularLabel(15))
-                    .foregroundColor(.homeText)
+                    .foregroundColor(isError ? .white : .homeText)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -51,7 +55,8 @@ struct LennyReply: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
         .frame(minHeight: 46)
-        .background(Color.homePill, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+        .background(isError ? Color.appBadgeRed : Color.homePill, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+        .animation(.smooth(duration: 0.3), value: isError)
     }
 
     /// Three dots passing a bounce along.
