@@ -94,10 +94,15 @@ struct LennySummaryView: View {
                 // Just above the control stack.
                 .padding(.bottom, 40 + 83 + 20)
 
-            // The control stack: back, and the one pill that asks, then books.
+            // The control stack: back, the pill that asks (then books), and
+            // while there's a question, a third button to continue.
             HStack(spacing: 13) {
                 DetailBackButton(action: back)
                 primaryPill
+                if showsContinue {
+                    continueButton
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
             }
             .padding(.horizontal, 24)
             // The cover respects the safe area, so 40 here is the 74 from
@@ -128,8 +133,7 @@ struct LennySummaryView: View {
                 decrease: { if guests > 1 { guests -= 1 } },
                 increase: { if guests < maxGuests { guests += 1 } },
                 decreaseLabel: "Fewer guests",
-                increaseLabel: "More guests",
-                next: { stage = .date }
+                increaseLabel: "More guests"
             ) {
                 Text("\(guests) \(guests == 1 ? "guest" : "guests")")
                     .font(AppFont.semiBoldLabel(14))
@@ -140,8 +144,7 @@ struct LennySummaryView: View {
                 decrease: { if canGoEarlier { startDate = shifted(startDate, by: -1) } },
                 increase: { startDate = shifted(startDate, by: 1) },
                 decreaseLabel: "Day earlier",
-                increaseLabel: "Day later",
-                next: { stage = .review }
+                increaseLabel: "Day later"
             ) {
                 // Tap the date for the calendar, to jump further.
                 Button { showsDatePicker = true } label: {
@@ -157,35 +160,48 @@ struct LennySummaryView: View {
         }
     }
 
-    /// The pill while it asks: − / + around the answer, and a solid circle to
-    /// confirm and move on. Same 83 high as every pill in the stack.
+    /// The pill while it asks: − / + around the answer. Same 83 high as
+    /// every pill in the stack.
     private func askPill<Answer: View>(
         decrease: @escaping () -> Void,
         increase: @escaping () -> Void,
         decreaseLabel: String,
         increaseLabel: String,
-        next: @escaping () -> Void,
         @ViewBuilder answer: () -> Answer
     ) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
             stepButton(systemImage: "minus", label: decreaseLabel, action: decrease)
             answer()
                 .frame(maxWidth: .infinity)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
             stepButton(systemImage: "plus", label: increaseLabel, action: increase)
-            Button(action: next) {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.homeBackground)
-                    .frame(width: 44, height: 44)
-                    .background(Color.homeText, in: Circle())
-            }
-            .buttonStyle(TapScaleButtonStyle())
-            .accessibilityLabel("Next")
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 6)
         .frame(maxWidth: .infinity)
         .frame(height: 83)
         .background(DetailPill())
+    }
+
+    /// Moves on to the next question: a solid round pill, the one to press.
+    private var continueButton: some View {
+        Button {
+            if let next = Stage(rawValue: stage.rawValue + 1) { stage = next }
+        } label: {
+            Image(systemName: "arrow.right")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.homeBackground)
+                .frame(width: 83, height: 83)
+                .background(Circle().fill(Color.homeText))
+        }
+        .buttonStyle(TapScaleButtonStyle())
+        .accessibilityLabel("Continue")
+    }
+
+    /// There's a question on the pill (not Reserve, not while booking or
+    /// once it's booked).
+    private var showsContinue: Bool {
+        status != .booking && status != .booked && stage != .review
     }
 
     private func stepButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
@@ -193,7 +209,7 @@ struct LennySummaryView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.homeText)
-                .frame(width: 36, height: 44)
+                .frame(width: 34, height: 44)
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(label)
