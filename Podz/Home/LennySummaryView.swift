@@ -6,12 +6,14 @@ import SwiftUI
 /// behind a fade into the ground, and the control stack at the bottom.
 /// Tap a row to look at that pod.
 ///
-/// It's also where the plan gets booked, one question at a time in the
-/// control stack's right-hand pill, with Lenny asking in its bubble above:
-/// **guests** (a stepper in the pill), then the **start date** (a day
-/// stepper; tap the date for the calendar), then **Reserve**. Each stop gets
-/// one night, in route order. Lenny answers while it books (typing, then a
-/// happy "booked" or a sorry "couldn't"), and once they're booked the pill
+/// It's also where the plan gets booked, one question at a time, with Lenny
+/// asking in its bubble above the control stack: **guests**, then the
+/// **start date**, then **Reserve**. Each question is first a plain button
+/// ("Add guest", "Add date") beside the back pill; tapping it opens the
+/// picker across the whole stack (a round minus, the answer, a round plus and
+/// the continue button; tap the date for a calendar). Each stop gets one
+/// night, in route order. Lenny answers while it books (typing, then a happy
+/// "booked" or a sorry "couldn't"), and once they're booked the pill
 /// becomes **View reservations**. Back steps back through the questions.
 struct LennySummaryView: View {
     struct Entry: Identifiable {
@@ -37,9 +39,12 @@ struct LennySummaryView: View {
     @State private var startDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     @State private var guests = 1
     @State private var stage = Stage.guests
-    /// On the first question: false shows a plain "Add guest" button, true
-    /// opens the picker across the whole stack.
-    @State private var isPickingGuests = false
+    /// On a question: false shows a plain button ("Add guest", "Add date"),
+    /// true opens the picker across the whole stack.
+    @State private var isPicking = false
+    /// Set once a question has been answered with the continue button.
+    @State private var guestsConfirmed = false
+    @State private var dateConfirmed = false
     @State private var status = BookingStatus.idle
     /// Stops already booked, so a retry only books what's left.
     @State private var bookedPodIDs: Set<UUID> = []
@@ -97,19 +102,16 @@ struct LennySummaryView: View {
                 // Just above the control stack.
                 .padding(.bottom, 40 + 83 + 20)
 
-            // The control stack: back, the pill that asks (then books), and
-            // while there's a question, a third button to continue.
+            // The control stack. Resting: back and the pill (a plain button
+            // for the question, then Reserve). While a picker is open it takes
+            // the whole stack: minus, the answer, plus, continue.
             HStack(spacing: 13) {
-                // While the guest picker is open it takes the back button's
-                // place; the next screen brings it back.
-                if showsBack {
+                if isPicking && status != .booking && status != .booked {
+                    picker
+                        .transition(.opacity)
+                } else {
                     DetailBackButton(action: back)
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
-                }
-                primaryPill
-                if showsContinue {
-                    continueButton
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    primaryPill
                 }
             }
             .padding(.horizontal, 24)
@@ -119,15 +121,16 @@ struct LennySummaryView: View {
         }
         .background(Color.homeBackground.ignoresSafeArea())
         .animation(.smooth(duration: 0.35), value: stage)
-        .animation(.smooth(duration: 0.35), value: isPickingGuests)
+        .animation(.smooth(duration: 0.35), value: isPicking)
         .animation(.smooth(duration: 0.35), value: status)
         .onAppear { appeared = true }
         .sheet(isPresented: $showsDatePicker) { datePickerSheet }
     }
 
-    // MARK: - The pill
+    // MARK: - The control stack
 
-    /// The question for the current step, or Reserve / View reservations.
+    /// The right-hand pill at rest: the question as a plain button, then
+    /// Reserve / View reservations.
     @ViewBuilder
     private var primaryPill: some View {
         switch (status, stage) {
@@ -137,75 +140,92 @@ struct LennySummaryView: View {
             DetailTextButton(title: "Reserving…", action: {})
                 .disabled(true)
                 .opacity(0.45)
-        case (_, .guests) where !isPickingGuests:
-            // First a plain button; it opens the picker.
-            DetailTextButton(title: guests == 1 ? "Add guest" : "\(guests) guests") { isPickingGuests = true }
         case (_, .guests):
-            askPill(
-                decrease: { if guests > 1 { guests -= 1 } },
-                increase: { if guests < maxGuests { guests += 1 } },
-                decreaseLabel: "Fewer guests",
-                increaseLabel: "More guests",
-                circleSize: 63
-            ) {
-                Text("\(guests) \(guests == 1 ? "guest" : "guests")")
-                    .font(AppFont.semiBoldLabel(14))
-                    .foregroundColor(.homeText)
+            DetailTextButton(title: guestsConfirmed ? "\(guests) \(guests == 1 ? "guest" : "guests")" : "Add guest") {
+                isPicking = true
             }
         case (_, .date):
-            askPill(
-                decrease: { if canGoEarlier { startDate = shifted(startDate, by: -1) } },
-                increase: { startDate = shifted(startDate, by: 1) },
-                decreaseLabel: "Day earlier",
-                increaseLabel: "Day later",
-                circleSize: 38
-            ) {
-                // Tap the date for the calendar, to jump further.
-                Button { showsDatePicker = true } label: {
-                    Text(startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
-                        .font(AppFont.semiBoldLabel(14))
-                        .foregroundColor(.homeText)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Start date, \(startDate.formatted(.dateTime.weekday(.wide).day().month(.wide))). Opens the calendar")
+            DetailTextButton(title: dateConfirmed ? startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)) : "Add date") {
+                isPicking = true
             }
         case (_, .review):
             DetailTextButton(title: "Reserve", isHighlighted: true, action: reserve)
         }
     }
 
-    /// The pill while it asks: − / + around the answer. Same 83 high as
-    /// every pill in the stack.
-    private func askPill<Answer: View>(
-        decrease: @escaping () -> Void,
-        increase: @escaping () -> Void,
-        decreaseLabel: String,
-        increaseLabel: String,
-        circleSize: CGFloat,
-        @ViewBuilder answer: () -> Answer
-    ) -> some View {
-        HStack(spacing: 4) {
-            stepButton(systemImage: "minus", label: decreaseLabel, size: circleSize, action: decrease)
-            answer()
-                .frame(maxWidth: .infinity)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-            stepButton(systemImage: "plus", label: increaseLabel, size: circleSize, action: increase)
+    /// The picker, across the whole stack: a round minus, the answer, a round
+    /// plus, then continue. All round buttons are the stack's 83.
+    private var picker: some View {
+        HStack(spacing: 13) {
+            DetailRoundButton(accessibilityLabel: stage == .guests ? "Fewer guests" : "Day earlier", action: decrease) {
+                MinusGlyph()
+                    .stroke(Color.homeText, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .frame(width: 12, height: 12)
+            }
+
+            Group {
+                if stage == .guests {
+                    VStack(spacing: 2) {
+                        Text("\(guests)")
+                            .font(AppFont.semiBoldLabel(24))
+                            .foregroundColor(.homeText)
+                        Text(guests == 1 ? "guest" : "guests")
+                            .font(AppFont.regularLabel(12))
+                            .foregroundColor(.homeSubtitle)
+                    }
+                } else {
+                    // Tap the date for the calendar, to jump further.
+                    Button { showsDatePicker = true } label: {
+                        VStack(spacing: 2) {
+                            Text(startDate.formatted(.dateTime.day().month(.abbreviated)))
+                                .font(AppFont.semiBoldLabel(16))
+                                .foregroundColor(.homeText)
+                            Text(startDate.formatted(.dateTime.weekday(.abbreviated)))
+                                .font(AppFont.regularLabel(12))
+                                .foregroundColor(.homeSubtitle)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Start date, \(startDate.formatted(.dateTime.weekday(.wide).day().month(.wide))). Opens the calendar")
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
+
+            DetailRoundButton(accessibilityLabel: stage == .guests ? "More guests" : "Day later", action: increase) {
+                PlusGlyph()
+                    .stroke(Color.homeText, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .frame(width: 12, height: 12)
+            }
+
+            continueButton
         }
-        .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity)
-        .frame(height: 83)
-        .background(DetailPill())
     }
 
-    /// Moves on to the next question: the back pill's twin, with its chevron
-    /// turned around, inverted because it's the one to press.
+    private func decrease() {
+        if stage == .guests {
+            if guests > 1 { guests -= 1 }
+        } else if canGoEarlier {
+            startDate = shifted(startDate, by: -1)
+        }
+    }
+
+    private func increase() {
+        if stage == .guests {
+            if guests < maxGuests { guests += 1 }
+        } else {
+            startDate = shifted(startDate, by: 1)
+        }
+    }
+
+    /// Answers the question and moves on: the back pill's twin, with its
+    /// chevron turned around, inverted because it's the one to press.
     private var continueButton: some View {
         Button {
-            if let next = Stage(rawValue: stage.rawValue + 1) {
-                isPickingGuests = false
-                stage = next
-            }
+            isPicking = false
+            if stage == .guests { guestsConfirmed = true } else { dateConfirmed = true }
+            if let next = Stage(rawValue: stage.rawValue + 1) { stage = next }
         } label: {
             // The back pill's chevron, turned around: same glyph, same size.
             DetailBackChevron()
@@ -217,31 +237,6 @@ struct LennySummaryView: View {
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel("Continue")
-    }
-
-    /// There's a question on the pill (not Reserve, not while booking or
-    /// once it's booked).
-    private var showsContinue: Bool {
-        guard status != .booking, status != .booked else { return false }
-        return stage == .date || (stage == .guests && isPickingGuests)
-    }
-
-    /// Everywhere but while the guest picker is open.
-    private var showsBack: Bool { !(stage == .guests && isPickingGuests) }
-
-    /// A − or + circle: the classic pill grey with a 0.5pt edge so it reads
-    /// against the pill it sits on.
-    private func stepButton(systemImage: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: size > 50 ? 16 : 12, weight: .semibold))
-                .foregroundColor(.homeText)
-                .frame(width: size, height: size)
-                .background(Color.homePill, in: Circle())
-                .overlay(Circle().strokeBorder(Color.homeText.opacity(0.25), lineWidth: 0.5))
-        }
-        .buttonStyle(TapScaleButtonStyle())
-        .accessibilityLabel(label)
     }
 
     /// The calendar, in a small sheet with the same Done pill as everywhere.
@@ -272,7 +267,7 @@ struct LennySummaryView: View {
             onBack()
         } else if let previous = Stage(rawValue: stage.rawValue - 1) {
             status = .idle
-            isPickingGuests = false
+            isPicking = false
             stage = previous
         } else {
             onBack()
@@ -300,7 +295,7 @@ struct LennySummaryView: View {
     }
 
     /// The stops show their nights once the date is being chosen.
-    private var showsDates: Bool { stage != .guests }
+    private var showsDates: Bool { dateConfirmed || stage == .review }
 
     private var mood: LennyMood {
         switch status {
@@ -431,5 +426,25 @@ struct LennySummaryView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// The thin "-" and "+" of the picker, drawn like the back chevron: 1.5 round
+/// strokes in a 12 x 12 box.
+private struct MinusGlyph: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
+    }
+}
+
+private struct PlusGlyph: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = MinusGlyph().path(in: rect)
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        return path
     }
 }
