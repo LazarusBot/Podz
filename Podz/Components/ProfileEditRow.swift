@@ -21,23 +21,22 @@ struct ProfileEditRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(value)
-                        .font(AppFont.pillLabelSemiBold(16))
-                        .foregroundColor(.black)
+                        .font(AppFont.semiBoldLabel(16))
+                        .foregroundColor(.homeText)
                     Text(label)
-                        .font(AppFont.regularLabel(11))
-                        .foregroundColor(.appTextMuted)
+                        .font(AppFont.regularLabel(13))
+                        .foregroundColor(.homeSubtitle)
                 }
                 Spacer()
                 Image(systemName: "pencil")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.black)
+                    .foregroundColor(.homeSubtitle)
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.horizontal, 24)
-        .padding(.vertical, 31)
-        .background(Color.appHomeBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
-        }
+        .padding(.vertical, 20)
+        .overlay(alignment: .bottom) { Hairline() }
     }
 }

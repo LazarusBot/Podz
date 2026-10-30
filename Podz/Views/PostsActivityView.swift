@@ -34,28 +34,24 @@ struct PostsActivityView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                CloseButton(action: { dismiss() })
+                CloseButton(style: .pill, size: 44, action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
 
             Text("Activity")
-                .font(AppFont.pillLabel(20))
-                .fontWeight(.bold)
-                .foregroundColor(.black)
+                .font(AppFont.semiBoldLabel(20))
+                .foregroundColor(.homeText)
                 .padding(.top, 8)
                 .padding(.bottom, 12)
 
             if activity.isEmpty {
                 Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "bell")
-                        .font(.system(size: 32))
-                        .foregroundColor(.appTextMuted)
+VStack(spacing: 12) {
                     Text("No likes or comments on your posts yet.")
                         .font(AppFont.regularLabel(14))
-                        .foregroundColor(.appTextMuted)
+                        .foregroundColor(.homeSubtitle)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
                 }
@@ -75,7 +71,7 @@ struct PostsActivityView: View {
                 }
             }
         }
-        .background(Color.appHomeBackground)
+        .background(Color.homeBackground)
         // Opening this screen is what "seeing" the activity means — the
         // tab-bar dot and the Posts row's pill both key off
         // `activitySeenAt`, so this is what actually clears them. Snapshot
@@ -98,9 +94,7 @@ private struct ActivityRow: View {
     let actorProfile: Profile?
     let podName: String?
     /// Already seen on a previous visit to this screen — recolored flat
-    /// gray (not just faded via opacity, which left the icon's own red/
-    /// blue and the bold name text still reading at near-full strength)
-    /// so a seen row unmistakably desaturates instead of just dimming.
+    /// subtitle-gray, so a seen row is unmistakably quieter than a new one.
     var isSeen: Bool = false
 
     private var actionText: String {
@@ -120,12 +114,12 @@ private struct ActivityRow: View {
                         + Text(" \(actionText)")
                 )
                 .font(AppFont.regularLabel(14))
-                .foregroundColor(isSeen ? .appTextMuted : .black)
+                .foregroundColor(isSeen ? .homeSubtitle : .homeText)
 
                 if case .comment(let body) = item.kind {
                     Text("\u{201C}\(body)\u{201D}")
                         .font(AppFont.regularLabel(13))
-                        .foregroundColor(.appTextMuted)
+                        .foregroundColor(.homeSubtitle)
                         .lineLimit(2)
                 }
 
@@ -136,21 +130,19 @@ private struct ActivityRow: View {
                     }
                     Text(Self.relativeTime(item.createdAt))
                 }
-                .font(AppFont.regularLabel(11))
-                .foregroundColor(.appTextMuted)
+                .font(AppFont.regularLabel(12))
+                .foregroundColor(.homeSubtitle)
             }
 
             Spacer()
 
             Image(systemName: item.isLike ? "heart.fill" : "bubble.left.fill")
                 .font(.system(size: 13))
-                .foregroundColor(isSeen ? .appTextMuted : (item.isLike ? .red : .appMessageBlue))
+                .foregroundColor(isSeen ? .homeSubtitle : .homeText)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.black.opacity(0.06)).frame(height: 0.5)
-        }
+        .overlay(alignment: .bottom) { Hairline() }
     }
 
     private static func relativeTime(_ date: Date) -> String {

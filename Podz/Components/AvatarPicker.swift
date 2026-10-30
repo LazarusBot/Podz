@@ -124,35 +124,17 @@ struct AvatarPicker: View {
     }
 }
 
-/// Camera badge on the avatar's corner, in real Liquid Glass — matches
-/// Figma's pencil/camera button style. Falls back to a plain material
-/// circle pre-iOS 26.
+/// The pencil badge on the avatar's corner: the flat round pill from
+/// `design.md`.
 private struct CameraBadge: View {
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if #available(iOS 26, *) {
-                GlassEffectContainer {
-                    icon
-                        .glassEffect(.regular.tint(.white.opacity(0.1)), in: .circle)
-                }
-            } else {
-                icon
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .overlay(Circle().fill(Color.black.opacity(0.1)))
-                    )
-            }
-        }
-        .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
-    }
-
-    private var icon: some View {
         Image(systemName: "pencil")
             .font(.system(size: size * 0.16))
-            .foregroundColor(.black)
+            .foregroundColor(.homeText.opacity(0.6))
             .frame(width: size * 0.34, height: size * 0.34)
+            .background(Circle().fill(Color.homePill.opacity(0.95)))
+            .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1))
     }
 }

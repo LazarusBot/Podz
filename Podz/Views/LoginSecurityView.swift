@@ -24,9 +24,7 @@ struct LoginSecurityView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ProfileTopBar(title: "Login and security", onBack: onBack)
-
+        SectionPage(title: "Login and security", onBack: onBack) {
             InfoRow(value: email, label: "Email")
             InfoRow(value: signInMethod, label: "Sign-in method")
 
@@ -40,10 +38,7 @@ struct LoginSecurityView: View {
                     }
                 }
             }
-
-            Spacer()
         }
-        .background(Color.appHomeBackground)
         .alert("Email sent", isPresented: $showResetConfirmation) {
             Button("OK") {}
         } message: {
@@ -53,9 +48,8 @@ struct LoginSecurityView: View {
     }
 }
 
-/// Read-only value/label pair — same row rhythm as `ProfileEditRow`
-/// (24h/31v padding, hairline bottom border) but without the trailing
-/// pencil or tap target, since nothing here is editable from this screen.
+/// Read-only value/label pair — same rhythm as `ProfileEditRow` but without
+/// the trailing pencil or tap target, since nothing here is editable.
 private struct InfoRow: View {
     let value: String
     let label: String
@@ -63,19 +57,16 @@ private struct InfoRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value)
-                .font(AppFont.pillLabelSemiBold(16))
-                .foregroundColor(.black)
+                .font(AppFont.semiBoldLabel(16))
+                .foregroundColor(.homeText)
             Text(label)
-                .font(AppFont.regularLabel(11))
-                .foregroundColor(.appTextMuted)
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.homeSubtitle)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)
-        .padding(.vertical, 31)
-        .background(Color.appHomeBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
-        }
+        .padding(.vertical, 20)
+        .overlay(alignment: .bottom) { Hairline() }
     }
 }
 

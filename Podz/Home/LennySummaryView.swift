@@ -39,13 +39,7 @@ struct LennySummaryView: View {
             }
 
             // Fade into the ground behind the buttons.
-            LinearGradient(
-                stops: [.init(color: .clear, location: 0.5), .init(color: .homeBackground, location: 1)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            BottomFade()
 
             HStack(spacing: 13) {
                 DetailBackButton(action: onBack)

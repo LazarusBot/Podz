@@ -69,8 +69,10 @@ struct LikeFolderPickerSheet: View {
                 }
             }
 
+            BottomFade()
+
             actionRow
-                .padding(.bottom, 40)
+                .padding(.bottom, DetailLayout.controlStackGap)
         }
         .background(Color.homeBackground)
     }
