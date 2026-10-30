@@ -70,6 +70,9 @@ struct LennyTimeline: View {
                 }
             }
         }
+        // Rows are exactly their own height: a flexible row would split up
+        // whatever space the screen has left.
+        .fixedSize(horizontal: false, vertical: true)
         .animation(.easeOut(duration: 0.3), value: steps.map(\.title))
         .sensoryFeedback(.impact(weight: .light), trigger: doneCount)
     }
@@ -97,9 +100,8 @@ struct LennyTimeline: View {
                 .stroke(Color.homeText, style: StrokeStyle(lineWidth: 1, lineCap: .round))
                 .animation(.easeOut(duration: 0.6), value: isDrawn)
         }
-        .frame(width: 1)
-        .frame(maxHeight: .infinity)
-        .padding(.vertical, 6)
+        .frame(width: 1, height: dotGap - 8)
+        .padding(.vertical, 4)
     }
 }
 
