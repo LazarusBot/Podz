@@ -49,7 +49,7 @@ struct DitherLoader: View {
                         let waveB = sin((u * 2.3 + time * 0.3) * .pi - v * 4.5)
                         let wave = 0.5 + 0.25 * waveA + 0.25 * waveB
                         // Sparse: well under half the pixels are ever lit.
-                        let density = wave * 0.5
+                        let density = wave * 0.4
                         if density > Self.bayer[row % 8][column % 8] {
                             path.addRect(CGRect(
                                 x: CGFloat(column) * cell,
@@ -60,7 +60,7 @@ struct DitherLoader: View {
                         }
                     }
                 }
-                graphics.fill(path, with: .color(Color.homeText.opacity(0.06)))
+                graphics.fill(path, with: .color(Color.homeText.opacity(0.035)))
             }
         }
         .accessibilityHidden(true)

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The steps Lenny works through (Paper "LennySearch" frames): a dot per
-/// step on a dotted line, the step's name (13 semiBold) and a caption (11)
+/// step on a dotted line, the step's name (15 semiBold) and a caption (13)
 /// beside it. All of it is on screen from the first frame; a step fills in
 /// as it finishes.
 ///
@@ -16,9 +16,8 @@ struct LennyTimeline: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let dotSize: CGFloat = 24
-    /// Dot to dot, from the Paper frame: 98 from the first step to the second,
-    /// 148 from the second to the third (the line trails off longer).
-    private func rowHeight(after index: Int) -> CGFloat { index == 0 ? 98 : 148 }
+    /// Dot to dot.
+    private let rowHeight: CGFloat = 72
 
     /// What a step says while it's running, by step. The last one is the long
     /// wait, so it has the most to say.
@@ -53,9 +52,9 @@ struct LennyTimeline: View {
                     }
                     .frame(width: dotSize)
 
-                    VStack(alignment: .leading, spacing: 5) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(step.title)
-                            .font(AppFont.semiBoldLabel(13))
+                            .font(AppFont.semiBoldLabel(15))
                             .foregroundColor(step.isDone || isActive ? .homeText : .homeSubtitle)
                             .contentTransition(.opacity)
                         StepCaption(
@@ -64,8 +63,8 @@ struct LennyTimeline: View {
                             isRotating: isActive && !reduceMotion
                         )
                     }
-                    .padding(.top, 4)
-                    .frame(maxWidth: .infinity, minHeight: isLast ? 0 : rowHeight(after: index), alignment: .topLeading)
+                    .padding(.top, 3)
+                    .frame(maxWidth: .infinity, minHeight: isLast ? 0 : rowHeight, alignment: .topLeading)
                 }
             }
         }
@@ -119,14 +118,14 @@ private struct StepCaption: View {
 
     var body: some View {
         Text(shown)
-            .font(AppFont.regularLabel(11))
+            .font(AppFont.regularLabel(13))
             .foregroundColor(.homeSubtitle)
             .id(shown)
             .transition(.asymmetric(
                 insertion: .move(edge: .bottom).combined(with: .opacity),
                 removal: .move(edge: .top).combined(with: .opacity)
             ))
-            .frame(maxWidth: .infinity, minHeight: 14, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 16, alignment: .topLeading)
             .clipped()
             .task(id: isRotating) {
                 guard isRotating, lines.count > 1 else { return }

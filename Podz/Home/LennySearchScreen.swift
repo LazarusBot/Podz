@@ -90,7 +90,7 @@ struct LennySearchScreen: View {
 
             if let message = lenny.errorMessage {
                 Text(message)
-                    .font(AppFont.regularLabel(13))
+                    .font(AppFont.regularLabel(14))
                     .foregroundColor(.appBadgeRed)
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
@@ -128,7 +128,7 @@ struct LennySearchScreen: View {
                 } animation: { _ in .easeInOut(duration: 0.7) }
 
             Text(lenny.itineraryText)
-                .font(AppFont.regularLabel(14))
+                .font(AppFont.regularLabel(16))
                 .foregroundColor(.homeBackground)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
