@@ -32,8 +32,20 @@ final class LennySearchViewModel: ObservableObject {
     struct JourneyStop: Identifiable {
         let id = UUID()
         var name: String
+        /// Best first: Lenny's pick leads.
         var pods: [Pod]
         var isResolved: Bool
+        /// How far each pod is from the stop, when it's known.
+        var distancesKm: [UUID: Double] = [:]
+        /// Why the first pod leads ("Closest to Lake Braies").
+        var pickReason: String?
+
+        /// "3 km from Lake Braies" for any pod whose distance is known.
+        func distanceCaption(for pod: Pod) -> String? {
+            guard let km = distancesKm[pod.id] else { return nil }
+            let amount = km < 1 ? "Under 1 km" : km < 10 ? String(format: "%.1f km", km) : "\(Int(km.rounded())) km"
+            return "\(amount) from \(name)"
+        }
     }
     
     @Published var phase: Phase = .idle
@@ -142,7 +154,10 @@ final class LennySearchViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 600_000_000)
             guard !Task.isCancelled else { return }
             let found = PodsStore.shared.pods(inCountry: matchedCountry, type: nil)
-            journeyStops = [JourneyStop(name: matchedCountry, pods: found, isResolved: true)]
+            // No stop to measure from: the pick is the pod with the most beds.
+            let byBeds = found.sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }
+            let reason = byBeds.first?.bedsTotal.map { "Most beds in \(matchedCountry), \($0)" }
+            journeyStops = [JourneyStop(name: matchedCountry, pods: byBeds, isResolved: true, pickReason: reason)]
             steps[2].subtitle = "Your plan is ready"
         steps[2].isDone = true
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -188,8 +203,21 @@ final class LennySearchViewModel: ObservableObject {
         journeyStops = placeNames.map { JourneyStop(name: $0, pods: [], isResolved: false) }
         for (index, name) in placeNames.enumerated() {
             guard let result = await LennyItineraryParser.geocode(name), !Task.isCancelled else { continue }
-            let found = PodsStore.shared.pods(near: [result.coordinate], radiusKm: 50)
-            journeyStops[index] = JourneyStop(name: name, pods: found, isResolved: true)
+            let stopLocation = CLLocation(latitude: result.coordinate.latitude, longitude: result.coordinate.longitude)
+            var distances: [UUID: Double] = [:]
+            for pod in PodsStore.shared.pods(near: [result.coordinate], radiusKm: 50) {
+                guard let lat = pod.latitude, let lng = pod.longitude else { continue }
+                distances[pod.id] = CLLocation(latitude: lat, longitude: lng).distance(from: stopLocation) / 1000
+            }
+            // Closest first; the lead pod is Lenny's pick.
+            let found = PodsStore.shared.pods
+                .filter { distances[$0.id] != nil }
+                .sorted { distances[$0.id, default: 0] < distances[$1.id, default: 0] }
+            journeyStops[index] = JourneyStop(
+                name: name, pods: found, isResolved: true,
+                distancesKm: distances,
+                pickReason: found.first == nil ? nil : "Closest to \(name)"
+            )
         }
         guard !Task.isCancelled else { return }
 

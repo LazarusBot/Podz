@@ -42,6 +42,12 @@ struct LennySearchScreen: View {
                 searching
                     .transition(.opacity)
 
+                // Lenny's answer to the route: typing, then the result.
+                LennyReply(message: replyMessage)
+                    .padding(.horizontal, 24)
+                    // Just above the pill row (83 high, 40 + safe area up).
+                    .padding(.bottom, 40 + 83 + 20)
+
                 HStack(spacing: 13) {
                     DetailBackButton(action: onClose)
                     DetailTextButton(title: "View selected pods", isHighlighted: canOpenPlan) {
@@ -120,12 +126,25 @@ struct LennySearchScreen: View {
     }
 
     /// Different pods only: one can be near two stops.
+    private var foundCount: Int {
+        Set(planStops.flatMap { $0.pods.map(\.id) }).count
+    }
+
     private var foundTitle: String {
-        let count = Set(planStops.flatMap { $0.pods.map(\.id) }).count
-        switch count {
+        switch foundCount {
         case 0: return "No pods found"
         case 1: return "1 pod found"
-        default: return "\(count) pods found"
+        default: return "\(foundCount) pods found"
+        }
+    }
+
+    /// What Lenny says when it's done; `nil` while it's still working.
+    private var replyMessage: String? {
+        guard lenny.phase == .results else { return nil }
+        switch foundCount {
+        case 0: return "I couldn't find any pods on that route."
+        case 1: return "I found 1 pod along your route. Want to take a look?"
+        default: return "I found \(foundCount) pods along your route. Want to take a look?"
         }
     }
 

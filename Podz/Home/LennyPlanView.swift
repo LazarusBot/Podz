@@ -64,6 +64,10 @@ struct LennyPlanView: View {
                         .padding(.horizontal, 24)
                         .padding(.top, 6)
 
+                    pickCaption
+                        .padding(.horizontal, 24)
+                        .padding(.top, 10)
+
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(stop.pods) { pod in
                             FolderPodTile(
@@ -95,6 +99,41 @@ struct LennyPlanView: View {
             .padding(.bottom, 40)
         }
         .background(Color.homeBackground.ignoresSafeArea())
+    }
+
+    /// Why the picked pod is there: Lenny's own pick says so and gives the
+    /// reason; any other pod just says how far it is. One line, always the
+    /// same height, so the grid below never jumps.
+    private var pickCaption: some View {
+        let pod = pickedPod
+        let isLennysPick = pod?.id == stop.pods.first?.id && stop.pickReason != nil
+        return HStack(spacing: 8) {
+            if isLennysPick {
+                Image("lenny")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 11, height: 11)
+                    .foregroundColor(.homeBackground)
+                    .frame(width: 20, height: 20)
+                    .background(Color.homeText, in: Circle())
+            }
+            Group {
+                if isLennysPick, let reason = stop.pickReason {
+                    Text("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.homeText)
+                        + Text("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
+                } else if let pod, let distance = stop.distanceCaption(for: pod) {
+                    Text(distance).font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
+                } else {
+                    Text(" ").font(AppFont.regularLabel(13))
+                }
+            }
+            .lineLimit(1)
+        }
+        .frame(height: 20, alignment: .leading)
+        .id(pod?.id)
+        .transition(.opacity)
+        .animation(.easeInOut(duration: AppMotion.snappy), value: pod?.id)
     }
 
     private func tap(_ pod: Pod) {
