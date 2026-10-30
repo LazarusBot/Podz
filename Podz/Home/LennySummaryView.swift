@@ -6,8 +6,9 @@ import SwiftUI
 /// behind a fade into the ground, and the back pill with the page's action
 /// beside it. Tap a row to look at that pod.
 ///
-/// It's also where the plan gets booked: a start date and a guest count, one
-/// night per stop in route order, and **Reserve** books them all. Lenny
+/// It's also where the plan gets booked: a start date and a guest count, set
+/// right in the control stack, one night per stop in route order, and
+/// **Reserve** books them all. Lenny
 /// answers in its bubble above the pills (typing while it books, a happy
 /// "booked" or a sorry "couldn't"), and once they're booked the pill becomes
 /// **View reservations**.
@@ -31,6 +32,7 @@ struct LennySummaryView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var reservationsStore = ReservationsStore.shared
     @State private var appeared = false
+    @State private var showsDatePicker = false
     @State private var startDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     @State private var guests = 1
     @State private var status = BookingStatus.idle
@@ -63,10 +65,7 @@ struct LennySummaryView: View {
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
                         .padding(.top, 6)
-                        .padding(.bottom, 12)
-
-                    bookingRows
-                        .padding(.bottom, 24)
+                        .padding(.bottom, 28)
 
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                         row(entry, number: index + 1, isLast: index == entries.count - 1, date: date(forStop: index))
@@ -77,7 +76,7 @@ struct LennySummaryView: View {
                     }
 
                     // Room under the list for the pills (and Lenny's bubble).
-                    Color.clear.frame(height: status == .idle ? 190 : 250)
+                    Color.clear.frame(height: 190 + (showsOptions ? optionsRowHeight + 13 : 0) + (status == .idle ? 0 : 60))
                 }
             }
 
@@ -86,16 +85,23 @@ struct LennySummaryView: View {
             if status != .idle {
                 LennyReply(message: replyMessage, mood: mood)
                     .padding(.horizontal, 24)
-                    // Just above the pill row (83 high, 40 up).
-                    .padding(.bottom, 40 + 83 + 20)
+                    // Just above the control stack.
+                    .padding(.bottom, 40 + 83 + 20 + (showsOptions ? optionsRowHeight + 13 : 0))
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
 
-            HStack(spacing: 13) {
-                DetailBackButton(action: onBack)
-                DetailTextButton(title: buttonTitle, isHighlighted: status != .booking, action: buttonTapped)
-                    .disabled(status == .booking)
-                    .opacity(status == .booking ? 0.45 : 1)
+            // The control stack: when and how many, then back and Reserve.
+            VStack(spacing: 13) {
+                if showsOptions {
+                    optionsRow
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+                HStack(spacing: 13) {
+                    DetailBackButton(action: onBack)
+                    DetailTextButton(title: buttonTitle, isHighlighted: status != .booking, action: buttonTapped)
+                        .disabled(status == .booking)
+                        .opacity(status == .booking ? 0.45 : 1)
+                }
             }
             .padding(.horizontal, 24)
             // The cover respects the safe area, so 40 here is the 74 from
@@ -105,48 +111,55 @@ struct LennySummaryView: View {
         .background(Color.homeBackground.ignoresSafeArea())
         .animation(.smooth(duration: 0.35), value: status)
         .onAppear { appeared = true }
+        .sheet(isPresented: $showsDatePicker) { datePickerSheet }
     }
 
     // MARK: - Booking
 
-    /// Start date and guests, as flat rows; the stops below take their dates
-    /// from them.
-    private var bookingRows: some View {
-        VStack(spacing: 0) {
-            bookingRow(title: "Starts") {
-                DatePicker("", selection: $startDate, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
-                    .labelsHidden()
-                    .tint(.homeText)
-            }
-            bookingRow(title: "Guests") {
-                HStack(spacing: 14) {
-                    stepButton(systemImage: "minus", label: "Fewer guests") { if guests > 1 { guests -= 1 } }
-                    Text("\(guests)")
-                        .font(AppFont.semiBoldLabel(16))
-                        .foregroundColor(.homeText)
-                        .frame(minWidth: 18)
-                    stepButton(systemImage: "plus", label: "More guests") { if guests < maxGuests { guests += 1 } }
-                }
-            }
-        }
-        // Not editable once it's booked (or while it books).
-        .disabled(status == .booking || status == .booked)
-        .opacity(status == .booked ? 0.55 : 1)
-    }
+    private let optionsRowHeight: CGFloat = 60
 
-    private func bookingRow<Trailing: View>(title: String, @ViewBuilder trailing: () -> Trailing) -> some View {
-        HStack {
-            Text(title)
-                .font(AppFont.regularLabel(15))
-                .foregroundColor(.homeText)
-            Spacer()
-            trailing()
+    /// Open until it's booked; the choices are final after that.
+    private var showsOptions: Bool { status != .booked }
+
+    /// When and how many, as two flat pills right above back / Reserve.
+    private var optionsRow: some View {
+        HStack(spacing: 13) {
+            Button { showsDatePicker = true } label: {
+                VStack(spacing: 2) {
+                    Text("Starts")
+                        .font(AppFont.regularLabel(11))
+                        .foregroundColor(.homeSubtitle)
+                    Text(startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
+                        .font(AppFont.semiBoldLabel(14))
+                        .foregroundColor(.homeText)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: optionsRowHeight)
+                .background(Capsule().fill(Color.homePill))
+            }
+            .buttonStyle(TapScaleButtonStyle())
+            .accessibilityLabel("Start date, \(startDate.formatted(.dateTime.weekday(.wide).day().month(.wide)))")
+
+            HStack(spacing: 10) {
+                stepButton(systemImage: "minus", label: "Fewer guests") { if guests > 1 { guests -= 1 } }
+                VStack(spacing: 2) {
+                    Text("Guests")
+                        .font(AppFont.regularLabel(11))
+                        .foregroundColor(.homeSubtitle)
+                    Text("\(guests)")
+                        .font(AppFont.semiBoldLabel(14))
+                        .foregroundColor(.homeText)
+                }
+                .frame(minWidth: 40)
+                stepButton(systemImage: "plus", label: "More guests") { if guests < maxGuests { guests += 1 } }
+            }
+            .padding(.horizontal, 10)
+            .frame(height: optionsRowHeight)
+            .background(Capsule().fill(Color.homePill))
         }
-        .padding(.horizontal, 24)
-        .frame(height: 56)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.homeText.opacity(0.08)).frame(height: 1).padding(.horizontal, 24)
-        }
+        // Not editable while it books.
+        .disabled(status == .booking)
+        .opacity(status == .booking ? 0.45 : 1)
     }
 
     private func stepButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
@@ -154,11 +167,32 @@ struct LennySummaryView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.homeText)
-                .frame(width: 36, height: 36)
-                .background(Color.homePill, in: Circle())
+                .frame(width: 40, height: 40)
+                .background(Color.homeBackground, in: Circle())
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(label)
+    }
+
+    /// The calendar, in a small sheet with the same Done pill as everywhere.
+    private var datePickerSheet: some View {
+        VStack(spacing: 0) {
+            DatePicker("", selection: $startDate, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(.homeText)
+                .padding(.horizontal, 16)
+                .padding(.top, 24)
+
+            Spacer(minLength: 0)
+
+            DetailTextButton(title: "Done", isHighlighted: true) { showsDatePicker = false }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+        }
+        .background(Color.homeBackground)
+        .presentationDetents([.height(560)])
+        .presentationDragIndicator(.hidden)
     }
 
     /// The tightest bed count among the picked pods.
