@@ -33,7 +33,17 @@ struct LennyPlanView: View {
             LennySummaryView(
                 entries: stops.compactMap { stop in
                     (stop.pods.first { $0.id == picks[stop.id] } ?? stop.pods.first)
-                        .map { LennySummaryView.Entry(stopName: stop.name, pod: $0) }
+                        .map { pod in
+                            var details: [String] = []
+                            if let distance = stop.distanceText(for: pod) { details.append("\(distance) away") }
+                            if let beds = pod.bedsTotal { details.append("\(beds) \(beds == 1 ? "bed" : "beds")") }
+                            return LennySummaryView.Entry(
+                                stopName: stop.name,
+                                pod: pod,
+                                detail: details.joined(separator: " · "),
+                                isLennysPick: pod.id == stop.pods.first?.id && stop.pickReason != nil
+                            )
+                        }
                 },
                 photoURLs: photoURLs,
                 onBack: { withAnimation(.easeInOut(duration: 0.3)) { showsSummary = false } },

@@ -40,11 +40,15 @@ final class LennySearchViewModel: ObservableObject {
         /// Why the first pod leads ("Closest to Lake Braies").
         var pickReason: String?
 
+        /// "3.2 km" / "Under 1 km", when the pod's distance is known.
+        func distanceText(for pod: Pod) -> String? {
+            guard let km = distancesKm[pod.id] else { return nil }
+            return km < 1 ? "Under 1 km" : km < 10 ? String(format: "%.1f km", km) : "\(Int(km.rounded())) km"
+        }
+
         /// "3 km from Lake Braies" for any pod whose distance is known.
         func distanceCaption(for pod: Pod) -> String? {
-            guard let km = distancesKm[pod.id] else { return nil }
-            let amount = km < 1 ? "Under 1 km" : km < 10 ? String(format: "%.1f km", km) : "\(Int(km.rounded())) km"
-            return "\(amount) from \(name)"
+            distanceText(for: pod).map { "\($0) from \(name)" }
         }
     }
     
