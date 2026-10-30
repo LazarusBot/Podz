@@ -7,6 +7,8 @@ struct FolderPodTile: View {
     let pod: Pod
     let photoURL: String?
     let isSelected: Bool
+    /// Tints the selected check (white circle by default).
+    var checkAccent: Color?
     var onTap: () -> Void
 
     var body: some View {
@@ -30,10 +32,10 @@ struct FolderPodTile: View {
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
                         CheckGlyphShape()
-                            .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                            .stroke(checkAccent == nil ? Color.black : Color.white, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
                             .frame(width: 12, height: 10)
                             .frame(width: 26, height: 26)
-                            .background(Color.white, in: Circle())
+                            .background(checkAccent ?? Color.white, in: Circle())
                             .padding(14)
                             .transition(.scale.combined(with: .opacity))
                     }

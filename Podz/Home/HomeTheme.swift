@@ -24,6 +24,15 @@ extension Color {
 }
 
 extension Color {
+    /// #2F6BFF light / #6C95FF dark — the app's one accent color, reserved for
+    /// Lenny's pick (the label, its mark and its check). Nothing else uses it.
+    static let lennyAccent = Color(
+        light: Color(red: 0x2F / 255, green: 0x6B / 255, blue: 0xFF / 255),
+        dark: Color(red: 0x6C / 255, green: 0x95 / 255, blue: 0xFF / 255)
+    )
+}
+
+extension Color {
     /// Placeholder on the focused (inverted) search bar — #A0A0A0 on both
     /// the black light-mode bar and the white dark-mode bar (Paper Home2).
     static let homeSubtitleOnInverse = Color(white: 0xA0 / 255)

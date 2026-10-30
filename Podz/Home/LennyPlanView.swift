@@ -74,6 +74,8 @@ struct LennyPlanView: View {
                                 pod: pod,
                                 photoURL: photoURLs[pod.id],
                                 isSelected: pod.id == pickedPod?.id,
+                                // Lenny's own pick carries the app's one color.
+                                checkAccent: isLennysPick(pod) ? .lennyAccent : nil,
                                 onTap: { tap(pod) }
                             )
                         }
@@ -106,21 +108,21 @@ struct LennyPlanView: View {
     /// same height, so the grid below never jumps.
     private var pickCaption: some View {
         let pod = pickedPod
-        let isLennysPick = pod?.id == stop.pods.first?.id && stop.pickReason != nil
+        let isPick = pod.map(isLennysPick) ?? false
         return HStack(spacing: 8) {
-            if isLennysPick {
+            if isPick {
                 Image("lenny")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 11, height: 11)
-                    .foregroundColor(.homeBackground)
+                    .foregroundColor(.white)
                     .frame(width: 20, height: 20)
-                    .background(Color.homeText, in: Circle())
+                    .background(Color.lennyAccent, in: Circle())
             }
             Group {
-                if isLennysPick, let reason = stop.pickReason {
-                    Text("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.homeText)
+                if isPick, let reason = stop.pickReason {
+                    Text("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.lennyAccent)
                         + Text("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
                 } else if let pod, let distance = stop.distanceCaption(for: pod) {
                     Text(distance).font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
@@ -134,6 +136,10 @@ struct LennyPlanView: View {
         .id(pod?.id)
         .transition(.opacity)
         .animation(.easeInOut(duration: AppMotion.snappy), value: pod?.id)
+    }
+
+    private func isLennysPick(_ pod: Pod) -> Bool {
+        pod.id == stop.pods.first?.id && stop.pickReason != nil
     }
 
     private func tap(_ pod: Pod) {
