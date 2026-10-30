@@ -72,6 +72,7 @@ struct LennySearchScreen: View {
     private var searching: some View {
         VStack(alignment: .leading, spacing: 0) {
             title
+                .animation(.smooth(duration: 0.45), value: lenny.phase)
                 .font(AppFont.semiBoldLabel(30))
                 .tracking(-0.6)
                 .foregroundColor(.homeText)
@@ -99,15 +100,32 @@ struct LennySearchScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    /// "Lenny is searching" with dots that come and go one by one. The hidden
-    /// dots keep their room, so the title never reflows. Still, with Reduce
-    /// Motion.
+    /// "Lenny is searching" with dots that come and go one by one (the hidden
+    /// dots keep their room, so the title never reflows; still, with Reduce
+    /// Motion). When the search is over it becomes "3 pods found".
+    @ViewBuilder
     private var title: some View {
-        TimelineView(.periodic(from: .now, by: 0.45)) { context in
-            let shownDots = reduceMotion ? 3 : Int(context.date.timeIntervalSinceReferenceDate / 0.45) % 4
-            (0..<3).reduce(Text("Lenny is searching")) { text, index in
-                text + Text(".").foregroundColor(index < shownDots ? .homeText : .clear)
+        if lenny.phase == .results {
+            Text(foundTitle)
+                .transition(.blurReplace)
+        } else {
+            TimelineView(.periodic(from: .now, by: 0.45)) { context in
+                let shownDots = reduceMotion ? 3 : Int(context.date.timeIntervalSinceReferenceDate / 0.45) % 4
+                (0..<3).reduce(Text("Lenny is searching")) { text, index in
+                    text + Text(".").foregroundColor(index < shownDots ? .homeText : .clear)
+                }
             }
+            .transition(.blurReplace)
+        }
+    }
+
+    /// Different pods only: one can be near two stops.
+    private var foundTitle: String {
+        let count = Set(planStops.flatMap { $0.pods.map(\.id) }).count
+        switch count {
+        case 0: return "No pods found"
+        case 1: return "1 pod found"
+        default: return "\(count) pods found"
         }
     }
 
