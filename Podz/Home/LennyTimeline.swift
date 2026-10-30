@@ -15,7 +15,7 @@ struct LennyTimeline: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let dotSize: CGFloat = 18
+    private let dotSize: CGFloat = 24
     private let rowHeight: CGFloat = 96
 
     /// What a step says while it's running, by step. The last one is the long
@@ -42,7 +42,7 @@ struct LennyTimeline: View {
             ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
                 let isLast = index == steps.count - 1
                 let isActive = step.id == activeID
-                HStack(alignment: .top, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
                     VStack(spacing: 0) {
                         dot(isDone: step.isDone, isActive: isActive)
                         if !isLast {
@@ -62,7 +62,7 @@ struct LennyTimeline: View {
                             isRotating: isActive && !reduceMotion
                         )
                     }
-                    .padding(.top, 2)
+                    .padding(.top, 4)
                     .frame(maxWidth: .infinity, minHeight: isLast ? 0 : rowHeight, alignment: .topLeading)
                 }
             }
@@ -147,8 +147,8 @@ private struct VLine: Shape {
 }
 
 /// A step's dot. Quiet while the step waits, breathing while it runs. When it
-/// finishes it reacts: the dot swells to fill its ring with a check drawing
-/// itself inside, and a ring ripples out once.
+/// finishes it reacts: the dot grows to full size with a check drawing itself
+/// inside, and a soft swell fades out around it once. No outlines.
 private struct StepDot: View {
     let isDone: Bool
     let isActive: Bool
@@ -160,34 +160,32 @@ private struct StepDot: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(Color.homeText.opacity(0.12))
-
+            // Breathing while the step runs: a soft filled swell, no outline.
             if isActive && !reduceMotion {
                 Circle()
-                    .fill(Color.homeText.opacity(0.12))
+                    .fill(Color.homeText.opacity(0.14))
                     .phaseAnimator([false, true]) { view, grown in
                         view
-                            .scaleEffect(grown ? 1.9 : 1)
+                            .scaleEffect(grown ? 1.6 : 0.9)
                             .opacity(grown ? 0 : 1)
                     } animation: { _ in .easeOut(duration: 1.1) }
             }
 
-            // The one-time ripple on finishing.
+            // The one-time swell on finishing.
             Circle()
-                .strokeBorder(Color.homeText.opacity(0.5), lineWidth: 1)
-                .scaleEffect(rippleOut ? 2.6 : 1)
+                .fill(Color.homeText.opacity(0.16))
+                .scaleEffect(rippleOut ? 1.9 : 1)
                 .opacity(rippleOut ? 0 : (rippleID == 0 ? 0 : 1))
                 .id(rippleID)
 
             Circle()
-                .fill(Color.homeText.opacity(isDone ? 1 : isActive ? 0.6 : 0.3))
-                .padding(isDone ? 1 : 4)
-                .scaleEffect(isDone ? 1 : 0.8)
+                .fill(Color.homeText.opacity(isDone ? 1 : isActive ? 0.6 : 0.25))
+                .scaleEffect(isDone ? 1 : 0.7)
 
             CheckGlyphShape()
                 .trim(from: 0, to: isDone ? 1 : 0)
-                .stroke(Color.homeBackground, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                .frame(width: 8, height: 6.5)
+                .stroke(Color.homeBackground, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+                .frame(width: 11, height: 9)
         }
         .frame(width: size, height: size)
         .animation(.bouncy(duration: 0.5), value: isDone)
