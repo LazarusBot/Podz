@@ -169,7 +169,7 @@ struct LennySummaryView: View {
         increaseLabel: String,
         @ViewBuilder answer: () -> Answer
     ) -> some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 4) {
             stepButton(systemImage: "minus", label: decreaseLabel, action: decrease)
             answer()
                 .frame(maxWidth: .infinity)
@@ -177,7 +177,7 @@ struct LennySummaryView: View {
                 .minimumScaleFactor(0.85)
             stepButton(systemImage: "plus", label: increaseLabel, action: increase)
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 10)
         .frame(maxWidth: .infinity)
         .frame(height: 83)
         .background(DetailPill())
@@ -212,7 +212,8 @@ struct LennySummaryView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.homeText)
-                .frame(width: 34, height: 44)
+                .frame(width: 38, height: 38)
+                .background(Color.homeBackground, in: Circle())
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(label)
