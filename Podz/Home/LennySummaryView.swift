@@ -37,6 +37,9 @@ struct LennySummaryView: View {
     @State private var startDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     @State private var guests = 1
     @State private var stage = Stage.guests
+    /// On the first question: false shows a plain "Add guest" button, true
+    /// opens the picker across the whole stack.
+    @State private var isPickingGuests = false
     @State private var status = BookingStatus.idle
     /// Stops already booked, so a retry only books what's left.
     @State private var bookedPodIDs: Set<UUID> = []
@@ -97,7 +100,12 @@ struct LennySummaryView: View {
             // The control stack: back, the pill that asks (then books), and
             // while there's a question, a third button to continue.
             HStack(spacing: 13) {
-                DetailBackButton(action: back)
+                // While the guest picker is open it takes the back button's
+                // place; the next screen brings it back.
+                if showsBack {
+                    DetailBackButton(action: back)
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
                 primaryPill
                 if showsContinue {
                     continueButton
@@ -111,6 +119,7 @@ struct LennySummaryView: View {
         }
         .background(Color.homeBackground.ignoresSafeArea())
         .animation(.smooth(duration: 0.35), value: stage)
+        .animation(.smooth(duration: 0.35), value: isPickingGuests)
         .animation(.smooth(duration: 0.35), value: status)
         .onAppear { appeared = true }
         .sheet(isPresented: $showsDatePicker) { datePickerSheet }
@@ -128,6 +137,9 @@ struct LennySummaryView: View {
             DetailTextButton(title: "Reserving…", action: {})
                 .disabled(true)
                 .opacity(0.45)
+        case (_, .guests) where !isPickingGuests:
+            // First a plain button; it opens the picker.
+            DetailTextButton(title: guests == 1 ? "Add guest" : "\(guests) guests") { isPickingGuests = true }
         case (_, .guests):
             askPill(
                 decrease: { if guests > 1 { guests -= 1 } },
@@ -187,7 +199,10 @@ struct LennySummaryView: View {
     /// turned around, inverted because it's the one to press.
     private var continueButton: some View {
         Button {
-            if let next = Stage(rawValue: stage.rawValue + 1) { stage = next }
+            if let next = Stage(rawValue: stage.rawValue + 1) {
+                isPickingGuests = false
+                stage = next
+            }
         } label: {
             // The back pill's chevron, turned around: same glyph, same size.
             DetailBackChevron()
@@ -204,8 +219,12 @@ struct LennySummaryView: View {
     /// There's a question on the pill (not Reserve, not while booking or
     /// once it's booked).
     private var showsContinue: Bool {
-        status != .booking && status != .booked && stage != .review
+        guard status != .booking, status != .booked else { return false }
+        return stage == .date || (stage == .guests && isPickingGuests)
     }
+
+    /// Everywhere but while the guest picker is open.
+    private var showsBack: Bool { !(stage == .guests && isPickingGuests) }
 
     private func stepButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -247,6 +266,7 @@ struct LennySummaryView: View {
             onBack()
         } else if let previous = Stage(rawValue: stage.rawValue - 1) {
             status = .idle
+            isPickingGuests = false
             stage = previous
         } else {
             onBack()
