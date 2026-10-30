@@ -1,45 +1,53 @@
 import SwiftUI
 
-/// Lenny's itinerary search, opened from the Home pill's round button.
-/// Same phases and components the old Home used — describe a route, watch
-/// the steps tick by, pick from the matching pods — just on its own screen
-/// instead of inside Home's search pill.
+/// Lenny's itinerary search (Paper "LennySearch" frames), opened when a
+/// route is submitted from the Home pill's Lenny mode.
+///
+/// "Lenny is searching…", the route in the inverted pill with Lenny's mark,
+/// the steps ticking by, and the bottom pill row: back, and **View selected
+/// pods**, which wakes up once the search has results.
+/// The results themselves (`LennyPlan` frames) still use the old list.
 struct LennySearchScreen: View {
+    var onClose: () -> Void
+
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var podsStore = PodsStore.shared
+    @State private var showsResults = false
     @State private var selectedPod: Pod?
     @Namespace private var zoomNamespace
-    @FocusState private var fieldFocused: Bool
+
+    private var hasResults: Bool { lenny.phase == .results }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                CloseButton(action: { lenny.cancel() })
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-
-            if lenny.phase == .editing {
-                field
-                    .padding(.horizontal, 24)
-                    .padding(.top, 20)
+        ZStack(alignment: .bottom) {
+            if showsResults {
+                resultsList
+                    .transition(.opacity)
+            } else {
+                searching
+                    .transition(.opacity)
             }
 
-            ScrollView {
-                content
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, 40)
+            HStack(spacing: 13) {
+                DetailBackButton(action: back)
+
+                if !showsResults {
+                    DetailTextButton(title: "View selected pods") {
+                        withAnimation(.easeInOut(duration: 0.3)) { showsResults = true }
+                    }
+                    .disabled(!hasResults)
+                    .opacity(hasResults ? 1 : 0.45)
+                }
             }
-            .scrollDismissesKeyboard(.interactively)
+            .padding(.horizontal, 24)
+            // The cover respects the safe area, so 40 here is the 74 from
+            // the bottom edge every control stack uses.
+            .padding(.bottom, 40)
         }
-        .background(Color.appHomeBackground.ignoresSafeArea())
-        // The Lenny components still use fixed black-on-white colors.
-        .preferredColorScheme(.light)
-        .onAppear { fieldFocused = lenny.phase == .editing }
-        .onChange(of: lenny.phase) { _, phase in
-            fieldFocused = phase == .editing
-        }
+        .background(Color.homeBackground.ignoresSafeArea())
+        // The results list still uses fixed black-on-white colors.
+        .preferredColorScheme(showsResults ? .light : nil)
+        .interactiveDismissDisabled()
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
@@ -47,58 +55,88 @@ struct LennySearchScreen: View {
         }
     }
 
-    private var field: some View {
-        TextField(
-            "",
-            text: $lenny.itineraryText,
-            prompt: Text("Chamonix to Zermatt in 5 days").foregroundColor(.black.opacity(0.35)),
-            axis: .vertical
-        )
-        .font(AppFont.regularLabel(16))
-        .foregroundColor(.black)
-        .lineLimit(1...4)
-        .focused($fieldFocused)
-        .submitLabel(.search)
-        .onSubmit { Task { await lenny.submit() } }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 18)
-        .background(Color(white: 0xF1 / 255), in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+    /// Back from the results goes to the steps; back from the steps leaves.
+    private func back() {
+        if showsResults {
+            withAnimation(.easeInOut(duration: 0.3)) { showsResults = false }
+        } else {
+            onClose()
+        }
     }
 
-    @ViewBuilder
-    private var content: some View {
-        switch lenny.phase {
-        case .idle:
-            EmptyView()
-        case .editing:
-            VStack(spacing: 32) {
-                LennyWalkingAvatar()
-                Text(lenny.errorMessage ?? "Describe your hike and Lenny will find pods along the way.")
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(lenny.errorMessage == nil ? .appTextMuted : .red)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.top, 60)
-            .padding(.horizontal, 40)
-        case .searching:
-            LennySearchSteps(steps: lenny.steps)
-        case .results:
-            LennyJourneyProgress(stops: lenny.journeyStops)
+    // MARK: - Searching
 
-            VStack(spacing: 30) {
-                ForEach(lenny.matchingPods) { pod in
-                    LennyResultCard(
-                        pod: pod,
-                        photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                        isSelected: lenny.selectedPodIDs.contains(pod.id),
-                        onToggleSelect: { lenny.toggleSelection(for: pod) },
-                        onTapCard: { selectedPod = pod },
-                        zoomNamespace: zoomNamespace
-                    )
+    private var searching: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Lenny is searching…")
+                .font(AppFont.semiBoldLabel(30))
+                .tracking(-0.6)
+                .foregroundColor(.homeText)
+                .padding(.horizontal, 24)
+                .padding(.top, 25)
+
+            routePill
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+
+            LennyTimeline(steps: lenny.steps)
+                .padding(.horizontal, 36)
+                .padding(.top, 52)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// The route as the Home pill leaves it in Lenny mode: inverted bar,
+    /// Lenny's disc melted into it so only the eyes and mouth show.
+    private var routePill: some View {
+        HStack(spacing: 20) {
+            Image("lenny")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+                .foregroundColor(.homeBackground)
+                .frame(width: 40, height: 40)
+
+            Text(lenny.itineraryText)
+                .font(AppFont.regularLabel(14))
+                .foregroundColor(.homeBackground)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.leading, 9)
+        .padding(.trailing, 28)
+        .frame(height: 60)
+        .background(Color.homeText, in: Capsule())
+    }
+
+    // MARK: - Results (old list, until the LennyPlan frames land)
+
+    private var resultsList: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                LennyJourneyProgress(stops: lenny.journeyStops)
+                    .padding(.top, 24)
+
+                VStack(spacing: 30) {
+                    ForEach(lenny.matchingPods) { pod in
+                        LennyResultCard(
+                            pod: pod,
+                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
+                            isSelected: lenny.selectedPodIDs.contains(pod.id),
+                            onToggleSelect: { lenny.toggleSelection(for: pod) },
+                            onTapCard: { selectedPod = pod },
+                            zoomNamespace: zoomNamespace
+                        )
+                    }
                 }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
+
+                Color.clear.frame(height: 190)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
         }
     }
 }

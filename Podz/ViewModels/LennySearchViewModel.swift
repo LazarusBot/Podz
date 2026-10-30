@@ -46,6 +46,7 @@ final class LennySearchViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isKeyboardFocused = false
     private var dismissTask: Task<Void, Never>?
+    private var searchTask: Task<Void, Never>?
     
     func toggleSelection(for pod: Pod) {
         if selectedPodIDs.contains(pod.id) {
@@ -96,6 +97,7 @@ final class LennySearchViewModel: ObservableObject {
     /// dismissing before clearing state.
     func forceReset() {
         dismissTask?.cancel()
+        searchTask?.cancel()
         isKeyboardFocused = false
         phase = .idle
         itineraryText = ""
@@ -106,6 +108,14 @@ final class LennySearchViewModel: ObservableObject {
         errorMessage = nil
     }
     
+    /// Starts a search for `text` in a task the view model owns, so leaving
+    /// the screen (`forceReset`) also stops the steps still ticking.
+    func start(_ text: String) {
+        searchTask?.cancel()
+        itineraryText = text
+        searchTask = Task { await submit() }
+    }
+
     func submit() async {
         guard !itineraryText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         dismissTask?.cancel()
@@ -122,13 +132,14 @@ final class LennySearchViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 300_000_000)
             phase = .searching
             steps = [
-                StepInfo(id: 0, title: "Recognized a country", subtitle: matchedCountry, isDone: true)
+                StepInfo(id: 0, title: "Recognized a country.", subtitle: matchedCountry, isDone: true)
             ]
             // Long enough to actually read the single step, not just
             // register a flash before results replace it — this is the
             // fast path's whole "searching" phase, so it's the only
             // chance to see it happen at all.
             try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled else { return }
             let found = PodsStore.shared.pods(inCountry: matchedCountry, type: nil)
             matchingPods = found
             journeyStops = [JourneyStop(name: matchedCountry, podsFound: found.count, isResolved: true)]
@@ -142,9 +153,9 @@ final class LennySearchViewModel: ObservableObject {
         errorMessage = nil
         
         steps = [
-            StepInfo(id: 0, title: "Extracting stops", subtitle: "Reading your itinerary...", isDone: false),
-            StepInfo(id: 1, title: "Finding the best podz around each stop", subtitle: "", isDone: false),
-            StepInfo(id: 2, title: "Loading your itinerary...", subtitle: "Can take up to 2 minutes", isDone: false)
+            StepInfo(id: 0, title: "Extracting your stops.", subtitle: "Reading your itinerary…", isDone: false),
+            StepInfo(id: 1, title: "Finding the best pods around here.", subtitle: "Within 50 km of each stop", isDone: false),
+            StepInfo(id: 2, title: "Loading your itinerary.", subtitle: "Can take up to 2 minutes…", isDone: false)
         ]
         
         // Step 1 — extract place names on-device.
@@ -160,17 +171,21 @@ final class LennySearchViewModel: ObservableObject {
             phase = .editing
             return
         }
+        steps[0].title = "Extracting \(Self.stopCount(placeNames.count))."
         steps[0].subtitle = placeNames.joined(separator: ", ")
         steps[0].isDone = true
         try? await Task.sleep(nanoseconds: 700_000_000) // keeps the step readable, not just a flash
+        guard !Task.isCancelled else { return }
 
         steps[1].isDone = true
         try? await Task.sleep(nanoseconds: 700_000_000)
+        guard !Task.isCancelled else { return }
         steps[2].isDone = true
         // Same 700ms as the other two, not the original 300 — all
         // three steps used to fly by in ~1s total, too fast to read
         // any of them before results replaced the list outright.
         try? await Task.sleep(nanoseconds: 700_000_000)
+        guard !Task.isCancelled else { return }
         
         // Switch to the results screen now, then resolve each stop one
         // at a time — the journey timeline fills in live rather than
@@ -180,7 +195,7 @@ final class LennySearchViewModel: ObservableObject {
         
         var allFound: [Pod] = []
         for (index, name) in placeNames.enumerated() {
-            guard let result = await LennyItineraryParser.geocode(name) else { continue }
+            guard let result = await LennyItineraryParser.geocode(name), !Task.isCancelled else { continue }
             let found = PodsStore.shared.pods(near: [result.coordinate], radiusKm: 50)
             allFound.append(contentsOf: found)
             journeyStops[index] = JourneyStop(name: result.region, podsFound: found.count, isResolved: true)
@@ -191,5 +206,12 @@ final class LennySearchViewModel: ObservableObject {
         if allFound.isEmpty {
             errorMessage = "Couldn't find any podz along that route."
         }
+    }
+
+    /// "one stop", "three stops", "12 stops" — the step title's wording.
+    private static func stopCount(_ count: Int) -> String {
+        let words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+        let number = count < words.count ? words[count] : "\(count)"
+        return "\(number) \(count == 1 ? "stop" : "stops")"
     }
 }
