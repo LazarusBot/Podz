@@ -82,11 +82,11 @@ struct LennySearchScreen: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
 
-            // The steps sit right above the control stack.
-            Spacer(minLength: 0)
-
+            // Positions from the Paper frame: the first dot sits 71 under the
+            // pill, 45 from the left edge.
             LennyTimeline(steps: lenny.steps)
                 .padding(.horizontal, 33)
+                .padding(.top, 59)
 
             if let message = lenny.errorMessage {
                 Text(message)
@@ -96,8 +96,6 @@ struct LennySearchScreen: View {
                     .padding(.top, 24)
             }
         }
-        // Clear of the control stack (83 high, 40 + safe area from the edge).
-        .padding(.bottom, 83 + 40 + 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 

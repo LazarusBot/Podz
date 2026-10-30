@@ -16,7 +16,9 @@ struct LennyTimeline: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let dotSize: CGFloat = 24
-    private let rowHeight: CGFloat = 96
+    /// Dot to dot, from the Paper frame: 98 from the first step to the second,
+    /// 148 from the second to the third (the line trails off longer).
+    private func rowHeight(after index: Int) -> CGFloat { index == 0 ? 98 : 148 }
 
     /// What a step says while it's running, by step. The last one is the long
     /// wait, so it has the most to say.
@@ -63,7 +65,7 @@ struct LennyTimeline: View {
                         )
                     }
                     .padding(.top, 4)
-                    .frame(maxWidth: .infinity, minHeight: isLast ? 0 : rowHeight, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, minHeight: isLast ? 0 : rowHeight(after: index), alignment: .topLeading)
                 }
             }
         }
