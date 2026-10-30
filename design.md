@@ -17,7 +17,7 @@ color, a button style or a pattern.** Check it before every commit/push.
   detail's photo paging vs. swipe-to-dismiss is the example), **tell the
   user before building** and propose the simpler option; remove the
   interaction that is hardest to get right.
-- Pure black / white grounds. **No accent color**: the photos carry all the color. The one exception is `lennyAccent` (#2F6BFF light, #6C95FF dark), reserved for **Lenny's pick** on the Lenny plan (its label, its mark and the check on its tile) and used nowhere else, so that a color always means "Lenny chose this".
+- Pure black / white grounds. **No accent color**: the photos carry all the color. The one exception is `lennyAccent` (a pink: #E8337F light, #FF6FA8 dark), reserved for **Lenny's pick** on the Lenny plan (its label, its mark and the check on its tile) and used nowhere else, so that a color always means "Lenny chose this".
 - Flat. No shadows, no gradients except a fade into the ground and the soft black scrim under a name on a photo tile (white text on photos is the one place text isn't a token). Nothing is glass:
   the Likes folders are flat bubbles (see Patterns).
 - Dark and light are both designed. Never hard-code a color: use a token below,

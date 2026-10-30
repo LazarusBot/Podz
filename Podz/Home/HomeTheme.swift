@@ -24,11 +24,11 @@ extension Color {
 }
 
 extension Color {
-    /// #2F6BFF light / #6C95FF dark — the app's one accent color, reserved for
+    /// #E8337F light / #FF6FA8 dark — the app's one accent color, reserved for
     /// Lenny's pick (the label, its mark and its check). Nothing else uses it.
     static let lennyAccent = Color(
-        light: Color(red: 0x2F / 255, green: 0x6B / 255, blue: 0xFF / 255),
-        dark: Color(red: 0x6C / 255, green: 0x95 / 255, blue: 0xFF / 255)
+        light: Color(red: 0xE8 / 255, green: 0x33 / 255, blue: 0x7F / 255),
+        dark: Color(red: 0xFF / 255, green: 0x6F / 255, blue: 0xA8 / 255)
     )
 }
 
