@@ -13,6 +13,7 @@ struct LennySearchScreen: View {
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var podsStore = PodsStore.shared
     @State private var showsPlan = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedPod: Pod?
     @Namespace private var zoomNamespace
 
@@ -60,7 +61,7 @@ struct LennySearchScreen: View {
 
     private var searching: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Lenny is searching…")
+            title
                 .font(AppFont.semiBoldLabel(30))
                 .tracking(-0.6)
                 .foregroundColor(.homeText)
@@ -88,6 +89,18 @@ struct LennySearchScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
+    /// "Lenny is searching" with dots that come and go one by one. The hidden
+    /// dots keep their room, so the title never reflows. Still, with Reduce
+    /// Motion.
+    private var title: some View {
+        TimelineView(.periodic(from: .now, by: 0.45)) { context in
+            let shownDots = reduceMotion ? 3 : Int(context.date.timeIntervalSinceReferenceDate / 0.45) % 4
+            (0..<3).reduce(Text("Lenny is searching")) { text, index in
+                text + Text(".").foregroundColor(index < shownDots ? .homeText : .clear)
+            }
+        }
+    }
+
     /// The route as the Home pill leaves it in Lenny mode: inverted bar,
     /// Lenny's disc melted into it so only the eyes and mouth show.
     private var routePill: some View {
@@ -99,6 +112,10 @@ struct LennySearchScreen: View {
                 .frame(width: 20, height: 20)
                 .foregroundColor(.homeBackground)
                 .frame(width: 40, height: 40)
+                // Lenny sways while it searches.
+                .phaseAnimator(reduceMotion || lenny.phase == .results ? [0.0] : [-9.0, 9.0]) { view, angle in
+                    view.rotationEffect(.degrees(angle))
+                } animation: { _ in .easeInOut(duration: 0.7) }
 
             Text(lenny.itineraryText)
                 .font(AppFont.regularLabel(14))

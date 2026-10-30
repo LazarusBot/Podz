@@ -98,7 +98,20 @@ final class LennySearchViewModel: ObservableObject {
     func start(_ text: String) {
         searchTask?.cancel()
         itineraryText = text
+        // The steps are on screen from the first frame, all still to do.
+        steps = Self.initialSteps()
+        phase = .searching
         searchTask = Task { await submit() }
+    }
+
+    /// The three steps every search walks through, so the screen's layout
+    /// never changes shape while it waits.
+    private static func initialSteps() -> [StepInfo] {
+        [
+            StepInfo(id: 0, title: "Extracting your stops.", subtitle: "", isDone: false),
+            StepInfo(id: 1, title: "Finding the best pods around here.", subtitle: "", isDone: false),
+            StepInfo(id: 2, title: "Loading your itinerary.", subtitle: "", isDone: false)
+        ]
     }
 
     func submit() async {
@@ -114,33 +127,37 @@ final class LennySearchViewModel: ObservableObject {
             $0.localizedCaseInsensitiveCompare(trimmedInput) == .orderedSame
         }) {
             isKeyboardFocused = false
-            try? await Task.sleep(nanoseconds: 300_000_000)
             phase = .searching
-            steps = [
-                StepInfo(id: 0, title: "Recognized a country.", subtitle: matchedCountry, isDone: true)
-            ]
-            // Long enough to actually read the single step, not just
-            // register a flash before results replace it — this is the
-            // fast path's whole "searching" phase, so it's the only
-            // chance to see it happen at all.
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            steps = Self.initialSteps()
+            // Long enough to see the steps tick, not just a flash.
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled else { return }
+            steps[0].title = "Recognized a country."
+            steps[0].subtitle = matchedCountry
+            steps[0].isDone = true
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard !Task.isCancelled else { return }
+            steps[1].subtitle = "Within 50 km of each stop"
+            steps[1].isDone = true
+            try? await Task.sleep(nanoseconds: 600_000_000)
             guard !Task.isCancelled else { return }
             let found = PodsStore.shared.pods(inCountry: matchedCountry, type: nil)
             journeyStops = [JourneyStop(name: matchedCountry, pods: found, isResolved: true)]
+            steps[2].subtitle = "Your plan is ready"
+        steps[2].isDone = true
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled else { return }
             phase = .results
             return
         }
         
         isKeyboardFocused = false
-        try? await Task.sleep(nanoseconds: 300_000_000)
         phase = .searching
         errorMessage = nil
-        
-        steps = [
-            StepInfo(id: 0, title: "Extracting your stops.", subtitle: "Reading your itinerary…", isDone: false),
-            StepInfo(id: 1, title: "Finding the best pods around here.", subtitle: "Within 50 km of each stop", isDone: false),
-            StepInfo(id: 2, title: "Loading your itinerary.", subtitle: "Can take up to 2 minutes…", isDone: false)
-        ]
+        steps = Self.initialSteps()
+        // A beat on the first step before it resolves.
+        try? await Task.sleep(nanoseconds: 600_000_000)
+        guard !Task.isCancelled else { return }
         
         // Step 1 — extract place names on-device.
         var placeNames = LennyItineraryParser.extractPlaceNames(from: itineraryText)
@@ -161,6 +178,7 @@ final class LennySearchViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 700_000_000) // keeps the step readable, not just a flash
         guard !Task.isCancelled else { return }
 
+        steps[1].subtitle = "Within 50 km of each stop"
         steps[1].isDone = true
         try? await Task.sleep(nanoseconds: 700_000_000)
         guard !Task.isCancelled else { return }
@@ -175,6 +193,7 @@ final class LennySearchViewModel: ObservableObject {
         }
         guard !Task.isCancelled else { return }
 
+        steps[2].subtitle = "Your plan is ready"
         steps[2].isDone = true
         try? await Task.sleep(nanoseconds: 700_000_000)
         guard !Task.isCancelled else { return }
