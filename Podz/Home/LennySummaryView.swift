@@ -153,54 +153,76 @@ struct LennySummaryView: View {
         }
     }
 
-    /// The picker, across the whole stack: a round minus, the answer, a round
-    /// plus, then continue. All round buttons are the stack's 83.
+    /// The picker, across the whole stack: one big pill holding a round minus,
+    /// the answer and a round plus (the two buttons are 83, the stack's size,
+    /// flush with the pill's ends), then continue beside it.
     private var picker: some View {
         HStack(spacing: 13) {
-            DetailRoundButton(accessibilityLabel: stage == .guests ? "Fewer guests" : "Day earlier", action: decrease) {
-                MinusGlyph()
-                    .stroke(Color.homeText, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-                    .frame(width: 12, height: 12)
-            }
+            HStack(spacing: 0) {
+                pickerButton(accessibilityLabel: stage == .guests ? "Fewer guests" : "Day earlier", action: decrease) {
+                    MinusGlyph()
+                }
 
-            Group {
-                if stage == .guests {
-                    VStack(spacing: 2) {
-                        Text("\(guests)")
-                            .font(AppFont.semiBoldLabel(24))
-                            .foregroundColor(.homeText)
-                        Text(guests == 1 ? "guest" : "guests")
-                            .font(AppFont.regularLabel(12))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                } else {
-                    // Tap the date for the calendar, to jump further.
-                    Button { showsDatePicker = true } label: {
+                Group {
+                    if stage == .guests {
                         VStack(spacing: 2) {
-                            Text(startDate.formatted(.dateTime.day().month(.abbreviated)))
-                                .font(AppFont.semiBoldLabel(16))
+                            Text("\(guests)")
+                                .font(AppFont.semiBoldLabel(24))
                                 .foregroundColor(.homeText)
-                            Text(startDate.formatted(.dateTime.weekday(.abbreviated)))
+                            Text(guests == 1 ? "guest" : "guests")
                                 .font(AppFont.regularLabel(12))
                                 .foregroundColor(.homeSubtitle)
                         }
+                    } else {
+                        // Tap the date for the calendar, to jump further.
+                        Button { showsDatePicker = true } label: {
+                            VStack(spacing: 2) {
+                                Text(startDate.formatted(.dateTime.day().month(.abbreviated)))
+                                    .font(AppFont.semiBoldLabel(16))
+                                    .foregroundColor(.homeText)
+                                Text(startDate.formatted(.dateTime.weekday(.abbreviated)))
+                                    .font(AppFont.regularLabel(12))
+                                    .foregroundColor(.homeSubtitle)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Start date, \(startDate.formatted(.dateTime.weekday(.wide).day().month(.wide))). Opens the calendar")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Start date, \(startDate.formatted(.dateTime.weekday(.wide).day().month(.wide))). Opens the calendar")
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+
+                pickerButton(accessibilityLabel: stage == .guests ? "More guests" : "Day later", action: increase) {
+                    PlusGlyph()
                 }
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
             .frame(maxWidth: .infinity)
-
-            DetailRoundButton(accessibilityLabel: stage == .guests ? "More guests" : "Day later", action: increase) {
-                PlusGlyph()
-                    .stroke(Color.homeText, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-                    .frame(width: 12, height: 12)
-            }
+            .frame(height: 83)
+            .background(DetailPill())
 
             continueButton
         }
+    }
+
+    /// A − or + at the end of the picker pill: an 83 circle in the classic
+    /// pill grey with a 0.5pt edge so it reads against the pill, and a thin
+    /// vector like the back chevron's.
+    private func pickerButton<Glyph: Shape>(
+        accessibilityLabel: String,
+        action: @escaping () -> Void,
+        @ViewBuilder glyph: () -> Glyph
+    ) -> some View {
+        Button(action: action) {
+            glyph()
+                .stroke(Color.homeText, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                .frame(width: 12, height: 12)
+                .frame(width: 83, height: 83)
+                .background(Color.homePill, in: Circle())
+                .overlay(Circle().strokeBorder(Color.homeText.opacity(0.25), lineWidth: 0.5))
+        }
+        .buttonStyle(TapScaleButtonStyle())
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func decrease() {
