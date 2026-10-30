@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Header row: back button (44x44 circle, Apple's HIG minimum tap target —
-/// Figma's node 3827:1382 spec was 31x31) — centered title — empty
+/// Header row: back button (44x44 flat pill, Apple's HIG minimum tap target) — centered title — empty
 /// trailing spacer. Padding is 24 horizontal / 31 vertical exactly as in
 /// Figma — don't round these to 20/32.
 struct ProfileTopBar: View {
@@ -21,24 +20,21 @@ struct ProfileTopBar: View {
     /// row's badge, or whatever screen this leads to).
     var trailingBadge: Bool = false
     /// Skips the opaque `appHomeBackground` fill — e.g. ProfileEditView's
-    /// own header, floating this bar's back/edit buttons over a photo
-    /// instead of a flat colored bar. Also switches the buttons themselves
-    /// from solid white circles to real Liquid Glass with a white stroke —
-    /// a solid white circle reads fine on a flat background, but over
-    /// varied photo content it looks like an odd opaque patch rather than
-    /// a floating control.
+    /// own header, floating this bar's buttons over a photo instead of a
+    /// flat colored bar.
     var transparentBackground: Bool = false
 
     var body: some View {
         HStack {
             if let onBack {
                 Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.black)
+                    DetailBackChevron()
+                        .stroke(Color.homeText.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                        .frame(width: 8, height: 12)
                         .frame(width: 44, height: 44)
                 }
-                .modifier(TopBarButtonChrome(transparentBackground: transparentBackground))
+                .buttonStyle(TapScaleButtonStyle())
+                .modifier(TopBarButtonChrome())
                 .accessibilityLabel("Back")
             } else {
                 Color.clear.frame(width: 44, height: 44)
@@ -49,7 +45,7 @@ struct ProfileTopBar: View {
             Text(title)
                 .font(AppFont.pillLabel(24))
                 .fontWeight(.heavy)
-                .foregroundColor(.black)
+                .foregroundColor(.homeText)
 
             Spacer()
 
@@ -57,10 +53,11 @@ struct ProfileTopBar: View {
                 Button(action: onTrailingTap) {
                     Image(systemName: trailingIcon)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.homeText.opacity(0.35))
                         .frame(width: 44, height: 44)
                 }
-                .modifier(TopBarButtonChrome(transparentBackground: transparentBackground))
+                .buttonStyle(TapScaleButtonStyle())
+                .modifier(TopBarButtonChrome())
                 .accessibilityLabel(trailingAccessibilityLabel)
                 .overlay(alignment: .topTrailing) {
                     if trailingBadge {
@@ -72,9 +69,9 @@ struct ProfileTopBar: View {
                         // the stroke instead of floating past it or
                         // sitting deep inside.
                         Circle()
-                            .fill(Color.appMessageBlue)
+                            .fill(Color.homeText)
                             .frame(width: 12, height: 12)
-                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
+                            .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 2))
                     }
                 }
             } else {
@@ -89,31 +86,12 @@ struct ProfileTopBar: View {
     }
 }
 
-/// Solid white circle everywhere this bar had it before, or real Liquid
-/// Glass — with its own dynamic specular highlight, not just a blur —
-/// over `transparentBackground`'s photo. Same recipe as `AvatarPicker`'s
-/// own `CameraBadge`, so a floating circle button reads the same wherever
-/// it shows up in the app, with the same iOS 26 availability gate and
-/// `.ultraThinMaterial` fallback below it.
+/// The flat round pill from `design.md`: `homePill` with a thin border in
+/// the ground color, wherever the bar sits.
 private struct TopBarButtonChrome: ViewModifier {
-    let transparentBackground: Bool
-
     func body(content: Content) -> some View {
-        if transparentBackground {
-            Group {
-                if #available(iOS 26, *) {
-                    GlassEffectContainer {
-                        content.glassEffect(.regular.tint(.white.opacity(0.1)), in: .circle)
-                    }
-                } else {
-                    content.background(Circle().fill(.ultraThinMaterial))
-                }
-            }
-            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
-        } else {
-            content
-                .background(Circle().fill(Color.white))
-                .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
-        }
+        content
+            .background(Circle().fill(Color.homePill.opacity(0.95)))
+            .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1))
     }
 }

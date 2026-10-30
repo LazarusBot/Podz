@@ -3,12 +3,32 @@ import SwiftUI
 /// The pieces the pod detail and the Likes folder view share, so the two
 /// screens look and behave the same (Paper "DetailView" frames).
 enum DetailLayout {
+    /// The control stack (back pill + the page's action) sits this far above
+    /// the home-indicator zone, i.e. `controlStackGap + 34` = 74 from the
+    /// screen's physical bottom edge on a Face ID iPhone (the Paper frames).
+    static let controlStackGap: CGFloat = 40
+
     /// Photo heights from the Paper frames, as a share of the screen.
     static let stackedPhotoShare: CGFloat = 524 / 852
     static let extendedPhotoShare: CGFloat = 250 / 852
 
     static func photoHeight(screenHeight: CGFloat, isExtended: Bool) -> CGFloat {
         screenHeight * (isExtended ? extendedPhotoShare : stackedPhotoShare)
+    }
+}
+
+/// The fade into the ground that content scrolls under, behind the control
+/// stack: clear over the top half, solid `homeBackground` at the bottom edge.
+/// Used by the Likes folder view, the Likes tab and the save-to-folder sheet.
+struct BottomFade: View {
+    var body: some View {
+        LinearGradient(
+            stops: [.init(color: .clear, location: 0.5), .init(color: .homeBackground, location: 1)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 

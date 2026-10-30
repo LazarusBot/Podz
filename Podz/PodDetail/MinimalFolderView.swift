@@ -44,16 +44,10 @@ struct MinimalFolderView: View {
             }
 
             // Fade into the ground behind the buttons.
-            LinearGradient(
-                stops: [.init(color: .clear, location: 0.5), .init(color: .homeBackground, location: 1)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            BottomFade()
 
             actionRow
-                .padding(.bottom, 40)
+                .controlStackPadding()
         }
         .background(Color.homeBackground.ignoresSafeArea())
         // This screen replaces the tab's content, so the floating tab bar

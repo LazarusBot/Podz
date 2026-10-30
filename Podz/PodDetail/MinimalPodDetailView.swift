@@ -33,7 +33,8 @@ struct MinimalPodDetailView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let screenHeight = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
+            // The whole screen: this view ignores every safe area.
+            let screenHeight = proxy.size.height
             let photoHeight = DetailLayout.photoHeight(screenHeight: screenHeight, isExtended: isExtended)
 
             VStack(spacing: 0) {
@@ -58,11 +59,11 @@ struct MinimalPodDetailView: View {
                 .onTapGesture { toggleExtended() }
 
                 actionRow
-                    .padding(.bottom, proxy.safeAreaInsets.bottom + 40)
+                    .controlStackPadding()
             }
-            .frame(width: proxy.size.width, height: proxy.size.height + proxy.safeAreaInsets.top)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea()
         .background(Color.homeBackground.ignoresSafeArea())
         // Back is the only way out. The zoom transition's own swipe-to-
         // dismiss fought with paging through the photos.

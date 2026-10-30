@@ -95,6 +95,16 @@ struct LikesView: View {
     // MARK: - Folders overview
     
     private var foldersOverview: some View {
+        ZStack(alignment: .bottom) {
+            foldersScroll
+            // The bubbles fade into the ground at the bottom, like the
+            // folder view, so they slide under the tab bar.
+            BottomFade()
+        }
+        .background(Color.homeBackground)
+    }
+
+    private var foldersScroll: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {

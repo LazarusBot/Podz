@@ -25,93 +25,61 @@ struct MyPostDetailView: View {
     private var comments: [PostComment] { postsStore.comments(for: post.id) }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ProfileTopBar(
-                    title: pod?.name ?? "Post",
-                    onBack: onBack,
-                    trailingIcon: "trash",
-                    onTrailingTap: { showDeleteConfirmation = true },
-                    trailingAccessibilityLabel: "Delete post"
-                )
-
-                VStack(alignment: .leading, spacing: 16) {
-                    if !photos.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(photos) { photo in
-                                    PodPhoto(url: photo.url)
-                                        .frame(width: 280, height: 280)
-                                        .clipShape(RoundedRectangle(cornerRadius: AppRadius.r14, style: .continuous))
-                                }
-                            }
-                            .padding(.horizontal, 24)
-                        }
-                    }
-
-                    if let body = post.body, !body.isEmpty {
-                        Text(body)
-                            .font(AppFont.mediumLabel(14))
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 24)
-                    }
-
-                    HStack(spacing: 16) {
-                        Label("\(postsStore.likeCount(for: post.id))", systemImage: "heart.fill")
-                            .foregroundColor(.red)
-                        Label("\(comments.count)", systemImage: "bubble.left.fill")
-                            .foregroundColor(.appMessageBlue)
-                        Spacer()
-                        Text(Self.relativeTime(post.createdAt))
-                            .foregroundColor(.appTextMuted)
-                    }
-                    .font(AppFont.mediumLabel(11))
-                    .padding(.horizontal, 24)
-
-                    if !comments.isEmpty {
-                        Divider().padding(.horizontal, 24)
-
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(Array(comments.enumerated()), id: \.element.id) { index, comment in
-                                HStack(alignment: .top, spacing: 8) {
-                                    AvatarView(imageName: postsStore.profile(for: comment.authorId)?.avatarURL, size: 24)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(postsStore.profile(for: comment.authorId)?.displayName ?? "Someone")
-                                            // Same fix as PostCard's own
-                                            // comment row — see its
-                                            // comment for why this isn't
-                                            // `pillLabelBold` (Darker
-                                            // Grotesque) mixed with the
-                                            // body's Inter, and why this
-                                            // is 12pt (matching the body),
-                                            // not smaller, and SemiBold
-                                            // rather than Medium.
-                                            .font(AppFont.semiBoldLabel(12))
-                                            .foregroundColor(.black)
-                                        Text(comment.body)
-                                            .font(AppFont.regularLabel(12))
-                                            .foregroundColor(.black)
-                                    }
-                                }
-
-                                // Between comments only — same exact
-                                // construction as PostCard's own
-                                // inter-comment divider (see its comment
-                                // for why this isn't a plain `Divider()`).
-                                if index < comments.count - 1 {
-                                    Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5)
-                                }
+        SectionPage(
+            title: pod?.name ?? "Post",
+            onBack: onBack,
+            trailing: { deleteButton }
+        ) {
+            VStack(alignment: .leading, spacing: 18) {
+                if !photos.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(photos) { photo in
+                                PodPhoto(url: photo.url)
+                                    .frame(width: 240, height: 300)
+                                    .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
                             }
                         }
                         .padding(.horizontal, 24)
                     }
-
-                    Color.clear.frame(height: 40)
                 }
-                .padding(.top, 16)
+
+                if let body = post.body, !body.isEmpty {
+                    Text(body)
+                        .font(AppFont.regularLabel(16))
+                        .lineSpacing(5)
+                        .foregroundColor(.homeText)
+                        .padding(.horizontal, 24)
+                }
+
+                Text("\(postsStore.likeCount(for: post.id)) likes · \(comments.count) comments · \(Self.relativeTime(post.createdAt))")
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .padding(.horizontal, 24)
+
+                if !comments.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(comments) { comment in
+                            HStack(alignment: .top, spacing: 10) {
+                                AvatarView(imageName: postsStore.profile(for: comment.authorId)?.avatarURL, size: 28)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(postsStore.profile(for: comment.authorId)?.displayName ?? "Someone")
+                                        .font(AppFont.semiBoldLabel(13))
+                                        .foregroundColor(.homeText)
+                                    Text(comment.body)
+                                        .font(AppFont.regularLabel(14))
+                                        .foregroundColor(.homeText)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.vertical, 12)
+                            .overlay(alignment: .bottom) { Hairline() }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
             }
         }
-        .background(Color.appHomeBackground)
         .task { await postsStore.fetchCommentsIfNeeded(for: post.id) }
         .alert("Delete this post?", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -124,6 +92,19 @@ struct MyPostDetailView: View {
         } message: {
             Text("This removes it from your feed and your friends', along with its likes and comments.")
         }
+    }
+
+    /// A flat pill with the label in the error color.
+    private var deleteButton: some View {
+        Button { showDeleteConfirmation = true } label: {
+            Text("Delete")
+                .font(AppFont.regularLabel(14))
+                .foregroundColor(.appBadgeRed)
+                .frame(maxWidth: .infinity)
+                .frame(height: 83)
+                .background(DetailPill())
+        }
+        .buttonStyle(TapScaleButtonStyle())
     }
 
     private static func relativeTime(_ date: Date) -> String {

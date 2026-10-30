@@ -60,7 +60,7 @@ struct AddPodView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                CloseButton(action: { dismiss() })
+                CloseButton(style: .pill, size: 44, action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -387,30 +387,37 @@ struct AddPodView: View {
                 // second filled/bordered pill of its own, so it still
                 // reads as the lesser of the two actions despite matching
                 // its size.
+                // The flat pill from `design.md`.
                 Button(action: { withAnimation(.easeOut(duration: AppMotion.snappy)) { step -= 1 } }) {
                     Text("Back")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.appTextMuted)
-                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .font(AppFont.regularLabel(14))
+                        .foregroundColor(.homeText)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Capsule().fill(Color.homePill.opacity(0.95)))
+                        .overlay(Capsule().strokeBorder(Color.homeBackground, lineWidth: 1))
                 }
+                .buttonStyle(TapScaleButtonStyle())
             }
 
+            // The highlighted pill (ground and ink swapped); a plain pill
+            // while the step isn't complete yet.
             Button(action: primaryAction) {
                 HStack(spacing: 10) {
                     if isSubmitting {
-                        ProgressView().tint(.white)
+                        ProgressView().tint(.homeBackground)
                     } else {
                         Text(step == stepCount - 1 ? "Create pod" : "Next")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(AppFont.semiBoldLabel(14))
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                     }
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, minHeight: 50)
+                .foregroundColor(canAdvance ? .homeBackground : .homeText.opacity(0.35))
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(Capsule().fill(canAdvance ? Color.homeText : Color.homePill.opacity(0.95)))
             }
+            .buttonStyle(TapScaleButtonStyle())
             .disabled(isSubmitting || !canAdvance)
-            .pillStyle(fill: canAdvance ? .appAccentBlack : .appTextMuted, border: .appBorder)
         }
         .padding(.horizontal, 24)
         .padding(.top, 12)
