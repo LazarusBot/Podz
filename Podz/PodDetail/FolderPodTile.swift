@@ -31,7 +31,9 @@ struct FolderPodTile: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
-                        // Lenny's mark behind, the check on top, overlapping.
+                        // Lenny's mark behind, the check on top, overlapping:
+                        // two white discs, the check's edged in black so
+                        // they read apart.
                         HStack(spacing: -8) {
                             if isLennysPick {
                                 Image("lenny")
@@ -39,15 +41,20 @@ struct FolderPodTile: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 14, height: 14)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.black)
                                     .frame(width: 26, height: 26)
-                                    .background(Color.black, in: Circle())
+                                    .background(Color.white, in: Circle())
                             }
                             CheckGlyphShape()
                                 .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
                                 .frame(width: 12, height: 10)
                                 .frame(width: 26, height: 26)
                                 .background(Color.white, in: Circle())
+                                .overlay {
+                                    if isLennysPick {
+                                        Circle().strokeBorder(Color.black, lineWidth: 1.5)
+                                    }
+                                }
                         }
                         .padding(14)
                         .transition(.scale.combined(with: .opacity))
