@@ -4,16 +4,18 @@ import SwiftUI
 /// time, with the pods found around it in the folder grid's tiles. Tap a
 /// tile to pick it for this stop (the first one until you pick); tap the
 /// picked one again to look at it. The right pill moves to the next stop
-/// and, on the last stop, finishes.
+/// and, on the last stop, opens the summary of the picked pods.
 struct LennyPlanView: View {
     let stops: [LennySearchViewModel.JourneyStop]
     let photoURLs: [UUID: String]
     /// Back from the first stop leaves the plan.
     var onLeave: () -> Void
     var onOpenPod: (Pod) -> Void
+    /// Leaves the plan altogether (the summary's Done).
     var onFinish: () -> Void
 
     @State private var stopIndex = 0
+    @State private var showsSummary = false
     /// The pod picked for each stop (by stop id).
     @State private var picks: [UUID: UUID] = [:]
 
@@ -27,6 +29,24 @@ struct LennyPlanView: View {
     }
 
     var body: some View {
+        if showsSummary {
+            LennySummaryView(
+                entries: stops.compactMap { stop in
+                    (stop.pods.first { $0.id == picks[stop.id] } ?? stop.pods.first)
+                        .map { LennySummaryView.Entry(stopName: stop.name, pod: $0) }
+                },
+                photoURLs: photoURLs,
+                onBack: { withAnimation(.easeInOut(duration: 0.3)) { showsSummary = false } },
+                onOpenPod: onOpenPod,
+                onDone: onFinish
+            )
+            .transition(.opacity)
+        } else {
+            plan
+        }
+    }
+
+    private var plan: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -73,7 +93,7 @@ struct LennyPlanView: View {
 
             HStack(spacing: 13) {
                 DetailBackButton(action: back)
-                DetailTextButton(title: isLastStop ? "Done" : "Next stop: \(stops[stopIndex + 1].name)", action: next)
+                DetailTextButton(title: isLastStop ? "See summary" : "Next stop: \(stops[stopIndex + 1].name)", action: next)
             }
             .padding(.horizontal, 24)
             // The cover respects the safe area, so 40 here is the 74 from
@@ -101,7 +121,7 @@ struct LennyPlanView: View {
 
     private func next() {
         if isLastStop {
-            onFinish()
+            withAnimation(.easeInOut(duration: 0.3)) { showsSummary = true }
         } else {
             withAnimation(.easeInOut(duration: 0.3)) { stopIndex += 1 }
         }
