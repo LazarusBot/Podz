@@ -17,8 +17,8 @@ struct LennyTimeline: View {
 
     private let dotSize: CGFloat = 24
     /// Line between one dot and the next. A step's two lines of text are about
-    /// 41 high, so the pitch (dot + gap) can't go much under 44.
-    private let dotGap: CGFloat = 20
+    /// 41 high; this leaves a clear breath between one step and the next.
+    private let dotGap: CGFloat = 34
     private var rowHeight: CGFloat { dotSize + dotGap }
 
     /// What a step says while it's running, by step. The last one is the long
