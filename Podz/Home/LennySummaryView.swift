@@ -183,14 +183,17 @@ struct LennySummaryView: View {
         .background(DetailPill())
     }
 
-    /// Moves on to the next question: a solid round pill, the one to press.
+    /// Moves on to the next question: the back pill's twin, with its chevron
+    /// turned around, inverted because it's the one to press.
     private var continueButton: some View {
         Button {
             if let next = Stage(rawValue: stage.rawValue + 1) { stage = next }
         } label: {
-            Image(systemName: "arrow.right")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.homeBackground)
+            // The back pill's chevron, turned around: same glyph, same size.
+            DetailBackChevron()
+                .stroke(Color.homeBackground, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                .frame(width: 8, height: 12)
+                .scaleEffect(x: -1)
                 .frame(width: 83, height: 83)
                 .background(Circle().fill(Color.homeText))
         }
