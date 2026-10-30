@@ -7,8 +7,6 @@ struct FolderPodTile: View {
     let pod: Pod
     let photoURL: String?
     let isSelected: Bool
-    /// Lenny chose this pod: its mark sits beside the check, stacked.
-    var isLennysPick = false
     var onTap: () -> Void
 
     var body: some View {
@@ -31,24 +29,13 @@ struct FolderPodTile: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
-                        // Lenny's mark, bare, beside the check.
-                        HStack(spacing: 6) {
-                            if isLennysPick {
-                                Image("lenny")
-                                    .renderingMode(.template)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 20, height: 20)
-                                    .foregroundColor(.white)
-                            }
-                            CheckGlyphShape()
-                                .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-                                .frame(width: 12, height: 10)
-                                .frame(width: 26, height: 26)
-                                .background(Color.white, in: Circle())
-                        }
-                        .padding(14)
-                        .transition(.scale.combined(with: .opacity))
+                        CheckGlyphShape()
+                            .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                            .frame(width: 12, height: 10)
+                            .frame(width: 26, height: 26)
+                            .background(Color.white, in: Circle())
+                            .padding(14)
+                            .transition(.scale.combined(with: .opacity))
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))

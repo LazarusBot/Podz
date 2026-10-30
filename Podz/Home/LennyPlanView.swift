@@ -74,7 +74,6 @@ struct LennyPlanView: View {
                                 pod: pod,
                                 photoURL: photoURLs[pod.id],
                                 isSelected: pod.id == pickedPod?.id,
-                                isLennysPick: isLennysPick(pod),
                                 onTap: { tap(pod) }
                             )
                         }
