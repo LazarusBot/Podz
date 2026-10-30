@@ -31,17 +31,15 @@ struct FolderPodTile: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if isSelected {
-                        // Lenny's mark behind, the check on top, overlapping.
-                        HStack(spacing: -8) {
+                        // Lenny's mark, bare, beside the check.
+                        HStack(spacing: 6) {
                             if isLennysPick {
                                 Image("lenny")
                                     .renderingMode(.template)
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: 14, height: 14)
+                                    .frame(width: 20, height: 20)
                                     .foregroundColor(.white)
-                                    .frame(width: 26, height: 26)
-                                    .background(Color.black, in: Circle())
                             }
                             CheckGlyphShape()
                                 .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
