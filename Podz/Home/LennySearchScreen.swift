@@ -5,62 +5,54 @@ import SwiftUI
 ///
 /// "Lenny is searching…", the route in the inverted pill with Lenny's mark,
 /// the steps ticking by, and the bottom pill row: back, and **View selected
-/// pods**, which wakes up once the search has results.
-/// The results themselves (`LennyPlan` frames) still use the old list.
+/// pods**, which wakes up once every stop has been looked up and opens the
+/// plan (`LennyPlanView`, Paper "LennyPlan").
 struct LennySearchScreen: View {
     var onClose: () -> Void
 
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var podsStore = PodsStore.shared
-    @State private var showsResults = false
+    @State private var showsPlan = false
     @State private var selectedPod: Pod?
     @Namespace private var zoomNamespace
 
-    private var hasResults: Bool { lenny.phase == .results }
+    /// Ready once the search is done and found something to plan with.
+    private var canOpenPlan: Bool { lenny.phase == .results && !planStops.isEmpty }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            if showsResults {
-                resultsList
-                    .transition(.opacity)
+            if showsPlan, !planStops.isEmpty {
+                LennyPlanView(
+                    stops: planStops,
+                    photoURLs: podsStore.primaryPhotoByPodId,
+                    onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
+                    onOpenPod: { selectedPod = $0 },
+                    onFinish: onClose
+                )
+                .transition(.opacity)
             } else {
                 searching
                     .transition(.opacity)
-            }
 
-            HStack(spacing: 13) {
-                DetailBackButton(action: back)
-
-                if !showsResults {
+                HStack(spacing: 13) {
+                    DetailBackButton(action: onClose)
                     DetailTextButton(title: "View selected pods") {
-                        withAnimation(.easeInOut(duration: 0.3)) { showsResults = true }
+                        withAnimation(.easeInOut(duration: 0.3)) { showsPlan = true }
                     }
-                    .disabled(!hasResults)
-                    .opacity(hasResults ? 1 : 0.45)
+                    .disabled(!canOpenPlan)
+                    .opacity(canOpenPlan ? 1 : 0.45)
                 }
+                .padding(.horizontal, 24)
+                // The cover respects the safe area, so 40 here is the 74 from
+                // the bottom edge every control stack uses.
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 24)
-            // The cover respects the safe area, so 40 here is the 74 from
-            // the bottom edge every control stack uses.
-            .padding(.bottom, 40)
         }
         .background(Color.homeBackground.ignoresSafeArea())
-        // The results list still uses fixed black-on-white colors.
-        .preferredColorScheme(showsResults ? .light : nil)
         .interactiveDismissDisabled()
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
-                .preferredColorScheme(.light)
-        }
-    }
-
-    /// Back from the results goes to the steps; back from the steps leaves.
-    private func back() {
-        if showsResults {
-            withAnimation(.easeInOut(duration: 0.3)) { showsResults = false }
-        } else {
-            onClose()
         }
     }
 
@@ -82,6 +74,14 @@ struct LennySearchScreen: View {
             LennyTimeline(steps: lenny.steps)
                 .padding(.horizontal, 36)
                 .padding(.top, 52)
+
+            if let message = lenny.errorMessage {
+                Text(message)
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.appBadgeRed)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 24)
+            }
 
             Spacer(minLength: 0)
         }
@@ -112,31 +112,10 @@ struct LennySearchScreen: View {
         .background(Color.homeText, in: Capsule())
     }
 
-    // MARK: - Results (old list, until the LennyPlan frames land)
+    // MARK: - The plan
 
-    private var resultsList: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                LennyJourneyProgress(stops: lenny.journeyStops)
-                    .padding(.top, 24)
-
-                VStack(spacing: 30) {
-                    ForEach(lenny.matchingPods) { pod in
-                        LennyResultCard(
-                            pod: pod,
-                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                            isSelected: lenny.selectedPodIDs.contains(pod.id),
-                            onToggleSelect: { lenny.toggleSelection(for: pod) },
-                            onTapCard: { selectedPod = pod },
-                            zoomNamespace: zoomNamespace
-                        )
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 20)
-
-                Color.clear.frame(height: 190)
-            }
-        }
+    /// The stops that found something; the plan walks through these.
+    private var planStops: [LennySearchViewModel.JourneyStop] {
+        lenny.journeyStops.filter { !$0.pods.isEmpty }
     }
 }
