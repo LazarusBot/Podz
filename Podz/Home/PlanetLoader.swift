@@ -9,11 +9,14 @@ struct PlanetLoader: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// How strong the dots are against the ground.
-    private let opacity = 0.30
+    private let opacity = 0.13
     /// Radians per second.
     private let spin = 0.12
     private let tilt = 0.15
-    private let dotRadius: CGFloat = 1.1
+    /// The planet's radius as a multiple of the screen width: far wider than
+    /// the screen, so only its upper curve shows.
+    private let radiusToWidth: CGFloat = 1.4
+    private let dotRadius: CGFloat = 1.2
     /// Light from the upper left, toward the viewer.
     private let light = SIMD3<Double>(-0.55, -0.45, 0.7)
 
@@ -21,7 +24,7 @@ struct PlanetLoader: View {
         TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion)) { context in
             let time = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
             Canvas { graphics, size in
-                let radius = size.width * 0.95
+                let radius = size.width * radiusToWidth
                 let center = CGPoint(x: size.width / 2, y: size.height)
                 let angle = time * spin
                 let (sinA, cosA) = (sin(angle), cos(angle))
@@ -67,9 +70,9 @@ struct PlanetLoader: View {
     }
 
     /// Land points on the upper hemisphere (the only part the horizon
-    /// shows): Fibonacci-spaced, about 6.5pt apart at the planet's size.
+    /// shows): Fibonacci-spaced, about 7pt apart at the planet's size.
     private static let points: [Point] = {
-        let count = 21_000
+        let count = 39_000
         let golden = Double.pi * (3 - 5.0.squareRoot())
         var points: [Point] = []
         points.reserveCapacity(count / 2)
