@@ -1,22 +1,24 @@
 import SwiftUI
 
 /// The loading texture behind Lenny's search screen: a huge planet rising
-/// from the bottom edge, drawn as a stipple of tiny dots (after the Figma
-/// "Planet" plugin). Only the land is drawn, and the dots thicken toward the
-/// light, so the sphere reads from the density alone. It turns slowly, and
-/// stays still with Reduce Motion.
+/// from the bottom edge, drawn as rows of tiny dots (after the Figma "Planet"
+/// plugin): the dots sit on latitude rows, only the land is drawn, and each
+/// dot's size follows the light, so the sphere reads from the dots alone. It
+/// turns slowly, and stays still with Reduce Motion.
 struct PlanetLoader: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// How strong the dots are against the ground.
-    private let opacity = 0.13
+    private let opacity = 0.07
     /// Radians per second.
     private let spin = 0.12
     private let tilt = 0.15
     /// The planet's radius as a multiple of the screen width: far wider than
     /// the screen, so only its upper curve shows.
     private let radiusToWidth: CGFloat = 1.4
-    private let dotRadius: CGFloat = 1.2
+    /// Dot radius in the light, and in the half-shadow where it fades out.
+    private let litRadius: CGFloat = 1.9
+    private let shadowRadius: CGFloat = 0.4
     /// Light from the upper left, toward the viewer.
     private let light = SIMD3<Double>(-0.55, -0.45, 0.7)
 
@@ -44,14 +46,13 @@ struct PlanetLoader: View {
                     let py = center.y + y * radius
                     guard py > -4 else { continue }
 
-                    // Density by light: the lit side keeps most of its dots.
+                    // Size by light: full dots in the light, shrinking into
+                    // the shadow until they vanish at the terminator.
                     let lit = max(0, x * light.x + y * light.y + z * light.z)
-                    guard point.chance < pow(lit, 0.8) * 1.05 else { continue }
+                    guard lit > 0.03 else { continue }
+                    let dot = shadowRadius + (litRadius - shadowRadius) * CGFloat(min(1, lit * 1.2))
 
-                    path.addEllipse(in: CGRect(
-                        x: px - dotRadius, y: py - dotRadius,
-                        width: dotRadius * 2, height: dotRadius * 2
-                    ))
+                    path.addEllipse(in: CGRect(x: px - dot, y: py - dot, width: dot * 2, height: dot * 2))
                 }
                 graphics.fill(path, with: .color(Color.homeText.opacity(opacity)))
             }
@@ -65,26 +66,31 @@ struct PlanetLoader: View {
         let x: Double
         let y: Double
         let z: Double
-        /// A fixed draw-or-not roll, 0..<1.
-        let chance: Double
     }
 
     /// Land points on the upper hemisphere (the only part the horizon
-    /// shows): Fibonacci-spaced, about 7pt apart at the planet's size.
+    /// shows), on latitude rows about 7pt apart at the planet's size, each
+    /// row offset half a step from the one before.
     private static let points: [Point] = {
-        let count = 39_000
-        let golden = Double.pi * (3 - 5.0.squareRoot())
+        let spacing = 7.0
+        let referenceRadius = 393.0 * 1.4
+        let rowStep = spacing / referenceRadius
         var points: [Point] = []
-        points.reserveCapacity(count / 2)
-        for i in 0..<count {
-            // y runs -1...0: the upper half.
-            let y = -1 + (Double(i) + 0.5) / Double(count)
-            let r = (1 - y * y).squareRoot()
-            let theta = golden * Double(i)
-            let x = cos(theta) * r
-            let z = sin(theta) * r
-            guard isLand(x, y, z) else { continue }
-            points.append(Point(x: x, y: y, z: z, chance: (Double(i) * 0.6180339887).truncatingRemainder(dividingBy: 1)))
+        var row = 0
+        var latitude = 0.0
+        while latitude < 1.48 {
+            let y = -sin(latitude)
+            let ring = cos(latitude)
+            let count = max(1, Int((2 * .pi * ring * referenceRadius / spacing).rounded()))
+            let offset = row.isMultiple(of: 2) ? 0.0 : 0.5
+            for i in 0..<count {
+                let theta = (Double(i) + offset) / Double(count) * 2 * .pi
+                let x = ring * sin(theta)
+                let z = ring * cos(theta)
+                if isLand(x, y, z) { points.append(Point(x: x, y: y, z: z)) }
+            }
+            latitude += rowStep
+            row += 1
         }
         return points
     }()
