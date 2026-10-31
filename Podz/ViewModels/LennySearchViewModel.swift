@@ -14,8 +14,7 @@ final class LennySearchViewModel: ObservableObject {
     static let shared = LennySearchViewModel()
     
     enum Phase: Equatable {
-        case idle       // just the chip, not active
-        case editing    // full-width text field, typing itinerary
+        case idle       // not searching
         case searching  // step-by-step progress
         case results    // matching pods found
     }
@@ -59,55 +58,16 @@ final class LennySearchViewModel: ObservableObject {
     @Published var errorMessage: String?
     /// What Lenny understood from the sentence (places, guests, dates, stay).
     @Published var request: LennyRequest?
-    @Published var isKeyboardFocused = false
-    private var dismissTask: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
-    
-    func activate() {
-        phase = .editing
-        isKeyboardFocused = true
-    }
-    
-    func cancel() {
-        dismissTask?.cancel()
-        isKeyboardFocused = false
-        dismissTask = Task {
-            // Let the keyboard's own dismiss animation finish before the
-            // tab bar reappears — otherwise the two run out of sync and
-            // the bar briefly floats above the still-closing keyboard.
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !Task.isCancelled else { return }
-            phase = .idle
-            itineraryText = ""
-            steps = []
-            journeyStops = []
-            errorMessage = nil
-        }
-    }
-    
-    /// Switches the still-focused search bar back to plain location
-    /// search. Unlike `cancel()`, the bar itself never goes away here —
-    /// HomeSearchRow just swaps its icon/placeholder/chip back — so
-    /// there's no keyboard-dismiss animation to wait out.
-    func revertToLocationSearch() {
-        dismissTask?.cancel()
-        phase = .idle
-        itineraryText = ""
-        errorMessage = nil
-    }
 
-    /// Immediate reset, no animation delay — used as a safety net (e.g.
-    /// recovering from an app-background/foreground edge case), unlike
-    /// `cancel()` which deliberately waits for the keyboard to finish
-    /// dismissing before clearing state.
+    /// Leaves the search: stops whatever is still running and clears it all.
     func forceReset() {
-        dismissTask?.cancel()
         searchTask?.cancel()
-        isKeyboardFocused = false
         phase = .idle
         itineraryText = ""
         steps = []
         journeyStops = []
+        request = nil
         errorMessage = nil
     }
     
@@ -138,7 +98,6 @@ final class LennySearchViewModel: ObservableObject {
 
     func submit() async {
         guard !itineraryText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        dismissTask?.cancel()
         let input = itineraryText.trimmingCharacters(in: .whitespacesAndNewlines)
         let allPods = PodsStore.shared.pods
 
@@ -153,7 +112,6 @@ final class LennySearchViewModel: ObservableObject {
             return
         }
 
-        isKeyboardFocused = false
         phase = .searching
         errorMessage = nil
         steps = Self.initialSteps()

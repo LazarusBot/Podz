@@ -17,7 +17,7 @@ struct ProfileView: View {
     @StateObject private var friendsStore = FriendsStore.shared
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var appMode = AppModeStore.shared
-    @StateObject private var router = ProfileRouter.shared
+    @StateObject private var router = TabRouter.shared
     @State private var showEditProfile = false
     @State private var showFriends = false
     @State private var showMyPosts = false
