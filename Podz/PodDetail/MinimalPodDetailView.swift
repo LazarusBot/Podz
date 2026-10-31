@@ -39,36 +39,60 @@ struct MinimalPodDetailView: View {
             // The whole screen: this view ignores every safe area.
             let screenHeight = proxy.size.height
 
-            VStack(spacing: 0) {
-                if isExtended {
-                    // The photo steps back to a small one beside the name, and
-                    // the sections take the screen. Tap the header to go back.
-                    extendedHeader
-                        .transition(.opacity)
-                    PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit)
-                        .transition(.opacity)
-                } else {
-                    DetailPhotoPager(slots: photoURLs.map { Optional($0) }, pageIndex: $pageIndex, width: proxy.size.width, height: DetailLayout.podPhotoHeight(screenHeight: screenHeight), coordinate: pod.coordinate)
+            let stackPhotoHeight = DetailLayout.podPhotoHeight(screenHeight: screenHeight)
 
-                    // Everything between the photo and the buttons is one tap
-                    // target: a tap anywhere here opens the sections.
-                    VStack(spacing: 0) {
-                        titleBlock
-                        keyFacts
-                        stackChips
-                        teaser
-                        Spacer(minLength: 0)
+            ZStack(alignment: .topLeading) {
+                VStack(spacing: 0) {
+                    if isExtended {
+                        // The sections take the screen under a header that
+                        // leaves room for the thumbnail. Tap it to go back.
+                        extendedHeader
+                            .transition(Self.fadeIn)
+                        PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit)
+                            .transition(Self.fadeIn)
+                    } else {
+                        // Room for the photo, which is drawn on top of the
+                        // content so it can shrink into the thumbnail.
+                        Color.clear.frame(height: stackPhotoHeight)
+
+                        // Everything between the photo and the buttons is one
+                        // tap target: a tap anywhere here opens the sections.
+                        VStack(spacing: 0) {
+                            titleBlock
+                            keyFacts
+                            stackChips
+                            teaser
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture { toggleExtended() }
+                        .transition(Self.fadeIn)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture { toggleExtended() }
-                    .transition(.opacity)
-                }
 
-                actionRow
-                    .controlStackPadding()
+                    actionRow
+                        .controlStackPadding()
+                }
+                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                // One photo that is both: the big one with the rounded bottom
+                // and Lenny's badge, and the small rounded one beside the name.
+                // Its size, corners and place animate between the two.
+                DetailPhotoPager(
+                    slots: photoURLs.map { Optional($0) },
+                    pageIndex: $pageIndex,
+                    width: isExtended ? Self.thumbnailSize : proxy.size.width,
+                    height: isExtended ? Self.thumbnailSize : stackPhotoHeight,
+                    coordinate: pod.coordinate,
+                    topRadius: isExtended ? Self.thumbnailRadius : 0,
+                    bottomRadius: isExtended ? Self.thumbnailRadius : 75,
+                    showsBadge: !isExtended
+                )
+                .scrollDisabled(isExtended)
+                .padding(.leading, isExtended ? 24 : 0)
+                .padding(.top, isExtended ? Self.thumbnailTop : 0)
+                .onTapGesture { if isExtended { toggleExtended() } }
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .ignoresSafeArea()
         .background(Color.homeBackground.ignoresSafeArea())
@@ -206,11 +230,22 @@ struct MinimalPodDetailView: View {
     private var currentPhotoCredit: String? { currentPhotoURL.flatMap { photoCredits[$0] } }
 
     /// A small photo, the name and altitude and, for a listed hut, the badge.
+    private static let thumbnailSize: CGFloat = 92
+    private static let thumbnailRadius: CGFloat = 28
+    private static let thumbnailTop: CGFloat = 64
+
+    /// The old content leaves quickly, the new arrives a beat later, so the
+    /// photo's move is the thing you see.
+    private static let fadeIn = AnyTransition.asymmetric(
+        insertion: .opacity.animation(.easeOut(duration: 0.3).delay(0.18)),
+        removal: .opacity.animation(.easeOut(duration: 0.15))
+    )
+
+    /// The name and altitude and, for a listed hut, the badge, beside the
+    /// thumbnail (which is the photo above, in place).
     private var extendedHeader: some View {
         HStack(spacing: 18) {
-            PodPhoto(url: currentPhotoURL, coordinate: pod.coordinate)
-                .frame(width: 92, height: 92)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            Color.clear.frame(width: Self.thumbnailSize, height: Self.thumbnailSize)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(pod.name)
@@ -227,7 +262,7 @@ struct MinimalPodDetailView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 64)
+        .padding(.top, Self.thumbnailTop)
         .contentShape(Rectangle())
         .onTapGesture { toggleExtended() }
     }
