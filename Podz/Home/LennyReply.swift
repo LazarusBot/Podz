@@ -14,6 +14,8 @@ struct LennyReply: View {
     var mood: LennyMood = .working
     /// Off when Lenny's mark is already on screen and the bubble speaks from it.
     var showsAvatar = true
+    /// Where the bubble sits in the row: flush left, or centered.
+    var alignment: Alignment = .leading
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var typed = ""
@@ -23,7 +25,7 @@ struct LennyReply: View {
             if showsAvatar { avatar }
             bubble
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: alignment)
         .animation(.smooth(duration: 0.3), value: message == nil)
         .task(id: message) { await type() }
         .accessibilityElement(children: .combine)

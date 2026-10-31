@@ -69,15 +69,16 @@ struct LennyHutGuide: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            LennyReply(message: message, mood: .idle, showsAvatar: !inStack)
+            LennyReply(message: message, mood: .idle, showsAvatar: !inStack, alignment: inStack ? .center : .leading)
                 // On the stack the bubble speaks from the Lenny badge on the
-                // photo below it: a small tail points down to it.
-                .overlay(alignment: .bottom) {
+                // photo above it: a small tail points up to it.
+                .overlay(alignment: .top) {
                     if inStack {
                         BubbleTail()
                             .fill(Color.homePill)
                             .frame(width: 18, height: 9)
-                            .offset(y: 8)
+                            .rotationEffect(.degrees(180))
+                            .offset(y: -8)
                     }
                 }
 
@@ -116,11 +117,22 @@ struct LennyHutGuide: View {
     }
 
     private var message: String {
-        if inStack { return Self.trust(pod, liveBedsAvailable) + " Tap for the details." }
+        if inStack { return Self.stackMessage(pod, liveBedsAvailable) }
         return Self.message(for: section, pod: pod, liveBedsAvailable: liveBedsAvailable, first: available.first)
     }
 
     // MARK: - What Lenny says
+
+    /// Short, for the stack: the one thing to know, then a nudge to open the page.
+    private static func stackMessage(_ pod: Pod, _ liveBedsAvailable: Int?) -> String {
+        if pod.isBookable {
+            if let live = liveBedsAvailable, live > 0 { return "\(live) \(live == 1 ? "bed" : "beds") free tonight. Tap for the details." }
+            return "You can book this hut right here. Tap for the details."
+        }
+        return pod.hasContact
+            ? "Not checked by Podz: contact the hut first. Tap for the details."
+            : "Not checked by Podz, and I can't reach this hut. Tap for the details."
+    }
 
     static func message(for section: PodDetailSection?, pod: Pod, liveBedsAvailable: Int?, first: PodDetailSection?, today: Date = Date()) -> String {
         switch section ?? first ?? .goodToKnow {

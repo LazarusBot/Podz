@@ -2,13 +2,13 @@ import SwiftUI
 
 /// The minimalist pod detail (Paper "DetailView" frames).
 ///
-/// **Stack:** a tall photo you swipe through (its pager dots fan out above
-/// Lenny's badge), the pod's name and altitude, a two-line teaser and the
-/// back / Book pills.
+/// **Stack:** a shorter photo you swipe through (its pager dots fan out above
+/// Lenny's badge), the pod's name and altitude, the key facts and facility
+/// chips, Lenny's word on the hut (speaking from the badge) and the back /
+/// like / Book pills.
 /// **Extended:** tap anywhere between the photo and the buttons and the
-/// photo shrinks to make room for the full description and the pod's
-/// details; tap again to go back. Paging through the photos is the only
-/// swipe on this screen.
+/// photo shrinks to a thumbnail beside the name; Lenny guides you down the
+/// sections (`PodDetailSections`). Tap the header to go back.
 struct MinimalPodDetailView: View {
     let pod: Pod
     var onBack: () -> Void
@@ -76,7 +76,7 @@ struct MinimalPodDetailView: View {
                                 titleBlock
                                 keyFacts
                                 stackChips
-                                teaser
+                                stackLenny
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -125,25 +125,6 @@ struct MinimalPodDetailView: View {
                 .padding(.leading, isExtended ? 24 : 0)
                 .padding(.top, isExtended ? Self.thumbnailTop : 0)
                 .onTapGesture { if isExtended { toggleExtended() } }
-
-                // The same Lenny, over the photo on the stack, speaking from its badge.
-                if !isExtended {
-                    LennyHutGuide(
-                        pod: pod,
-                        liveBedsAvailable: liveBedsAvailable,
-                        section: nil,
-                        available: [],
-                        inStack: true
-                    )
-                    .padding(.horizontal, 24)
-                    // Above the pager dots and the Lenny badge, which it speaks
-                    // from.
-                    .frame(width: proxy.size.width, height: stackPhotoHeight - 62, alignment: .bottom)
-                    // Only the bubble takes the tap, so the photo still swipes
-                    // around it.
-                    .onTapGesture { toggleExtended() }
-                    .transition(.opacity.animation(.easeOut(duration: 0.15)))
-                }
             }
         }
         .ignoresSafeArea()
@@ -259,22 +240,11 @@ struct MinimalPodDetailView: View {
         }
     }
 
-    private var teaser: some View {
-        Text(summary)
-            .font(AppFont.regularLabel(15))
-            .lineSpacing(4)
-            .foregroundColor(.homeBodyText)
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
-            .frame(maxWidth: 329)
-            .padding(.top, 18)
-            .padding(.horizontal, 32)
-    }
-
-    /// The description if the pod has one, else where it is.
-    private var summary: String {
-        let description = pod.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return description.isEmpty ? [pod.region, pod.country].compactMap { $0 }.joined(separator: ", ") : description
+    /// Lenny's word on the hut, speaking from the badge on the photo.
+    private var stackLenny: some View {
+        LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, section: nil, available: [], inStack: true)
+            .padding(.top, 26)
+            .padding(.horizontal, 24)
     }
 
     // MARK: - Extended header
