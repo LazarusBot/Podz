@@ -7,14 +7,17 @@ import SwiftUI
 /// Tap a row to look at that pod.
 ///
 /// It's also where the plan gets booked, one question at a time, with Lenny
-/// asking in its bubble above the control stack: **guests**, then the
-/// **start date**, then **Reserve**. Each question is first a plain button
-/// ("Add guest", "Add date") beside the back pill; tapping it opens the
-/// picker across the whole stack (a round minus, the answer, a round plus and
-/// the continue button; tap the date for a calendar). Each stop gets one
-/// night, in route order. Lenny answers while it books (typing, then a happy
-/// "booked" or a sorry "couldn't"), and once they're booked the pill
-/// becomes **View reservations**. Back steps back through the questions.
+/// asking in its bubble above the control stack: **guests**, the **start
+/// date**, the **nights at each stop** (Lenny suggests a number from the
+/// route), then **Reserve**. Each question is first a plain button ("Add
+/// guest", "Add date", "Add nights") beside the back pill; tapping it opens
+/// the picker across the whole stack (a round minus, the answer, a round plus
+/// and the continue button; tap the date for a calendar). Every answer then
+/// shows as a chip under the title, and a tap on a chip changes that answer on
+/// its own. The stops take their dates from the start date and the nights, in
+/// route order. Lenny answers while it books (typing, then a happy "booked" or
+/// a sorry "couldn't"), and once they're booked the pill becomes **View
+/// reservations**. Back steps back through the questions.
 struct LennySummaryView: View {
     struct Entry: Identifiable {
         let stopName: String
@@ -31,6 +34,9 @@ struct LennySummaryView: View {
     var onOpenPod: (Pod) -> Void
     /// After booking: go look at the reservations.
     var onViewReservations: () -> Void
+    /// What the user asked Lenny ("Chamonix to Zermatt in 5 days"), to
+    /// suggest how many nights each stop gets.
+    var routeText = ""
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var reservationsStore = ReservationsStore.shared
@@ -38,6 +44,7 @@ struct LennySummaryView: View {
     @State private var showsDatePicker = false
     @State private var startDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     @State private var guests = 1
+    @State private var nights = 1
     @State private var stage = Stage.guests
     /// On a question: false shows a plain button ("Add guest", "Add date"),
     /// true opens the picker across the whole stack.
@@ -45,13 +52,14 @@ struct LennySummaryView: View {
     /// Set once a question has been answered with the continue button.
     @State private var guestsConfirmed = false
     @State private var dateConfirmed = false
+    @State private var nightsConfirmed = false
     @State private var status = BookingStatus.idle
     /// Stops already booked, so a retry only books what's left.
     @State private var bookedPodIDs: Set<UUID> = []
 
     /// The questions, in order.
     private enum Stage: Int {
-        case guests, date, review
+        case guests, date, nights, review
     }
 
     private enum BookingStatus: Equatable {
@@ -80,7 +88,9 @@ struct LennySummaryView: View {
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
                         .padding(.top, 6)
-                        .padding(.bottom, 28)
+                        .padding(.bottom, hasChoices ? 16 : 28)
+
+                    choiceChips
 
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                         row(entry, number: index + 1, isLast: index == entries.count - 1, date: showsDates ? date(forStop: index) : nil)
@@ -123,7 +133,13 @@ struct LennySummaryView: View {
         .animation(.smooth(duration: 0.35), value: stage)
         .animation(.smooth(duration: 0.35), value: isPicking)
         .animation(.smooth(duration: 0.35), value: status)
-        .onAppear { appeared = true }
+        .animation(.smooth(duration: 0.35), value: guestsConfirmed)
+        .animation(.smooth(duration: 0.35), value: dateConfirmed)
+        .animation(.smooth(duration: 0.35), value: nightsConfirmed)
+        .onAppear {
+            appeared = true
+            nights = suggestedNights ?? 1
+        }
         .sheet(isPresented: $showsDatePicker) { datePickerSheet }
     }
 
@@ -148,6 +164,10 @@ struct LennySummaryView: View {
             DetailTextButton(title: dateConfirmed ? startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)) : "Add date") {
                 isPicking = true
             }
+        case (_, .nights):
+            DetailTextButton(title: nightsConfirmed ? nightsText : "Add nights") {
+                isPicking = true
+            }
         case (_, .review):
             DetailTextButton(title: "Reserve", isHighlighted: true, action: reserve)
         }
@@ -159,21 +179,17 @@ struct LennySummaryView: View {
     private var picker: some View {
         HStack(spacing: 13) {
             HStack(spacing: 0) {
-                pickerButton(accessibilityLabel: stage == .guests ? "Fewer guests" : "Day earlier", action: decrease) {
+                pickerButton(accessibilityLabel: lessLabel, action: decrease) {
                     MinusGlyph()
                 }
 
                 Group {
-                    if stage == .guests {
-                        VStack(spacing: 2) {
-                            Text("\(guests)")
-                                .font(AppFont.semiBoldLabel(24))
-                                .foregroundColor(.homeText)
-                            Text(guests == 1 ? "guest" : "guests")
-                                .font(AppFont.regularLabel(12))
-                                .foregroundColor(.homeSubtitle)
-                        }
-                    } else {
+                    switch stage {
+                    case .guests:
+                        pickerAnswer("\(guests)", caption: guests == 1 ? "guest" : "guests")
+                    case .nights:
+                        pickerAnswer("\(nights)", caption: nights == 1 ? "night each" : "nights each")
+                    default:
                         // Tap the date for the calendar, to jump further.
                         Button { showsDatePicker = true } label: {
                             VStack(spacing: 2) {
@@ -193,7 +209,7 @@ struct LennySummaryView: View {
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
 
-                pickerButton(accessibilityLabel: stage == .guests ? "More guests" : "Day later", action: increase) {
+                pickerButton(accessibilityLabel: moreLabel, action: increase) {
                     PlusGlyph()
                 }
             }
@@ -227,30 +243,53 @@ struct LennySummaryView: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
+    private var lessLabel: String {
+        switch stage {
+        case .guests: "Fewer guests"
+        case .nights: "Fewer nights"
+        default: "Day earlier"
+        }
+    }
+
+    private var moreLabel: String {
+        switch stage {
+        case .guests: "More guests"
+        case .nights: "More nights"
+        default: "Day later"
+        }
+    }
+
+    private func pickerAnswer(_ value: String, caption: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(AppFont.semiBoldLabel(24))
+                .foregroundColor(.homeText)
+            Text(caption)
+                .font(AppFont.regularLabel(12))
+                .foregroundColor(.homeSubtitle)
+        }
+    }
+
     private func decrease() {
-        if stage == .guests {
-            if guests > 1 { guests -= 1 }
-        } else if canGoEarlier {
-            startDate = shifted(startDate, by: -1)
+        switch stage {
+        case .guests: if guests > 1 { guests -= 1 }
+        case .nights: if nights > 1 { nights -= 1 }
+        default: if canGoEarlier { startDate = shifted(startDate, by: -1) }
         }
     }
 
     private func increase() {
-        if stage == .guests {
-            if guests < maxGuests { guests += 1 }
-        } else {
-            startDate = shifted(startDate, by: 1)
+        switch stage {
+        case .guests: if guests < maxGuests { guests += 1 }
+        case .nights: if nights < Self.maxNights { nights += 1 }
+        default: startDate = shifted(startDate, by: 1)
         }
     }
 
     /// Answers the question and moves on: the back pill's twin, with its
     /// chevron turned around, inverted because it's the one to press.
     private var continueButton: some View {
-        Button {
-            isPicking = false
-            if stage == .guests { guestsConfirmed = true } else { dateConfirmed = true }
-            if let next = Stage(rawValue: stage.rawValue + 1) { stage = next }
-        } label: {
+        Button(action: confirm) {
             // The back pill's chevron, turned around: same glyph, same size.
             DetailBackChevron()
                 .stroke(Color.homeBackground, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
@@ -261,6 +300,27 @@ struct LennySummaryView: View {
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel("Continue")
+    }
+
+    /// Answers the question, then goes to the next one still unanswered, or to
+    /// the review when they're all answered (also after changing one answer).
+    private func confirm() {
+        isPicking = false
+        switch stage {
+        case .guests: guestsConfirmed = true
+        case .date: dateConfirmed = true
+        case .nights: nightsConfirmed = true
+        case .review: break
+        }
+        if !guestsConfirmed {
+            stage = .guests
+        } else if !dateConfirmed {
+            stage = .date
+        } else if !nightsConfirmed {
+            stage = .nights
+        } else {
+            stage = .review
+        }
     }
 
     /// The calendar, in a small sheet with the same Done pill as everywhere.
@@ -313,13 +373,81 @@ struct LennySummaryView: View {
         Calendar.current.date(byAdding: .day, value: days, to: date) ?? date
     }
 
-    /// One night per stop, in route order.
+    /// Each stop starts where the one before it ends: `nights` apart, in route
+    /// order.
     private func date(forStop index: Int) -> Date {
-        shifted(startDate, by: index)
+        shifted(startDate, by: index * nights)
     }
 
-    /// The stops show their nights once the date is being chosen.
-    private var showsDates: Bool { dateConfirmed || stage == .review }
+    /// The stops show their dates once the start and the nights are answered.
+    private var showsDates: Bool { dateConfirmed && nightsConfirmed }
+
+    private static let maxNights = 7
+
+    private var guestsText: String { "\(guests) \(guests == 1 ? "guest" : "guests")" }
+
+    private var dateText: String {
+        startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+    }
+
+    private var nightsText: String { "\(nights) \(nights == 1 ? "night" : "nights") each" }
+
+    private var totalNights: Int { nights * entries.count }
+
+    private var hasChoices: Bool { guestsConfirmed || dateConfirmed || nightsConfirmed }
+
+    /// How many nights each stop probably gets, from what the user asked
+    /// ("in 5 days" over 3 stops is 2 each); nil when the route says nothing.
+    private var suggestedNights: Int? {
+        let pattern = #"(\d+)\s*(days?|nights?|jours?|nuits?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: routeText, range: NSRange(routeText.startIndex..., in: routeText)),
+              let number = Range(match.range(at: 1), in: routeText).flatMap({ Int(routeText[$0]) }),
+              number > 0, !entries.isEmpty
+        else { return nil }
+        let each = (Double(number) / Double(entries.count)).rounded()
+        return max(1, min(Self.maxNights, Int(each)))
+    }
+
+    // MARK: - The choices
+
+    /// What's been decided so far, as flat chips under the title. Tap one to
+    /// change that answer on its own; the others stay as they are.
+    @ViewBuilder
+    private var choiceChips: some View {
+        if hasChoices {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    if guestsConfirmed { chip(guestsText, stage: .guests) }
+                    if dateConfirmed { chip(dateText, stage: .date) }
+                    if nightsConfirmed { chip(nightsText, stage: .nights) }
+                }
+                .padding(.horizontal, 24)
+            }
+            .padding(.bottom, 24)
+            .transition(.opacity)
+        }
+    }
+
+    private func chip(_ title: String, stage target: Stage) -> some View {
+        Button {
+            guard status != .booking, status != .booked else { return }
+            status = .idle
+            stage = target
+            isPicking = true
+        } label: {
+            Text(title)
+                .font(AppFont.regularLabel(14))
+                .foregroundColor(.homeText)
+                .padding(.horizontal, 16)
+                .frame(height: 38)
+                .background(Capsule().fill(Color.homePill))
+        }
+        .buttonStyle(TapScaleButtonStyle())
+        .disabled(status == .booked)
+        .transition(.scale(scale: 0.8).combined(with: .opacity))
+        .accessibilityLabel("\(title). Change")
+    }
 
     private var mood: LennyMood {
         switch status {
@@ -335,13 +463,19 @@ struct LennySummaryView: View {
         switch status {
         case .booking: nil
         case .booked:
-            "Booked! \(entries.count) \(entries.count == 1 ? "night" : "nights") for \(guests) \(guests == 1 ? "guest" : "guests"), all set."
+            "Booked! \(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), all set."
         case .failed(let message): message
         case .idle:
             switch stage {
             case .guests: "How many of you are going?"
             case .date: "And when do you start?"
-            case .review: "\(entries.count) \(entries.count == 1 ? "night" : "nights") for \(guests) \(guests == 1 ? "guest" : "guests"), from \(startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))). Shall I book it?"
+            case .nights:
+                if let suggestion = suggestedNights {
+                    "I'd say \(suggestion) \(suggestion == 1 ? "night" : "nights") at each stop. Does that work?"
+                } else {
+                    "How many nights at each stop?"
+                }
+            case .review: "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?"
             }
         }
     }
@@ -355,7 +489,7 @@ struct LennySummaryView: View {
             try? await Task.sleep(nanoseconds: 700_000_000)
             for (index, entry) in entries.enumerated() where !bookedPodIDs.contains(entry.pod.id) {
                 let checkIn = date(forStop: index)
-                let checkOut = shifted(checkIn, by: 1)
+                let checkOut = shifted(checkIn, by: nights)
                 let success = await reservationsStore.create(podId: entry.pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests)
                 guard success else {
                     let booked = bookedPodIDs.count
@@ -372,6 +506,13 @@ struct LennySummaryView: View {
     private var subtitle: String {
         let stops = entries.count
         return "\(stops) \(stops == 1 ? "stop" : "stops"), one pod each"
+    }
+
+    /// "Lake Braies  ·  Mon 2 Nov → Wed 4 Nov" once the dates are known.
+    private func stopCaption(_ entry: Entry, from date: Date?) -> String {
+        guard let date else { return entry.stopName }
+        let format = Date.FormatStyle().weekday(.abbreviated).day().month(.abbreviated)
+        return "\(entry.stopName)  ·  \(date.formatted(format)) → \(shifted(date, by: nights).formatted(format))"
     }
 
     /// A numbered dot on the line, then the stop, the pod and its photo.
@@ -401,7 +542,7 @@ struct LennySummaryView: View {
                 .frame(width: dotSize)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(date.map { "\(entry.stopName)  ·  \($0.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))" } ?? entry.stopName)
+                    Text(stopCaption(entry, from: date))
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)

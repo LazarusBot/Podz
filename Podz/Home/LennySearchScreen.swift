@@ -26,6 +26,7 @@ struct LennySearchScreen: View {
                 LennyPlanView(
                     stops: planStops,
                     photoURLs: podsStore.primaryPhotoByPodId,
+                    routeText: lenny.itineraryText,
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
                     onOpenPod: { selectedPod = $0 },
                     onFinish: {
