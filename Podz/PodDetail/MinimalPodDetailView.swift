@@ -42,32 +42,44 @@ struct MinimalPodDetailView: View {
             let stackPhotoHeight = DetailLayout.podPhotoHeight(screenHeight: screenHeight)
 
             ZStack(alignment: .topLeading) {
-                VStack(spacing: 0) {
-                    if isExtended {
-                        // The sections take the screen under a header that
-                        // leaves room for the thumbnail. Tap it to go back.
-                        extendedHeader
-                            .transition(Self.fadeIn)
-                        PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit)
-                            .transition(Self.fadeIn)
-                    } else {
-                        // Room for the photo, which is drawn on top of the
-                        // content so it can shrink into the thumbnail.
-                        Color.clear.frame(height: stackPhotoHeight)
+                ZStack(alignment: .bottom) {
+                    VStack(spacing: 0) {
+                        if isExtended {
+                            // The sections take the screen under a header that
+                            // leaves room for the thumbnail. Tap it to go back.
+                            extendedHeader
+                                .transition(Self.fadeIn)
+                            PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit)
+                                .transition(Self.fadeIn)
+                        } else {
+                            // Room for the photo, which is drawn on top of the
+                            // content so it can shrink into the thumbnail.
+                            Color.clear.frame(height: stackPhotoHeight)
 
-                        // Everything between the photo and the buttons is one
-                        // tap target: a tap anywhere here opens the sections.
-                        VStack(spacing: 0) {
-                            titleBlock
-                            keyFacts
-                            stackChips
-                            teaser
-                            Spacer(minLength: 0)
+                            // Everything between the photo and the buttons is one
+                            // tap target: a tap anywhere here opens the sections.
+                            VStack(spacing: 0) {
+                                titleBlock
+                                keyFacts
+                                stackChips
+                                teaser
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .onTapGesture { toggleExtended() }
+                            .transition(Self.fadeIn)
+
+                            // The buttons float over the page: keep their room.
+                            Color.clear.frame(height: 83 + 24 + DetailLayout.controlStackGap + ScreenInsets.bottom)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .onTapGesture { toggleExtended() }
-                        .transition(Self.fadeIn)
+                    }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+
+                    // The sections scroll behind the buttons, into the ground.
+                    if isExtended {
+                        BottomFade()
+                            .transition(.opacity)
                     }
 
                     actionRow

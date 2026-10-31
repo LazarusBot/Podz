@@ -26,7 +26,8 @@ struct PodDetailSections: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, 28)
-            .padding(.bottom, 32)
+            // Room to scroll the last section above the buttons.
+            .padding(.bottom, 190)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
