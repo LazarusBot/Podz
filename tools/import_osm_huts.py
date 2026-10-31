@@ -68,6 +68,39 @@ def number(value):
     return float(m.group(1).replace(",", ".")) if m else None
 
 
+# OSM tag -> label shown in the app. A value of "no" never counts.
+def facilities(tags):
+    def yes(*keys, values=("yes", "true", "1")):
+        return any(str(tags.get(k, "")).lower() in values for k in keys)
+
+    found = []
+    if yes("restaurant", "meals", "food", "catering") or tags.get("amenity") == "restaurant":
+        found.append("Meals")
+    if yes("self_catering", "kitchen"):
+        found.append("Self-catering")
+    if yes("shower", values=("yes", "true", "1", "hot", "cold", "cold_water", "hot_water")):
+        found.append("Showers")
+    if yes("drinking_water"):
+        found.append("Drinking water")
+    if yes("electricity", "power_supply"):
+        found.append("Electricity")
+    if yes("wifi", "internet_access", values=("yes", "wlan", "wifi", "true")):
+        found.append("Wi-Fi")
+    if str(tags.get("heating", "no")).lower() not in ("no", "none", ""):
+        found.append("Heating")
+    if yes("toilets"):
+        found.append("Toilets")
+    if yes("winter_room"):
+        found.append("Winter room")
+    if yes("dog", values=("yes", "leashed", "true")):
+        found.append("Dogs welcome")
+    if yes("wheelchair"):
+        found.append("Wheelchair access")
+    if str(tags.get("reservation", "")).lower() == "required":
+        found.append("Reservation required")
+    return found
+
+
 def row(element, country):
     tags = element.get("tags", {})
     name = tags.get("name") or tags.get("name:en")
@@ -97,12 +130,21 @@ def row(element, country):
         "booking_url": tags.get("reservation:website") or tags.get("website:booking"),
         "opening_hours": tags.get("opening_hours") or tags.get("seasonal"),
         "source": "osm", "source_id": f"{element['type']}/{element['id']}",
+        "facilities": facilities(tags),
     }
 
 
 COLUMNS = ["name", "pod_type", "country", "region", "address", "latitude", "longitude",
            "altitude_m", "beds_total", "description", "phone", "email", "website",
            "booking_url", "opening_hours", "source", "source_id"]
+
+
+def pg_array(items):
+    return "array[" + ", ".join(sql(i) for i in items) + "]::text[]" if items else "null"
+
+
+def facilities_statement(r):
+    return f"update pods set facilities = {pg_array(r['facilities'])} where source = 'osm' and source_id = {sql(r['source_id'])};"
 
 
 def statement(r):
@@ -116,8 +158,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--country", nargs="*", help="ISO codes, e.g. FR IT CH (default: the Alps)")
     ap.add_argument("--bbox", help="south,west,north,east: a test box instead of countries")
-    ap.add_argument("--out", default="tools/out/listed_huts.sql")
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--facilities-only", action="store_true",
+                    help="write only updates of the facilities column (after SQL/pod_facilities.sql)")
     args = ap.parse_args()
+    args.out = args.out or ("tools/out/facilities.sql" if args.facilities_only else "tools/out/listed_huts.sql")
 
     jobs = []
     if args.bbox:
@@ -147,7 +192,11 @@ def main():
         f.write("-- Listed huts from OpenStreetMap (c) contributors, ODbL. Run after SQL/listed_huts.sql.\n")
         f.write("begin;\n")
         for r in rows:
-            f.write(statement(r) + "\n")
+            if args.facilities_only:
+                if r["facilities"]:
+                    f.write(facilities_statement(r) + "\n")
+            else:
+                f.write(statement(r) + "\n")
         f.write("commit;\n")
     contactable = sum(1 for r in rows if r["phone"] or r["email"] or r["website"])
     print(f"{len(rows)} huts written to {args.out} ({contactable} with a phone, email or website)", file=sys.stderr)
