@@ -22,7 +22,10 @@ struct MinimalPodDetailView: View {
     @State private var activeSection: PodDetailSection?
     @State private var liveBedsAvailable: Int?
     @State private var isExtended = false
-    @State private var showBooking = false
+    /// Booking happens right here, with Lenny: the control stack and the
+    /// bubble turn into its questions (`BookingFlow`).
+    @State private var isBooking = false
+    @StateObject private var booking: BookingFlow
     @State private var showHutContact = false
     @State private var showFolderPicker = false
     @ObservedObject private var likesStore = LikesStore.shared
@@ -34,6 +37,7 @@ struct MinimalPodDetailView: View {
         self.onBack = onBack
         let seed = PodsStore.shared.primaryPhotoByPodId[pod.id]
         _photoURLs = State(initialValue: seed.map { [$0] } ?? [])
+        _booking = StateObject(wrappedValue: BookingFlow(entries: [Self.bookingEntry(for: pod)]))
     }
 
     var body: some View {
@@ -74,14 +78,20 @@ struct MinimalPodDetailView: View {
                             // tap target: a tap anywhere here opens the sections.
                             VStack(spacing: 0) {
                                 titleBlock
-                                keyFacts
-                                stackChips
+                                if isBooking {
+                                    // What's been decided so far, to change on its own.
+                                    BookingChips(flow: booking)
+                                        .padding(.top, 14)
+                                } else {
+                                    keyFacts
+                                    stackChips
+                                }
                                 stackLenny
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .contentShape(Rectangle())
-                            .onTapGesture { toggleExtended() }
+                            .onTapGesture { if !isBooking { toggleExtended() } }
                             .transition(Self.fadeIn)
 
                             // The buttons float over the page: keep their room.
@@ -133,22 +143,6 @@ struct MinimalPodDetailView: View {
         // dismiss fought with paging through the photos.
         .interactiveDismissDisabled()
         .hutContactDialog(for: pod, isPresented: $showHutContact)
-        // Booking is Lenny's flow (the plan's summary) with this one pod: Lenny
-        // asks the guests, the date and the nights, then reserves.
-        .fullScreenCover(isPresented: $showBooking) {
-            LennySummaryView(
-                entries: [bookingEntry],
-                photoURLs: PodsStore.shared.primaryPhotoByPodId,
-                onBack: { showBooking = false },
-                onOpenPod: { _ in showBooking = false },
-                onViewReservations: {
-                    TabRouter.shared.showsReservationsRequested = true
-                    showBooking = false
-                    onBack()
-                },
-                request: nil
-            )
-        }
         .task {
             async let photos = PodsStore.shared.photoRows(forPodId: pod.id)
             async let beds = pod.isBookable ? PodsStore.shared.bedsAvailableNow(forPodId: pod.id) : nil
@@ -158,20 +152,16 @@ struct MinimalPodDetailView: View {
                 photoCredits = Dictionary(fetchedRows.compactMap { row in row.credit.map { (row.url, $0) } }, uniquingKeysWith: { first, _ in first })
             }
             liveBedsAvailable = fetchedBeds
+            booking.liveBedsAvailable = fetchedBeds
         }
     }
 
     /// This pod as the one stop of a Lenny booking.
-    private var bookingEntry: LennySummaryView.Entry {
-        var detail = ""
-        if let total = pod.bedsTotal {
-            detail = "\(total) \(total == 1 ? "bed" : "beds")"
-            if let live = liveBedsAvailable { detail += " · \(live) free now" }
-        }
-        return LennySummaryView.Entry(
+    private static func bookingEntry(for pod: Pod) -> LennySummaryView.Entry {
+        LennySummaryView.Entry(
             stopName: [pod.region, pod.country].compactMap { $0 }.joined(separator: ", "),
             pod: pod,
-            detail: detail,
+            detail: "",
             isLennysPick: false
         )
     }
@@ -260,11 +250,26 @@ struct MinimalPodDetailView: View {
         }
     }
 
-    /// Lenny's word on the hut, speaking from the badge on the photo.
+    /// Lenny's word on the hut, speaking from the badge on the photo: the
+    /// trust line, or, while booking, the question.
+    @ViewBuilder
     private var stackLenny: some View {
-        LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, section: nil, available: [], inStack: true)
-            .padding(.top, 26)
-            .padding(.horizontal, 24)
+        if isBooking {
+            LennyReply(message: booking.replyMessage, mood: booking.mood, showsAvatar: false, alignment: .center)
+                .overlay(alignment: .top) {
+                    BubbleTail()
+                        .fill(Color.homePill)
+                        .frame(width: 18, height: 9)
+                        .rotationEffect(.degrees(180))
+                        .offset(y: -8)
+                }
+                .padding(.top, 26)
+                .padding(.horizontal, 24)
+        } else {
+            LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, section: nil, available: [], inStack: true)
+                .padding(.top, 26)
+                .padding(.horizontal, 24)
+        }
     }
 
     // MARK: - Extended header
@@ -315,21 +320,53 @@ struct MinimalPodDetailView: View {
 
     // MARK: - Actions
 
+    @ViewBuilder
     private var actionRow: some View {
-        HStack(spacing: 13) {
-            DetailBackButton(action: onBack)
-            likeButton
-            if pod.isBookable {
-                DetailTextButton(title: "Book") { showBooking = true }
-            } else {
-                // A listed hut takes its bookings itself.
-                DetailTextButton(title: "Book through the hut", isHighlighted: pod.hasContact) { showHutContact = true }
-                    .disabled(!pod.hasContact)
-                    .opacity(pod.hasContact ? 1 : 0.45)
+        if isBooking {
+            // Lenny's booking controls take the whole row (like and Book step
+            // aside until it's done).
+            BookingControlStack(
+                flow: booking,
+                onLeave: leaveBooking,
+                onViewReservations: {
+                    TabRouter.shared.showsReservationsRequested = true
+                    onBack()
+                }
+            )
+            .padding(.horizontal, 40)
+            .padding(.top, 24)
+        } else {
+            HStack(spacing: 13) {
+                DetailBackButton(action: onBack)
+                likeButton
+                if pod.isBookable {
+                    DetailTextButton(title: "Book", action: startBooking)
+                } else {
+                    // A listed hut takes its bookings itself.
+                    DetailTextButton(title: "Book through the hut", isHighlighted: pod.hasContact) { showHutContact = true }
+                        .disabled(!pod.hasContact)
+                        .opacity(pod.hasContact ? 1 : 0.45)
+                }
             }
+            .padding(.horizontal, 40)
+            .padding(.top, 24)
         }
-        .padding(.horizontal, 40)
-        .padding(.top, 24)
+    }
+
+    // MARK: - Booking
+
+    /// Book: the page steps back to the stack and Lenny starts asking.
+    private func startBooking() {
+        booking.restart()
+        withAnimation(.smooth(duration: 0.45)) {
+            isExtended = false
+            isBooking = true
+        }
+    }
+
+    private func leaveBooking() {
+        withAnimation(.smooth(duration: 0.35)) { isBooking = false }
+        booking.restart()
     }
 
     // MARK: - Expand / collapse
