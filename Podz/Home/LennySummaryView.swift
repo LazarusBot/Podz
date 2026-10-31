@@ -34,9 +34,9 @@ struct LennySummaryView: View {
     var onOpenPod: (Pod) -> Void
     /// After booking: go look at the reservations.
     var onViewReservations: () -> Void
-    /// What the user asked Lenny ("Chamonix to Zermatt in 5 days"), to
-    /// suggest how many nights each stop gets.
-    var routeText = ""
+    /// What Lenny understood from the user's sentence: guests and the start
+    /// date prefill the booking (shown as chips), the stay suggests the nights.
+    var request: LennyRequest?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var reservationsStore = ReservationsStore.shared
@@ -51,6 +51,7 @@ struct LennySummaryView: View {
     @State private var usesPerStop = false
     /// Which stop the nights picker is changing: nil is all of them.
     @State private var nightsScope: Int?
+    @State private var didApplyRequest = false
     @State private var stage = Stage.guests
     /// On a question: false shows a plain button ("Add guest", "Add date"),
     /// true opens the picker across the whole stack.
@@ -154,8 +155,7 @@ struct LennySummaryView: View {
         .animation(.smooth(duration: 0.35), value: nightsConfirmed)
         .onAppear {
             appeared = true
-            nights = suggestedNights ?? 1
-            nightsByStop = Array(repeating: nights, count: entries.count)
+            applyRequest()
         }
         .sheet(isPresented: $showsDatePicker) { datePickerSheet }
     }
@@ -494,17 +494,28 @@ struct LennySummaryView: View {
 
     private var hasChoices: Bool { guestsConfirmed || dateConfirmed || nightsConfirmed }
 
-    /// How many nights each stop probably gets, from what the user asked
-    /// ("in 5 days" over 3 stops is 2 each); nil when the route says nothing.
+    /// How many nights each stop probably gets, from the stay the user gave
+    /// ("in 5 days" over 3 stops is 2 each); nil when they said nothing.
     private var suggestedNights: Int? {
-        let pattern = #"(\d+)\s*(days?|nights?|jours?|nuits?)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let match = regex.firstMatch(in: routeText, range: NSRange(routeText.startIndex..., in: routeText)),
-              let number = Range(match.range(at: 1), in: routeText).flatMap({ Int(routeText[$0]) }),
-              number > 0, !entries.isEmpty
-        else { return nil }
-        let each = (Double(number) / Double(entries.count)).rounded()
-        return max(1, min(Self.maxNights, Int(each)))
+        request?.suggestedNightsPerStop(stops: entries.count, maximum: Self.maxNights)
+    }
+
+    /// What the user already said: guests and the start date are answered
+    /// before the questions start, and stay on screen as chips to change.
+    private func applyRequest() {
+        guard !didApplyRequest else { return }
+        didApplyRequest = true
+        nights = suggestedNights ?? 1
+        nightsByStop = Array(repeating: nights, count: entries.count)
+        if let said = request?.guests {
+            guests = min(max(1, said), maxGuests)
+            guestsConfirmed = true
+        }
+        if let said = request?.startDate {
+            startDate = max(said, today)
+            dateConfirmed = true
+        }
+        stage = !guestsConfirmed ? .guests : (!dateConfirmed ? .date : .nights)
     }
 
     // MARK: - The choices

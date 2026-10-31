@@ -26,7 +26,7 @@ struct LennySearchScreen: View {
                 LennyPlanView(
                     stops: planStops,
                     photoURLs: podsStore.primaryPhotoByPodId,
-                    routeText: lenny.itineraryText,
+                    request: lenny.request,
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
                     onOpenPod: { selectedPod = $0 },
                     onFinish: {
@@ -143,14 +143,20 @@ struct LennySearchScreen: View {
         return failed ? .sorry : .happy
     }
 
+    /// "(3 guests · from Sat 31 Oct · 5 days)": what Lenny picked up besides
+    /// the places, so the user sees it was understood.
+    private var understoodNote: String {
+        lenny.request?.understood.map { " (\($0))" } ?? ""
+    }
+
     /// What Lenny says when it's done; `nil` while it's still working.
     private var replyMessage: String? {
         guard lenny.phase == .results else { return nil }
         if let error = lenny.errorMessage { return error }
         switch foundCount {
         case 0: return "I couldn't find any pods on that route."
-        case 1: return "I found 1 pod along your route. Want to take a look?"
-        default: return "I found \(foundCount) pods along your route. Want to take a look?"
+        case 1: return "I found 1 pod along your route\(understoodNote). Want to take a look?"
+        default: return "I found \(foundCount) pods along your route\(understoodNote). Want to take a look?"
         }
     }
 

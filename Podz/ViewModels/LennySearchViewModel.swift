@@ -57,6 +57,8 @@ final class LennySearchViewModel: ObservableObject {
     @Published var steps: [StepInfo] = []
     @Published var journeyStops: [JourneyStop] = []
     @Published var errorMessage: String?
+    /// What Lenny understood from the sentence (places, guests, dates, stay).
+    @Published var request: LennyRequest?
     @Published var isKeyboardFocused = false
     private var dismissTask: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
@@ -114,6 +116,10 @@ final class LennySearchViewModel: ObservableObject {
     func start(_ text: String) {
         searchTask?.cancel()
         itineraryText = text
+        // A fresh start: nothing left over from before.
+        errorMessage = nil
+        journeyStops = []
+        request = nil
         // The steps are on screen from the first frame, all still to do.
         steps = Self.initialSteps()
         phase = .searching
@@ -133,10 +139,11 @@ final class LennySearchViewModel: ObservableObject {
     func submit() async {
         guard !itineraryText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         dismissTask?.cancel()
-        let trimmedInput = itineraryText.trimmingCharacters(in: .whitespaces)
+        let input = itineraryText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let allPods = PodsStore.shared.pods
 
         // Nothing loaded to search in (offline, or still starting up).
-        if PodsStore.shared.pods.isEmpty {
+        if allPods.isEmpty {
             phase = .searching
             steps = Self.initialSteps()
             try? await Task.sleep(nanoseconds: 900_000_000)
@@ -145,107 +152,166 @@ final class LennySearchViewModel: ObservableObject {
             phase = .results
             return
         }
-        
-        // Fast path: the input is literally a country we already have
-        // pods for ("Slovenia", "France"...) — skip NLP/geocoding
-        // entirely, this is both faster and far more reliable than
-        // running it through place-name extraction.
-        if let matchedCountry = PodsStore.shared.countries.first(where: {
-            $0.localizedCaseInsensitiveCompare(trimmedInput) == .orderedSame
-        }) {
-            isKeyboardFocused = false
-            phase = .searching
-            steps = Self.initialSteps()
-            // Long enough to see the steps tick, not just a flash.
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            guard !Task.isCancelled else { return }
-            steps[0].title = "Recognized a country."
-            steps[0].subtitle = matchedCountry
-            steps[0].isDone = true
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            guard !Task.isCancelled else { return }
-            steps[1].subtitle = "Within 50 km of each stop"
-            steps[1].isDone = true
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            guard !Task.isCancelled else { return }
-            let found = PodsStore.shared.pods(inCountry: matchedCountry, type: nil)
-            // No stop to measure from: the pick is the pod with the most beds.
-            let byBeds = found.sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }
-            let reason = byBeds.first?.bedsTotal.map { "Most beds in \(matchedCountry), \($0)" }
-            journeyStops = [JourneyStop(name: matchedCountry, pods: byBeds, isResolved: true, pickReason: reason)]
-            steps[2].subtitle = "Your plan is ready"
-            steps[2].isDone = true
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            guard !Task.isCancelled else { return }
-            if found.isEmpty { errorMessage = "I don't have any pods in \(matchedCountry) yet." }
-            phase = .results
-            return
-        }
-        
+
         isKeyboardFocused = false
         phase = .searching
         errorMessage = nil
         steps = Self.initialSteps()
-        // A beat on the first step before it resolves.
-        try? await Task.sleep(nanoseconds: 600_000_000)
+
+        // 1 - Understand the sentence, however long: places, and the number
+        // of guests, the dates and the stay when they're in it.
+        let request = LennyRequestParser.parse(input, pods: allPods)
+        self.request = request
+        try? await Task.sleep(nanoseconds: 450_000_000) // a beat, so the step reads
         guard !Task.isCancelled else { return }
-        
-        // Step 1 — extract place names on-device.
-        var placeNames = LennyItineraryParser.extractPlaceNames(from: itineraryText)
-        if placeNames.isEmpty {
-            // NLTagger needs sentence context and often misses short or
-            // single-word input ("Chamonix" alone, no surrounding text).
-            // Fall back to treating the whole trimmed input as one place.
-            placeNames = [trimmedInput]
-        }
-        guard !placeNames.isEmpty else {
+        guard !request.mentions.isEmpty else {
             errorMessage = "I couldn't make out a place in that. Try a town, a lake or a peak."
             phase = .results
             return
         }
-        steps[0].title = "Extracting \(Self.stopCount(placeNames.count))."
-        steps[0].subtitle = placeNames.joined(separator: ", ")
+        steps[0].title = "Extracting \(Self.stopCount(request.mentions.count))."
+        steps[0].subtitle = request.mentions.map(\.name).joined(separator: ", ") + (request.understood.map { "  ·  \($0)" } ?? "")
         steps[0].isDone = true
-        try? await Task.sleep(nanoseconds: 700_000_000) // keeps the step readable, not just a flash
-        guard !Task.isCancelled else { return }
 
-        steps[1].subtitle = "Within 50 km of each stop"
+        // 2 - Place every stop at once (pods and regions already know where
+        // they are; the rest are geocoded side by side).
+        async let located = Self.locate(request.mentions)
+        try? await Task.sleep(nanoseconds: 450_000_000)
+        let stops = await located
+        guard !Task.isCancelled else { return }
+        steps[1].subtitle = "Around each stop"
         steps[1].isDone = true
-        try? await Task.sleep(nanoseconds: 700_000_000)
-        guard !Task.isCancelled else { return }
 
-        // The last step stays "loading" while each stop is resolved to
-        // its pods, one at a time; the plan opens once they all are.
-        journeyStops = placeNames.map { JourneyStop(name: $0, pods: [], isResolved: false) }
-        for (index, name) in placeNames.enumerated() {
-            guard let result = await LennyItineraryParser.geocode(name), !Task.isCancelled else { continue }
-            let stopLocation = CLLocation(latitude: result.coordinate.latitude, longitude: result.coordinate.longitude)
-            var distances: [UUID: Double] = [:]
-            for pod in PodsStore.shared.pods(near: [result.coordinate], radiusKm: 50) {
-                guard let lat = pod.latitude, let lng = pod.longitude else { continue }
-                distances[pod.id] = CLLocation(latitude: lat, longitude: lng).distance(from: stopLocation) / 1000
-            }
-            // Closest first; the lead pod is Lenny's pick.
-            let found = PodsStore.shared.pods
-                .filter { distances[$0.id] != nil }
-                .sorted { distances[$0.id, default: 0] < distances[$1.id, default: 0] }
-            journeyStops[index] = JourneyStop(
-                name: name, pods: found, isResolved: true,
-                distancesKm: distances,
-                pickReason: found.first == nil ? nil : "Closest to \(name)"
-            )
-        }
+        // 3 - Pods around each stop, nearest first, and some along the way.
+        journeyStops = Self.journey(from: stops, pods: allPods)
+        try? await Task.sleep(nanoseconds: 350_000_000)
         guard !Task.isCancelled else { return }
-
-        steps[2].subtitle = "Your plan is ready"
+        let nothing = journeyStops.allSatisfy { $0.pods.isEmpty }
+        steps[2].subtitle = nothing ? "Nothing found" : "Your plan is ready"
         steps[2].isDone = true
-        try? await Task.sleep(nanoseconds: 700_000_000)
+        try? await Task.sleep(nanoseconds: 500_000_000)
         guard !Task.isCancelled else { return }
 
-        if journeyStops.allSatisfy({ $0.pods.isEmpty }) {
+        if nothing {
             errorMessage = "I couldn't find any pods along that route. Try another stop, or a wider area."
         }
         phase = .results
+    }
+
+    // MARK: - Finding the pods
+
+    private struct Located {
+        let mention: LennyRequest.Mention
+        let coordinate: CLLocationCoordinate2D?
+    }
+
+    /// Where each mention is: known pods give their own middle, the rest are
+    /// geocoded, all at the same time.
+    private nonisolated static func locate(_ mentions: [LennyRequest.Mention]) async -> [Located] {
+        await withTaskGroup(of: (Int, CLLocationCoordinate2D?).self) { group in
+            for (index, mention) in mentions.enumerated() {
+                group.addTask {
+                    if let middle = Self.middle(of: mention.pods) { return (index, middle) }
+                    return (index, await LennyItineraryParser.geocode(mention.name)?.coordinate)
+                }
+            }
+            var coordinates: [Int: CLLocationCoordinate2D] = [:]
+            for await (index, coordinate) in group {
+                if let coordinate { coordinates[index] = coordinate }
+            }
+            return mentions.enumerated().map { Located(mention: $0.element, coordinate: coordinates[$0.offset]) }
+        }
+    }
+
+    private nonisolated static func middle(of pods: [Pod]) -> CLLocationCoordinate2D? {
+        let located = pods.compactMap { pod -> (Double, Double)? in
+            guard let lat = pod.latitude, let lng = pod.longitude else { return nil }
+            return (lat, lng)
+        }
+        guard !located.isEmpty else { return nil }
+        return CLLocationCoordinate2D(
+            latitude: located.map(\.0).reduce(0, +) / Double(located.count),
+            longitude: located.map(\.1).reduce(0, +) / Double(located.count)
+        )
+    }
+
+    private static func km(_ pod: Pod, from point: CLLocationCoordinate2D) -> Double? {
+        guard let lat = pod.latitude, let lng = pod.longitude else { return nil }
+        return CLLocation(latitude: lat, longitude: lng)
+            .distance(from: CLLocation(latitude: point.latitude, longitude: point.longitude)) / 1000
+    }
+
+    /// Pods within the first radius that has any (50, then 100, then 160 km),
+    /// nearest first.
+    private static func nearest(to point: CLLocationCoordinate2D, in pods: [Pod], radii: [Double] = [50, 100, 160]) -> (pods: [Pod], distances: [UUID: Double]) {
+        let measured = pods.compactMap { pod in km(pod, from: point).map { (pod, $0) } }
+        for radius in radii {
+            let within = measured.filter { $0.1 <= radius }.sorted { $0.1 < $1.1 }
+            if !within.isEmpty {
+                return (within.map(\.0), Dictionary(uniqueKeysWithValues: within.map { ($0.0.id, $0.1) }))
+            }
+        }
+        return ([], [:])
+    }
+
+    private static func journey(from located: [Located], pods allPods: [Pod]) -> [JourneyStop] {
+        var stops: [(stop: JourneyStop, coordinate: CLLocationCoordinate2D?)] = []
+
+        for item in located {
+            let name = item.mention.name
+            switch item.mention.kind {
+            case .pod:
+                // The pod asked for, then its neighbours.
+                guard let pod = item.mention.pods.first else { continue }
+                var ordered = [pod]
+                var distances: [UUID: Double] = [pod.id: 0]
+                if let point = item.coordinate {
+                    let around = nearest(to: point, in: allPods.filter { $0.id != pod.id }, radii: [40])
+                    ordered += around.pods
+                    distances.merge(around.distances) { first, _ in first }
+                }
+                stops.append((JourneyStop(name: name, pods: ordered, isResolved: true, distancesKm: distances, pickReason: "You asked for it"), item.coordinate))
+            case .region, .country:
+                // No point to measure from: the pick is the pod with the most beds.
+                let byBeds = item.mention.pods.sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }
+                let reason = byBeds.first?.bedsTotal.map { "Most beds in \(name), \($0)" }
+                stops.append((JourneyStop(name: name, pods: byBeds, isResolved: true, pickReason: reason), item.coordinate))
+            case .place:
+                guard let point = item.coordinate else {
+                    stops.append((JourneyStop(name: name, pods: [], isResolved: true), nil))
+                    continue
+                }
+                let around = nearest(to: point, in: allPods)
+                stops.append((JourneyStop(
+                    name: name, pods: around.pods, isResolved: true,
+                    distancesKm: around.distances,
+                    pickReason: around.pods.isEmpty ? nil : "Closest to \(name)"
+                ), point))
+            }
+        }
+
+        // A long leg ("Chamonix to Zermatt") has pods in the middle too.
+        var withWaypoints: [JourneyStop] = []
+        for (index, item) in stops.enumerated() {
+            withWaypoints.append(item.stop)
+            guard index + 1 < stops.count, withWaypoints.count < 8,
+                  let from = item.coordinate, let to = stops[index + 1].coordinate
+            else { continue }
+            let legKm = CLLocation(latitude: from.latitude, longitude: from.longitude)
+                .distance(from: CLLocation(latitude: to.latitude, longitude: to.longitude)) / 1000
+            guard legKm > 90 else { continue }
+            let middle = CLLocationCoordinate2D(latitude: (from.latitude + to.latitude) / 2, longitude: (from.longitude + to.longitude) / 2)
+            let already = Set(item.stop.pods.map(\.id)).union(stops[index + 1].stop.pods.map(\.id))
+            let around = nearest(to: middle, in: allPods.filter { !already.contains($0.id) }, radii: [40])
+            guard !around.pods.isEmpty else { continue }
+            withWaypoints.append(JourneyStop(
+                name: "Between \(item.stop.name) and \(stops[index + 1].stop.name)",
+                pods: around.pods, isResolved: true,
+                distancesKm: around.distances,
+                pickReason: "Closest to the middle of your route"
+            ))
+        }
+        return withWaypoints
     }
 
     /// "one stop", "three stops", "12 stops" — the step title's wording.

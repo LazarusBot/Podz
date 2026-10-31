@@ -8,8 +8,8 @@ import SwiftUI
 struct LennyPlanView: View {
     let stops: [LennySearchViewModel.JourneyStop]
     let photoURLs: [UUID: String]
-    /// What the user asked Lenny, for the summary's nights suggestion.
-    var routeText = ""
+    /// What Lenny understood, to prefill the booking (guests, dates, nights).
+    var request: LennyRequest?
     /// Back from the first stop leaves the plan.
     var onLeave: () -> Void
     var onOpenPod: (Pod) -> Void
@@ -51,7 +51,7 @@ struct LennyPlanView: View {
                 onBack: { withAnimation(.easeInOut(duration: 0.3)) { showsSummary = false } },
                 onOpenPod: onOpenPod,
                 onViewReservations: onFinish,
-                routeText: routeText
+                request: request
             )
             .transition(.opacity)
         } else {
