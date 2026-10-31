@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 /// The pieces the pod detail and the Likes folder view share, so the two
 /// screens look and behave the same (Paper "DetailView" frames).
@@ -41,6 +42,8 @@ struct DetailPhotoPager: View {
     @Binding var pageIndex: Int?
     let width: CGFloat
     let height: CGFloat
+    /// The pod's spot: with no photo at all the picture is its satellite view.
+    var coordinate: CLLocationCoordinate2D?
 
     /// One empty slot when there is nothing yet, so the placeholder shows.
     private var pages: [String?] { slots.isEmpty ? [nil] : slots }
@@ -49,7 +52,7 @@ struct DetailPhotoPager: View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 0) {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, url in
-                    PodPhoto(url: url)
+                    PodPhoto(url: url, coordinate: coordinate)
                         .frame(width: width, height: height)
                         .clipped()
                         .id(index)

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 import UIKit
 import PassKit
 import MapKit
@@ -82,7 +83,7 @@ struct TripPassView: View {
                 // The whole screen: this page ignores every safe area.
                 Color.clear
                     .frame(width: proxy.size.width, height: photoHeight(proxy.size.height))
-                    .overlay { PodPhoto(url: pass.photoURL) }
+                    .overlay { PodPhoto(url: pass.photoURL, coordinate: pass.latitude.flatMap { lat in pass.longitude.map { CLLocationCoordinate2D(latitude: lat, longitude: $0) } }) }
                     .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 75, bottomTrailingRadius: 75, style: .continuous))
 
                 // Everything between the photo and the buttons is one tap
