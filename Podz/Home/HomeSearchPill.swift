@@ -20,6 +20,14 @@ struct HomeSearchPill: View {
 
     private let buttonSize: CGFloat = 40
     private let inset: CGFloat = 9
+    /// Lenny's button with its label ("Ask Lenny"): wide at rest, back to the
+    /// round mark once Lenny mode rolls it to the other end.
+    private let askWidth: CGFloat = 118
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Bumped now and then while the pill is idle: Lenny's mark gives a little
+    /// wave, a nudge that it can be asked.
+    @State private var wave = 0
 
     var body: some View {
         ZStack(alignment: isLennyMode ? .leading : .trailing) {
@@ -32,13 +40,20 @@ struct HomeSearchPill: View {
         .contentShape(Capsule())
         .onTapGesture { isFocused.wrappedValue = true }
         .animation(.smooth(duration: 0.4), value: isLennyMode)
+        .task {
+            // A wave every few seconds while there's nothing typed or focused.
+            while !Task.isCancelled && !reduceMotion {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                if !isLennyMode && !isFocused.wrappedValue { wave += 1 }
+            }
+        }
     }
 
     private var field: some View {
         TextField(
             "",
             text: $text,
-            prompt: Text(isLennyMode ? "Chamonix to Zermatt in 5 days" : "Search a region or ask Lenny")
+            prompt: Text(isLennyMode ? "Chamonix to Zermatt in 5 days" : "Search a region")
                 .foregroundColor(isLennyMode ? .homeSubtitleOnInverse : .homeSubtitle)
         )
         .font(AppFont.regularLabel(14))
@@ -53,29 +68,51 @@ struct HomeSearchPill: View {
         .onSubmit(onSubmit)
         // Room for the mark on whichever side it's on, plus the gap.
         .padding(.leading, isLennyMode ? inset + buttonSize + 20 : 28)
-        .padding(.trailing, isLennyMode ? 28 : inset + buttonSize + 8)
+        .padding(.trailing, isLennyMode ? 28 : inset + askWidth + 8)
     }
 
-    /// Same disc and glyph colors in both modes — it's the bar that
-    /// changes, which is what makes the disc disappear into it.
+    /// Lenny's button. At rest it says what it is, "Ask Lenny", on a solid
+    /// capsule that stands out from the grey bar, and waves now and then. In
+    /// Lenny mode it is the round mark again, rolled to the leading end and
+    /// melted into the bar so only the eyes and the mouth stay visible.
     private var lennyMark: some View {
         Button {
             isLennyMode.toggle()
             isFocused.wrappedValue = true
         } label: {
-            Image("lenny")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 20, height: 20)
-                .foregroundColor(.homeBackground)
-                .frame(width: buttonSize, height: buttonSize)
-                .background(Color.homeText, in: Circle())
-                // One full turn as it slides across — the "roll".
-                .rotationEffect(.degrees(isLennyMode ? 360 : 0))
+            HStack(spacing: 7) {
+                Image("lenny")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                    // One full turn as it slides across: the "roll".
+                    .rotationEffect(.degrees(isLennyMode ? 360 : 0))
+                    .keyframeAnimator(initialValue: 0.0, trigger: wave) { view, angle in
+                        view.rotationEffect(.degrees(angle))
+                    } keyframes: { _ in
+                        CubicKeyframe(-14, duration: 0.14)
+                        CubicKeyframe(12, duration: 0.16)
+                        CubicKeyframe(-8, duration: 0.14)
+                        CubicKeyframe(0, duration: 0.16)
+                    }
+
+                if !isLennyMode {
+                    Text("Ask Lenny")
+                        .font(AppFont.semiBoldLabel(13))
+                        .lineLimit(1)
+                        .fixedSize()
+                        .transition(.opacity)
+                }
+            }
+            .foregroundColor(.homeBackground)
+            .frame(width: isLennyMode ? buttonSize : askWidth, height: buttonSize)
+            .background(Color.homeText, in: Capsule())
+            .clipped()
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel("Ask Lenny")
+        .accessibilityHint("Describe your trip and Lenny finds the pods")
         .accessibilityAddTraits(isLennyMode ? .isSelected : [])
     }
 }
