@@ -205,11 +205,15 @@ struct LennySearchScreen: View {
         .contentShape(Capsule())
         .onTapGesture {
             guard failed else { return }
-            // Tapping to change the search clears the old route and Lenny's
-            // error, so there's a clean field to type in.
+            fieldFocused = true
+        }
+        // The field takes the tap itself, so this is what starts editing:
+        // getting focus clears the old route and Lenny's error, leaving a
+        // clean field to type in.
+        .onChange(of: fieldFocused) { _, focused in
+            guard focused, failed, !isEditingRoute else { return }
             isEditingRoute = true
             draft = ""
-            fieldFocused = true
         }
         // The route is in the field when a search fails.
         .onChange(of: failed) { _, isFailed in
