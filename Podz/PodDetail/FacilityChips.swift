@@ -35,6 +35,47 @@ struct UnverifiedBadge: View {
     }
 }
 
+/// "Open now" / "Closed until June" with a dot: filled when it's open, a ring
+/// when it's closed. Flat `homePill` like every chip, no color.
+struct OpenStatusChip: View {
+    let status: OpeningStatus.Result
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(status.isOpen ? Color.homeText : Color.clear)
+                .overlay(Circle().strokeBorder(Color.homeSubtitle, lineWidth: status.isOpen ? 0 : 1.2))
+                .frame(width: 8, height: 8)
+            Text(status.label)
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(status.isOpen ? .homeText : .homeSubtitle)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.homePill, in: Capsule())
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Under the name: whether it's open (when the hours say so) and, for a listed
+/// hut, that nobody at Podz has checked it.
+struct PodStatusRow: View {
+    let pod: Pod
+    var isCentered = true
+
+    private var status: OpeningStatus.Result? { OpeningStatus.evaluate(pod.openingHours) }
+
+    var body: some View {
+        if status != nil || !pod.isBookable {
+            HStack(spacing: 8) {
+                if let status { OpenStatusChip(status: status) }
+                if !pod.isBookable { UnverifiedBadge() }
+            }
+            .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+        }
+    }
+}
+
 /// Items left to right, wrapping to a new centered line when the width runs out.
 private struct FlowLayout: Layout {
     var spacing: CGFloat

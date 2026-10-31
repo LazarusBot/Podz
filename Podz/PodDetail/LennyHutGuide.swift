@@ -30,36 +30,24 @@ enum PodDetailSection: String, CaseIterable, Hashable {
     }
 }
 
-/// A small triangle pointing down, under a bubble.
-struct BubbleTail: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
-        path.closeSubpath()
-        return path
-    }
-}
-
-/// What Lenny says as you read down the page: a word on the section that's
-/// on screen, from what the data says (rules on the device, like
-/// `LennyTripTips`), and the one thing to do next. It never states what it
-/// doesn't know: a gap becomes "ask the hut".
+/// Lenny's word on a hut, from what the data says (rules on the device). On the
+/// stack it's the `LennyReply` bubble, one line of something useful that the
+/// badges don't already say. On the extended page it's one compact line under
+/// the header that follows the section on screen, with one move on the right
+/// (the next section, or the hut's contact). It never states what it doesn't
+/// know: a gap becomes "ask the hut".
 struct LennyHutGuide: View {
     let pod: Pod
     let liveBedsAvailable: Int?
     /// The section at the top of the page; `nil` before the first scroll.
-    let section: PodDetailSection?
-    let available: [PodDetailSection]
+    var section: PodDetailSection?
+    var available: [PodDetailSection] = []
     var onGo: (PodDetailSection) -> Void = { _ in }
     var onContact: () -> Void = {}
-    /// On the stack (over the photo): just the overview and a nudge to open
-    /// the page, no next step.
+    /// The stack's bubble instead of the compact line.
     var inStack = false
 
-    /// Where the page is: before any scroll it's the first section, and Lenny
-    /// opens with the overview.
+    /// Where the page is: before any scroll it's the first section.
     private var current: PodDetailSection { section ?? available.first ?? .goodToKnow }
 
     private var next: PodDetailSection? {
@@ -68,138 +56,102 @@ struct LennyHutGuide: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            LennyReply(message: message, mood: .idle, showsAvatar: !inStack, alignment: inStack ? .center : .leading)
-                // On the stack the bubble speaks from the Lenny badge on the
-                // photo above it: a small tail points up to it.
-                .overlay(alignment: .top) {
-                    if inStack {
-                        BubbleTail()
-                            .fill(Color.homePill)
-                            .frame(width: 18, height: 9)
-                            .rotationEffect(.degrees(180))
-                            .offset(y: -8)
-                    }
-                }
+        if inStack {
+            LennyReply(message: Self.stackMessage(pod, liveBedsAvailable), mood: .idle)
+        } else {
+            compact
+        }
+    }
+
+    // MARK: - The compact line
+
+    private var compact: some View {
+        HStack(spacing: 10) {
+            LennyMark(mood: .idle)
+                .frame(width: 13, height: 13)
+                .foregroundColor(.homeBackground)
+                .frame(width: 26, height: 26)
+                .background(Color.homeText, in: Circle())
+
+            Text(Self.shortMessage(for: section, pod: pod, first: available.first))
+                .font(AppFont.regularLabel(14))
+                .foregroundColor(.homeText)
+                .lineLimit(2)
+                .minimumScaleFactor(0.9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .id(current)
+                .transition(.opacity)
 
             if let action {
                 Button(action: action.run) {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Text(action.title)
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.homeSubtitle)
+                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
                     }
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
                     .padding(.vertical, 8)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                // Lined up with the bubble's text, past the avatar.
-                .padding(.leading, 38)
             }
         }
-        .animation(.smooth(duration: 0.3), value: section)
+        .padding(.leading, 10)
+        .padding(.trailing, 14)
+        .padding(.vertical, 8)
+        .background(Color.homePill, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+        .animation(.smooth(duration: 0.3), value: current)
     }
 
-    /// One thing to do from here: write to the hut where that's the way to
-    /// book, else on to the next section.
+    /// One move from here: the hut's contact where that's the way to book, else
+    /// on to the next section.
     private var action: (title: String, run: () -> Void)? {
-        if inStack { return nil }
         if !pod.isBookable, pod.hasContact, current == .contact || next == nil {
-            return ("Contact the hut", onContact)
+            return ("Contact", onContact)
         }
-        if let next { return ("Next: \(next.title)", { onGo(next) }) }
-        if let first = available.first, first != current { return ("Back to top", { onGo(first) }) }
+        if let next { return ("Next", { onGo(next) }) }
+        if let first = available.first, first != current { return ("Top", { onGo(first) }) }
         return nil
-    }
-
-    private var message: String {
-        if inStack { return Self.stackMessage(pod, liveBedsAvailable) }
-        return Self.message(for: section, pod: pod, liveBedsAvailable: liveBedsAvailable, first: available.first)
     }
 
     // MARK: - What Lenny says
 
-    /// Short, for the stack: the one thing to know, then a nudge to open the page.
+    /// On the stack: the one thing worth knowing that the badges above don't
+    /// say. (Open or closed and "Unverified" are chips already.)
     private static func stackMessage(_ pod: Pod, _ liveBedsAvailable: Int?) -> String {
         if pod.isBookable {
-            if let live = liveBedsAvailable, live > 0 { return "\(live) \(live == 1 ? "bed" : "beds") free tonight. Tap for the details." }
-            return "You can book this hut right here. Tap for the details."
-        }
-        return pod.hasContact
-            ? "Not checked by Podz: contact the hut first. Tap for the details."
-            : "Not checked by Podz, and I can't reach this hut. Tap for the details."
-    }
-
-    static func message(for section: PodDetailSection?, pod: Pod, liveBedsAvailable: Int?, first: PodDetailSection?, today: Date = Date()) -> String {
-        switch section ?? first ?? .goodToKnow {
-        case .about: return trust(pod, liveBedsAvailable)
-        case .onSite: return onSite(pod)
-        case .goodToKnow: return goodToKnow(pod, today)
-        case .gettingThere:
-            return "Tap the map for walking directions in Apple Maps. There's often no signal up there, so save the area offline before you leave."
-        case .contact:
-            if pod.isBookable { return "Happy with this hut? Tap Book and you're reserved in a minute." }
-            return pod.hasContact
-                ? "This is how to reach the hut. Tap Book through the hut, or the caption below, and pick call, email or website."
-                : "I have no way to reach this hut. Check it's open before you set off."
-        case .source:
-            return "OpenStreetMap is edited by volunteers, so details can be out of date. When it matters, ask the hut."
-        }
-    }
-
-    /// Can you trust it, and what to do about it.
-    static func trust(_ pod: Pod, _ liveBedsAvailable: Int?) -> String {
-        if pod.isBookable {
-            guard let live = liveBedsAvailable else { return "This hut takes bookings right here in Podz." }
-            return live > 0
-                ? "This hut takes bookings right here, and it has \(live) \(live == 1 ? "bed" : "beds") free tonight."
-                : "This hut takes bookings right here, but it's full tonight. Another date may work."
-        }
-        return pod.hasContact
-            ? "I found this hut on OpenStreetMap and nobody at Podz has checked it, so I'd contact the hut before you go."
-            : "I found this hut on OpenStreetMap, but I have no way to reach it and nobody at Podz has checked it."
-    }
-
-    private static func onSite(_ pod: Pod) -> String {
-        guard let facilities = pod.facilities, !facilities.isEmpty else {
-            return "No facilities are listed for this hut. Ask it what it offers (meals, water, a bed) before you count on it."
-        }
-        var text = "On site: \(list(facilities.filter { $0 != "Reservation required" }))."
-        if !facilities.contains("Meals") { text += " I don't see meals listed, so bring food just in case." }
-        if facilities.contains("Reservation required") { text += " It asks you to reserve first: don't walk up without a bed." }
-        return text
-    }
-
-    private static func goodToKnow(_ pod: Pod, _ today: Date) -> String {
-        var parts: [String] = []
-        let month = Calendar(identifier: .gregorian).component(.month, from: today)
-        if let hours = hutClean(pod.openingHours) {
-            parts.append("It's open \(hours).")
-        } else if !pod.isBookable {
-            parts.append("Its opening dates aren't listed, so ask the hut.")
-        }
-        if let altitude = pod.altitudeM {
-            if altitude >= 2000, [10, 11, 12, 1, 2, 3, 4, 5].contains(month) {
-                parts.append("At \(altitude) m, huts are often closed or only have a winter room from October to May.")
-            } else if altitude >= 2500 {
-                parts.append("At \(altitude) m it gets cold, even in summer: pack a warm layer, a hat and a headlamp.")
-            } else if altitude >= 1500 {
-                parts.append("At \(altitude) m the evenings cool down fast.")
+            if let live = liveBedsAvailable {
+                return live > 0
+                    ? "\(live) \(live == 1 ? "bed" : "beds") free tonight. Tell me your dates and I'll book it."
+                    : "Full tonight. Another date may work: tell me when and I'll check."
             }
+            return "You can book this hut right here. Tell me your dates."
         }
-        return parts.isEmpty ? "Here's the practical side: where it is, how big it is and how you book." : parts.joined(separator: " ")
+        if let hours = hutClean(pod.openingHours) { return "Open \(hours). Call ahead, as huts fill up." }
+        return pod.hasContact
+            ? "This hut takes bookings itself. Tap Book through the hut to reach it."
+            : "I have no way to reach this hut from here. Check it's open before you set off."
     }
 
-    /// "Meals, Showers and Drinking water".
-    private static func list(_ items: [String]) -> String {
-        switch items.count {
-        case 0: return "nothing listed"
-        case 1: return items[0]
-        default: return items.dropLast().joined(separator: ", ") + " and " + items[items.count - 1]
+    /// On the page: a short line for the section on screen (two lines at most).
+    static func shortMessage(for section: PodDetailSection?, pod: Pod, first: PodDetailSection?) -> String {
+        switch section ?? first ?? .goodToKnow {
+        case .about:
+            return pod.isBookable ? "Bookable right here in Podz." : "Details come from OpenStreetMap: confirm with the hut."
+        case .onSite:
+            guard let facilities = pod.facilities, !facilities.isEmpty else { return "Nothing listed: ask the hut what it offers." }
+            let shown = facilities.filter { $0 != "Reservation required" }
+            return facilities.contains("Reservation required") ? "Reserve first: it doesn't take walk-ups." : "On site: \(shown.prefix(3).joined(separator: ", "))."
+        case .goodToKnow:
+            if let altitude = pod.altitudeM, altitude >= 2500 { return "At \(altitude) m it's cold, even in summer: bring a warm layer." }
+            return pod.isBookable ? "Pick your dates and Book." : "Opening dates and prices: ask the hut."
+        case .gettingThere:
+            return "Save the map offline: there's often no signal up there."
+        case .contact:
+            if pod.isBookable { return "Happy with it? Tap Book." }
+            return pod.hasContact ? "Contact the hut to book a bed." : "No contact listed. Check it's open before you go."
+        case .source:
+            return "Volunteers edit OpenStreetMap, so details can be out of date."
         }
     }
 }

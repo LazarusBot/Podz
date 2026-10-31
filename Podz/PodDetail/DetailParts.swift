@@ -54,7 +54,7 @@ struct DetailPhotoPager: View {
     /// when it has shrunk to a thumbnail. Animatable, so it can morph.
     var topRadius: CGFloat = 0
     var bottomRadius: CGFloat = 75
-    /// Lenny's badge and the pager dots; hidden when the photo is a thumbnail.
+    /// The pager dots; hidden when the photo is a thumbnail.
     var showsBadge = true
 
     /// One empty slot when there is nothing yet, so the placeholder shows.
@@ -80,10 +80,9 @@ struct DetailPhotoPager: View {
             bottomTrailingRadius: bottomRadius, topTrailingRadius: topRadius, style: .continuous
         ))
         .overlay(alignment: .bottom) {
-            PodDetailBadge(photoCount: slots.count, currentIndex: pageIndex ?? 0)
-                .offset(y: 28)
+            PodPhotoDots(photoCount: slots.count, currentIndex: pageIndex ?? 0)
+                .padding(.bottom, 24)
                 .opacity(showsBadge ? 1 : 0)
-                .scaleEffect(showsBadge ? 1 : 0.3)
         }
         .zIndex(1)
     }

@@ -207,7 +207,7 @@ struct MinimalPodDetailView: View {
             titleText
                 .foregroundColor(.homeText)
                 .multilineTextAlignment(.center)
-            if !pod.isBookable { UnverifiedBadge() }
+            PodStatusRow(pod: pod)
         }
         .padding(.horizontal, 24)
         .padding(.top, 50)
@@ -217,8 +217,8 @@ struct MinimalPodDetailView: View {
         detailTitle(pod.name, detail: pod.altitudeM.map { "\($0)m" })
     }
 
-    /// "120 beds · 18 free now · Open Jun – Sep": the two facts a traveler
-    /// looks for first, under the name.
+    /// "120 beds · 18 free now  ·  45 € / night": what a traveler weighs first,
+    /// under the name. (Open or closed is the chip above.)
     private var keyFacts: some View {
         var parts: [String] = []
         if let total = pod.bedsTotal {
@@ -226,7 +226,11 @@ struct MinimalPodDetailView: View {
             if pod.isBookable, let live = liveBedsAvailable { beds += " · \(live) free now" }
             parts.append(beds)
         }
-        if let hours = hutClean(pod.openingHours) { parts.append("Open \(hours)") }
+        if let price = pod.priceText {
+            parts.append(price)
+        } else if !pod.isBookable {
+            parts.append("Price at the hut")
+        }
         return Group {
             if !parts.isEmpty {
                 Text(parts.joined(separator: "  ·  "))
@@ -250,26 +254,36 @@ struct MinimalPodDetailView: View {
         }
     }
 
-    /// Lenny's word on the hut, speaking from the badge on the photo: the
-    /// trust line, or, while booking, the question.
+    /// Lenny's word on the hut, or, while booking, the question; and under it
+    /// the small caption that says the page opens.
     @ViewBuilder
     private var stackLenny: some View {
-        if isBooking {
-            LennyReply(message: booking.replyMessage, mood: booking.mood, showsAvatar: false, alignment: .center)
-                .overlay(alignment: .top) {
-                    BubbleTail()
-                        .fill(Color.homePill)
-                        .frame(width: 18, height: 9)
-                        .rotationEffect(.degrees(180))
-                        .offset(y: -8)
+        VStack(alignment: .leading, spacing: 0) {
+            if isBooking {
+                LennyReply(message: booking.replyMessage, mood: booking.mood)
+            } else {
+                LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true)
+
+                Button(action: toggleExtended) {
+                    HStack(spacing: 5) {
+                        Text("Details")
+                            .font(AppFont.regularLabel(13))
+                            .foregroundColor(.homeSubtitle)
+                            .underline(color: Color.homeSubtitle.opacity(0.5))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(.homeSubtitle)
+                    }
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
                 }
-                .padding(.top, 26)
-                .padding(.horizontal, 24)
-        } else {
-            LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, section: nil, available: [], inStack: true)
-                .padding(.top, 26)
-                .padding(.horizontal, 24)
+                .buttonStyle(.plain)
+                // Lined up with the bubble's text, past the avatar.
+                .padding(.leading, 38)
+            }
         }
+        .padding(.top, 22)
+        .padding(.horizontal, 24)
     }
 
     // MARK: - Extended header
@@ -308,7 +322,7 @@ struct MinimalPodDetailView: View {
                         .font(AppFont.regularLabel(14))
                         .foregroundColor(.homeSubtitle)
                 }
-                if !pod.isBookable { UnverifiedBadge() }
+                PodStatusRow(pod: pod, isCentered: false)
             }
             Spacer(minLength: 0)
         }
@@ -340,7 +354,7 @@ struct MinimalPodDetailView: View {
                 DetailBackButton(action: onBack)
                 likeButton
                 if pod.isBookable {
-                    DetailTextButton(title: "Book", action: startBooking)
+                    DetailTextButton(title: "Book", isHighlighted: true, action: startBooking)
                 } else {
                     // A listed hut takes its bookings itself.
                     DetailTextButton(title: "Book through the hut", isHighlighted: pod.hasContact) { showHutContact = true }

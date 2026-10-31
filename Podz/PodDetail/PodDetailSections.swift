@@ -86,10 +86,8 @@ struct PodDetailSections: View {
     private var goodToKnow: some View {
         DetailSection("Good to know") {
             VStack(spacing: 0) {
-                row("Where", [pod.region, pod.country].compactMap { $0 }.joined(separator: ", "))
-                row("Type", pod.podType.capitalized)
-                row("Altitude", pod.altitudeM.map { "\($0) m" })
                 row("Beds", bedsText)
+                row("Price", pod.priceText ?? (pod.isBookable ? nil : "Set by the hut"))
                 row("Open", hutClean(pod.openingHours) ?? (pod.isBookable ? nil : "Ask the hut"))
                 row("Booking", pod.isBookable ? "In Podz" : "Through the hut")
             }
