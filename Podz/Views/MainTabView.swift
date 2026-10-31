@@ -2,8 +2,6 @@ import SwiftUI
 
 struct MainTabView: View {
     @StateObject private var auth = AuthManager.shared
-    @StateObject private var lenny = LennySearchViewModel.shared
-    @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
     @StateObject private var tabBarVisibility = TabBarVisibilityState.shared
     @StateObject private var appearance = AppearanceState.shared
@@ -42,7 +40,7 @@ struct MainTabView: View {
                 }
                 .ignoresSafeArea(edges: .bottom)
 
-                if lenny.phase != .editing && !homeSearch.isExpanded && !tabBarVisibility.isHidden {
+                if !tabBarVisibility.isHidden {
                     MinimalTabBar(selected: $selectedTab)
                         // 24, not 18 — matches this app's actual spacing
                         // system (24pt is the standard content margin
@@ -76,8 +74,6 @@ struct MainTabView: View {
                 }
             }
         }
-        .animation(.easeOut(duration: AppMotion.snappy), value: lenny.phase)
-        .animation(.easeOut(duration: AppMotion.snappy), value: homeSearch.isExpanded)
         .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)
         .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())

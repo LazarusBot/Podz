@@ -1,16 +1,12 @@
 import Foundation
 import Combine
 
-/// Whether Home's search pill is expanded (focused) — shared so
-/// `MainTabView` can hide the floating tab bar while it's open, the
-/// same way it already does for Lenny's editing phase.
+/// Home's tab bar signals, shared across screens.
 @MainActor
 final class HomeSearchState: ObservableObject {
     static let shared = HomeSearchState()
 
-    @Published var isExpanded = false
-
-    /// Bumped by BottomTabBar whenever "Feed" is tapped while it's
+    /// Bumped by MinimalTabBar whenever "Feed" is tapped while it's
     /// already the active tab — HomeView observes this to pop back out
     /// of a pod detail and collapse search, the same "tap the tab again
     /// to go home" pattern most apps use. A plain counter, not a Bool:
