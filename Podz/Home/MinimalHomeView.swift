@@ -53,7 +53,7 @@ struct MinimalHomeView: View {
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
                     ForEach(discoverySections) { section in
                         sectionHeader(title: section.title, pods: section.pods, id: section.id)
-                        cardsRow(section.pods, idPrefix: section.id, subtitle: section.subtitle)
+                        shelf(section)
                             .padding(.top, 16)
                     }
                 }
@@ -152,8 +152,45 @@ struct MinimalHomeView: View {
 
     /// The shelves under "Available tonight".
     private var discoverySections: [HomeSection] {
-        let liked = podsStore.pods.filter { likesStore.isLiked($0) }
-        return HomeSection.discovery(from: podsStore.pods, liked: liked)
+        HomeSection.discovery(from: podsStore.pods)
+    }
+
+    /// A shelf in its own layout: carousel, tall cards or a mosaic.
+    @ViewBuilder
+    private func shelf(_ section: HomeSection) -> some View {
+        switch section.layout {
+        case .hero:
+            cardsRow(section.pods, idPrefix: section.id, subtitle: section.subtitle)
+        case .tall:
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(section.pods) { pod in
+                        let zoomID = AnyHashable("\(section.id)-\(pod.id)")
+                        HomeTallCard(
+                            pod: pod,
+                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
+                            zoomNamespace: zoomNamespace,
+                            zoomID: zoomID,
+                            onTap: {
+                                selectedZoomID = zoomID
+                                selectedPod = pod
+                            }
+                        )
+                    }
+                }
+            }
+            .contentMargins(.horizontal, 24, for: .scrollContent)
+        case .mosaic:
+            HomeMosaic(
+                pods: section.pods,
+                photoURLs: podsStore.primaryPhotoByPodId,
+                zoomNamespace: zoomNamespace,
+                zoomIDPrefix: section.id
+            ) { pod, zoomID in
+                selectedZoomID = zoomID
+                selectedPod = pod
+            }
+        }
     }
 
     /// One row of big cards, scrolling sideways with the next one peeking.
