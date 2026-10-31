@@ -83,7 +83,7 @@ struct LennySummaryView: View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Your plan")
+                    Text(entries.count == 1 ? "Your stay" : "Your plan")
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(-0.6)
                         .foregroundColor(.homeText)
@@ -646,7 +646,8 @@ struct LennySummaryView: View {
 
     private var subtitle: String {
         let stops = entries.count
-        return "\(stops) \(stops == 1 ? "stop" : "stops"), one pod each"
+        if stops == 1 { return "No payment now: you settle up at the shelter" }
+        return "\(stops) stops, one pod each"
     }
 
     /// "Lake Braies  ·  Mon 2 Nov → Wed 4 Nov" once the dates are known.

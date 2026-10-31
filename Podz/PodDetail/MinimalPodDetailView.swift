@@ -72,12 +72,21 @@ struct MinimalPodDetailView: View {
         // dismiss fought with paging through the photos.
         .interactiveDismissDisabled()
         .hutContactDialog(for: pod, isPresented: $showHutContact)
-        .sheet(isPresented: $showBooking) {
-            ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable) { showBooking = false }
-                .background(Color.appHomeBackground)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.hidden)
-                .preferredColorScheme(.light)
+        // Booking is Lenny's flow (the plan's summary) with this one pod: Lenny
+        // asks the guests, the date and the nights, then reserves.
+        .fullScreenCover(isPresented: $showBooking) {
+            LennySummaryView(
+                entries: [bookingEntry],
+                photoURLs: PodsStore.shared.primaryPhotoByPodId,
+                onBack: { showBooking = false },
+                onOpenPod: { _ in showBooking = false },
+                onViewReservations: {
+                    TabRouter.shared.showsReservationsRequested = true
+                    showBooking = false
+                    onBack()
+                },
+                request: nil
+            )
         }
         .task {
             async let photos = PodsStore.shared.photoRows(forPodId: pod.id)
@@ -89,6 +98,21 @@ struct MinimalPodDetailView: View {
             }
             liveBedsAvailable = fetchedBeds
         }
+    }
+
+    /// This pod as the one stop of a Lenny booking.
+    private var bookingEntry: LennySummaryView.Entry {
+        var detail = ""
+        if let total = pod.bedsTotal {
+            detail = "\(total) \(total == 1 ? "bed" : "beds")"
+            if let live = liveBedsAvailable { detail += " · \(live) free now" }
+        }
+        return LennySummaryView.Entry(
+            stopName: [pod.region, pod.country].compactMap { $0 }.joined(separator: ", "),
+            pod: pod,
+            detail: detail,
+            isLennysPick: false
+        )
     }
 
     // MARK: - Like
