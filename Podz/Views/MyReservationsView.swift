@@ -21,7 +21,9 @@ struct MyReservationsView: View {
     @StateObject private var reservationsStore = ReservationsStore.shared
     @StateObject private var podsStore = PodsStore.shared
     @State private var pendingCancellation: [Reservation] = []
+    @StateObject private var tripPassStore = TripPassStore.shared
     @State private var selectedPod: Pod?
+    @State private var selectedPass: TripPass?
     /// Which of Lenny's tips is showing.
     @State private var tipIndex = 0
 
@@ -35,7 +37,7 @@ struct MyReservationsView: View {
             .sorted { $0.checkIn > $1.checkIn }
     }
 
-    private var isEmpty: Bool { reservationsStore.reservations.isEmpty }
+    private var isEmpty: Bool { reservationsStore.reservations.isEmpty && tripPassStore.passes.isEmpty }
 
     var body: some View {
         SectionPage(
@@ -49,6 +51,12 @@ struct MyReservationsView: View {
             content: {
                 if isEmpty {
                     emptyState
+                } else if reservationsStore.reservations.isEmpty {
+                    // Offline: the passes saved on the phone are what there is.
+                    SectionHeading(title: "Saved on this phone")
+                    ForEach(tripPassStore.passes) { pass in
+                        savedPassRow(pass)
+                    }
                 } else {
                     if !upcoming.isEmpty {
                         SectionHeading(title: "Upcoming")
@@ -76,9 +84,13 @@ struct MyReservationsView: View {
             lennyTips
                 .padding(.bottom, DetailLayout.controlStackGap + ScreenInsets.bottom + 83 + 10)
         }
-        .task { await reservationsStore.fetchMine() }
+        .task { await tripPassStore.refreshFromServer() }
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
+        }
+        // An upcoming stay opens its pass (saved on the phone, works offline).
+        .fullScreenCover(item: $selectedPass) { pass in
+            TripPassView(pass: pass, onBack: { selectedPass = nil })
         }
         .alert(
             pendingCancellation.count > 1 ? "Cancel this trip?" : "Cancel this reservation?",
@@ -158,6 +170,35 @@ struct MyReservationsView: View {
         .padding(.top, 16)
     }
 
+    // MARK: - Saved passes (offline)
+
+    private func savedPassRow(_ pass: TripPass) -> some View {
+        Button { selectedPass = pass } label: {
+            HStack(spacing: 14) {
+                Color.clear
+                    .frame(width: 64, height: 64)
+                    .overlay { PodPhoto(url: pass.photoURL) }
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(pass.podName)
+                        .font(AppFont.semiBoldLabel(16))
+                        .foregroundColor(.homeText)
+                        .lineLimit(1)
+                    Text("\(pass.rangeText)  ·  \(pass.nights) \(pass.nights == 1 ? "night" : "nights")")
+                        .font(AppFont.regularLabel(13))
+                        .foregroundColor(.homeSubtitle)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+            .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - A trip
 
     private func tripBlock(_ trip: ReservationTrip) -> some View {
@@ -209,7 +250,11 @@ struct MyReservationsView: View {
     private func stayRow(_ reservation: Reservation, number: Int?, isLast: Bool) -> some View {
         let pod = podsStore.pods.first { $0.id == reservation.podId }
         return Button {
-            if let pod { selectedPod = pod }
+            if reservation.isUpcoming, let pass = tripPassStore.passes.first(where: { $0.reservationId == reservation.id }) {
+                selectedPass = pass
+            } else if let pod {
+                selectedPod = pod
+            }
         } label: {
             HStack(alignment: .top, spacing: 14) {
                 if let number {
