@@ -114,6 +114,9 @@ final class LennySearchViewModel: ObservableObject {
     func start(_ text: String) {
         searchTask?.cancel()
         itineraryText = text
+        // A fresh start (also a retry after an error): nothing left over.
+        errorMessage = nil
+        journeyStops = []
         // The steps are on screen from the first frame, all still to do.
         steps = Self.initialSteps()
         phase = .searching

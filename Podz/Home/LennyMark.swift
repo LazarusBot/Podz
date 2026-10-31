@@ -8,6 +8,8 @@ enum LennyMood: Equatable {
     case happy
     /// Couldn't: a shake of the head, "no".
     case sorry
+    /// Nothing to say: the face just rests.
+    case idle
 }
 
 /// Lenny's mark (the eyes and the mouth) with its moves. Size and color are
