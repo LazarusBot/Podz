@@ -107,34 +107,36 @@ struct LennySummaryView: View {
                     }
 
                     // Room under the list for the pills and Lenny's bubble.
-                    Color.clear.frame(height: 250 + (showsScopePill ? scopePillHeight + 13 : 0))
+                    Color.clear.frame(height: 250 + (quickReply != nil ? 44 : 0))
                 }
             }
 
             BottomFade()
 
-            LennyReply(message: replyMessage, mood: mood)
-                .padding(.horizontal, 24)
-                // Just above the control stack.
-                .padding(.bottom, 40 + 83 + 20 + (showsScopePill ? scopePillHeight + 13 : 0))
+            // Lenny's line, and under it, when there's one, a quick reply.
+            VStack(alignment: .leading, spacing: 8) {
+                LennyReply(message: replyMessage, mood: mood)
+                if let reply = quickReply {
+                    quickReplyPill(reply)
+                        // Lined up under the bubble, past the avatar.
+                        .padding(.leading, 38)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+            }
+            .padding(.horizontal, 24)
+            // Just above the control stack.
+            .padding(.bottom, 40 + 83 + 20)
 
             // The control stack. Resting: back and the pill (a plain button
             // for the question, then Reserve). While a picker is open it takes
-            // the whole stack: minus, the answer, plus, continue. The nights
-            // picker has one more pill on top, to pick which stop it changes.
-            VStack(spacing: 13) {
-                if showsScopePill {
-                    scopePill
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-                HStack(spacing: 13) {
-                    if isPickerOpen {
-                        picker
-                            .transition(.opacity)
-                    } else {
-                        DetailBackButton(action: back)
-                        primaryPill
-                    }
+            // the whole stack: minus, the answer, plus, continue.
+            HStack(spacing: 13) {
+                if isPickerOpen {
+                    picker
+                        .transition(.opacity)
+                } else {
+                    DetailBackButton(action: back)
+                    primaryPill
                 }
             }
             .padding(.horizontal, 24)
@@ -292,58 +294,55 @@ struct LennySummaryView: View {
         usesPerStop && nightsByStop.indices.contains(index) ? nightsByStop[index] : nights
     }
 
-    private let scopePillHeight: CGFloat = 60
-
-    /// The nights picker is open, so the stop pill is too.
-    private var showsScopePill: Bool { stage == .nights && isPickerOpen }
-
     private var isPickerOpen: Bool { isPicking && status != .booking && status != .booked }
 
-    /// Which stop the − / + below changes: all of them, or one on its own.
-    private var scopePill: some View {
-        HStack(spacing: 0) {
-            scopeChevron(forward: false) { moveScope(by: -1) }
-            VStack(spacing: 2) {
-                Text(nightsScope.map { entries[$0].stopName } ?? "All stops")
-                    .font(AppFont.semiBoldLabel(14))
-                    .foregroundColor(.homeText)
-                    .lineLimit(1)
-                Text(nightsScope.map { "Stop \($0 + 1) of \(entries.count)" } ?? "\(entries.count) stops")
-                    .font(AppFont.regularLabel(11))
-                    .foregroundColor(.homeSubtitle)
+    // MARK: - Lenny's quick reply
+
+    private struct QuickReply {
+        let title: String
+        let action: () -> Void
+    }
+
+    /// The nights question is asked for all the stops at once; with two or
+    /// more stops Lenny offers to ask stop by stop instead, and while it does,
+    /// a way to go back a stop or to the single number.
+    private var quickReply: QuickReply? {
+        guard stage == .nights, status == .idle, entries.count > 1 else { return nil }
+        guard let stop = nightsScope else {
+            return QuickReply(title: "Set each stop") { startPerStopNights() }
+        }
+        if stop == 0 {
+            return QuickReply(title: "Same for every stop") {
+                nightsScope = nil
+                usesPerStop = false
             }
-            .frame(maxWidth: .infinity)
-            scopeChevron(forward: true) { moveScope(by: 1) }
         }
-        .frame(height: scopePillHeight)
-        .background(DetailPill())
-        .accessibilityElement(children: .contain)
+        return QuickReply(title: "Previous stop") { nightsScope = stop - 1 }
     }
 
-    /// The back pill's chevron, thin, at the end of the stop pill.
-    private func scopeChevron(forward: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            DetailBackChevron()
-                .stroke(Color.homeText.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                .frame(width: 8, height: 12)
-                .scaleEffect(x: forward ? -1 : 1)
-                .frame(width: 60, height: scopePillHeight)
-                .contentShape(Rectangle())
+    /// A flat pill in Lenny's area, not in the control stack.
+    private func quickReplyPill(_ reply: QuickReply) -> some View {
+        Button(action: reply.action) {
+            Text(reply.title)
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.homeText)
+                .padding(.horizontal, 16)
+                .frame(height: 36)
+                .background(Capsule().fill(Color.homePill))
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(forward ? "Next stop" : "Previous stop")
+        .buttonStyle(TapScaleButtonStyle())
     }
 
-    /// All stops, then each stop in turn, then round to all stops again.
-    private func moveScope(by step: Int) {
-        let positions = entries.count + 1   // 0 is "all", 1... are the stops
-        let current = (nightsScope ?? -1) + 1
-        let next = (current + step + positions) % positions
-        nightsScope = next == 0 ? nil : next - 1
+    /// Lenny asks the nights one stop at a time, starting with the first.
+    private func startPerStopNights() {
+        nightsByStop = Array(repeating: nights, count: entries.count)
+        usesPerStop = true
+        nightsScope = 0
+        isPicking = true
     }
 
-    /// Changes the nights of the stop the pill on top points at, or of all of
-    /// them (which also makes them equal again).
+    /// Changes the nights of the stop Lenny is asking about, or of all of them
+    /// (which also makes them equal again).
     private func adjustNights(by delta: Int) {
         if let stop = nightsScope, nightsByStop.indices.contains(stop) {
             if !usesPerStop {
@@ -392,6 +391,11 @@ struct LennySummaryView: View {
     /// Answers the question, then goes to the next one still unanswered, or to
     /// the review when they're all answered (also after changing one answer).
     private func confirm() {
+        // Asking stop by stop: next stop, until the last.
+        if stage == .nights, let stop = nightsScope, stop + 1 < entries.count {
+            nightsScope = stop + 1
+            return
+        }
         isPicking = false
         nightsScope = nil
         switch stage {
@@ -528,7 +532,8 @@ struct LennySummaryView: View {
             guard status != .booking, status != .booked else { return }
             status = .idle
             stage = target
-            nightsScope = nil
+            // Nights set stop by stop reopen stop by stop.
+            nightsScope = target == .nights && usesPerStop ? 0 : nil
             isPicking = true
         } label: {
             Text(title)
@@ -566,11 +571,11 @@ struct LennySummaryView: View {
             case .date: "And when do you start?"
             case .nights:
                 if let stop = nightsScope {
-                    "How many nights at \(entries[stop].stopName)?"
+                    stop == 0 ? "How many nights at \(entries[stop].stopName)?" : "And at \(entries[stop].stopName)?"
                 } else if let suggestion = suggestedNights {
-                    "I'd say \(suggestion) \(suggestion == 1 ? "night" : "nights") per stop. Does that work? Pick a stop above to change just that one."
+                    "I'd say \(suggestion) \(suggestion == 1 ? "night" : "nights") per stop. Does that work?"
                 } else {
-                    "How many nights per stop? Pick a stop above to change just that one."
+                    "How many nights per stop?"
                 }
             case .review: "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?"
             }
