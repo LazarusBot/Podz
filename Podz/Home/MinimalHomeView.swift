@@ -87,9 +87,10 @@ struct MinimalHomeView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        // Tap outside the field to close the keyboard — the cards and
-        // buttons handle their own taps first.
-        .onTapGesture { searchFocused = false }
+        // Tap outside the field to close the keyboard. A simultaneous gesture,
+        // so it runs next to the cards' own taps instead of competing with
+        // them (a plain onTapGesture here made the cards' taps flaky).
+        .simultaneousGesture(TapGesture().onEnded { searchFocused = false })
         // Leaving the field also leaves Lenny mode: the mark rolls back.
         .onChange(of: searchFocused) { _, focused in
             if !focused { isLennyMode = false }

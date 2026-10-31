@@ -30,8 +30,11 @@ struct HomePodCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 Color.clear
                     .aspectRatio(296.0 / 340.0, contentMode: .fit)
-                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate) }
+                    // The photo is drawn bigger than its frame (it fills it): it
+                    // must not take taps, or it steals them from the next card.
+                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate).allowsHitTesting(false) }
                     .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
                     .podZoomSource(id: zoomID ?? AnyHashable(pod.id), in: zoomNamespace, cornerRadius: 36)
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -46,6 +49,8 @@ struct HomePodCard: View {
                 }
                 .padding(.horizontal, 5)
             }
+            // The whole card is the button, gaps included.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
