@@ -38,6 +38,15 @@ struct TripPass: Codable, Identifiable, Equatable {
         reservationId.uuidString.prefix(8).uppercased()
     }
 
+    /// The nights of the stay.
+    var nights: Int {
+        guard let start = Reservation.date(from: checkIn), let end = Reservation.date(from: checkOut) else { return 0 }
+        return max(Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0, 0)
+    }
+
+    /// "Sat 31 Oct → Mon 2 Nov".
+    var rangeText: String { Reservation.rangeText(checkIn, checkOut) }
+
     /// What the pass's barcode actually encodes — a refuge with no signal
     /// also has no way to hit an API to validate a scan, so this is
     /// deliberately just a plain, self-contained string (not a URL to

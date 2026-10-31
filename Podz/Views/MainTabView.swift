@@ -67,6 +67,8 @@ struct MainTabView: View {
         // Home and Likes follow the system appearance; the other tabs have
         // no dark palette yet, so they (and the tab bar over them) stay
         // light — except a screen that has opted in (Profile's main one).
+        // Keep the passes on the phone fresh, so they open with no signal.
+        .task { await TripPassStore.shared.refreshFromServer() }
         // Something (Lenny's plan) asked Profile to open a page.
         .onChange(of: tabRouter.showsReservationsRequested) { _, requested in
             if requested { selectedTab = .profile }
