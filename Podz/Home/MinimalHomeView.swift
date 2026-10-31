@@ -32,7 +32,9 @@ struct MinimalHomeView: View {
 
     private var visiblePods: [Pod] {
         let query = query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return podsStore.pods }
+        // "Available tonight" is what can be booked in the app; the listed huts
+        // are found by searching, the shelves and Lenny.
+        guard !query.isEmpty else { return podsStore.pods.filter(\.isBookable) }
         return podsStore.pods.filter { pod in
             pod.name.localizedCaseInsensitiveContains(query)
                 || pod.country.localizedCaseInsensitiveContains(query)

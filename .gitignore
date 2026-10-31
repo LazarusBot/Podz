@@ -17,3 +17,4 @@ supabase-swift/
 
 # macOS
 .DS_Store
+tools/out/

@@ -28,6 +28,26 @@ struct Pod: Codable, Identifiable, Equatable {
     /// scan (see SQL/pod_3d_models.sql) uploads after the pod row and any
     /// photos already exist, same reason it's not on `PodInsert` either.
     var modelURL: String?
+    /// "partner" (bookable in the app) or "listed" (information only: book
+    /// through the hut). Nil reads as a partner, like every pod before this.
+    var listingStatus: String?
+    /// How to reach a listed hut, whichever it has.
+    var phone: String?
+    var email: String?
+    var website: String?
+    var bookingURL: String?
+    var openingHours: String?
+    /// Where a listed hut's information comes from ("osm"), for the credit.
+    var source: String?
+
+    /// A partner hut is reserved in the app; a listed one is booked through
+    /// the hut itself.
+    var isBookable: Bool { listingStatus != "listed" }
+
+    /// Some way to book a listed hut through the hut itself.
+    var hasContact: Bool {
+        [phone, email, website, bookingURL].contains { !($0 ?? "").isEmpty }
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, name
@@ -38,6 +58,11 @@ struct Pod: Codable, Identifiable, Equatable {
         case description
         case hostId = "host_id"
         case modelURL = "model_url"
+        case listingStatus = "listing_status"
+        case phone, email, website
+        case bookingURL = "booking_url"
+        case openingHours = "opening_hours"
+        case source
     }
 }
 

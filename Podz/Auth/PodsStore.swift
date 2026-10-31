@@ -38,12 +38,23 @@ final class PodsStore: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            pods = try await supabase
-                .from("pods")
-                .select()
-                .order("name")
-                .execute()
-                .value
+            // PostgREST returns at most 1,000 rows a request: read them page by
+            // page (the listed huts of Europe are many more than that).
+            var all: [Pod] = []
+            let pageSize = 1000
+            while true {
+                let page: [Pod] = try await supabase
+                    .from("pods")
+                    .select()
+                    .order("name")
+                    .order("id")
+                    .range(from: all.count, to: all.count + pageSize - 1)
+                    .execute()
+                    .value
+                all += page
+                if page.count < pageSize { break }
+            }
+            pods = all
             await fetchPrimaryPhotos()
             return true
         } catch {

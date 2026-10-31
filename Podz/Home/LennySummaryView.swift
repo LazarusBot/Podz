@@ -167,6 +167,9 @@ struct LennySummaryView: View {
     @ViewBuilder
     private var primaryPill: some View {
         switch (status, stage) {
+        case _ where bookableCount == 0:
+            // All listed: nothing to reserve; the rows open each hut.
+            DetailTextButton(title: "Back to plan", action: back)
         case (.booked, _):
             DetailTextButton(title: "View reservations", isHighlighted: true, action: onViewReservations)
         case (.booking, _):
@@ -498,6 +501,20 @@ struct LennySummaryView: View {
 
     private var totalNights: Int { entries.indices.reduce(0) { $0 + nightsFor($1) } }
 
+    /// Only partner huts are booked in the app; a listed one is booked through
+    /// the hut itself.
+    private var bookableCount: Int { entries.filter(\.pod.isBookable).count }
+
+    /// What Lenny says about the listed huts of the plan, if any.
+    private var listedNote: String? {
+        let listed = entries.filter { !$0.pod.isBookable }.map(\.pod.name)
+        switch listed.count {
+        case 0: return nil
+        case 1: return "\(listed[0]) is listed only, so book it through the hut."
+        default: return "\(listed.count) of the huts are listed only, so book them through the huts."
+        }
+    }
+
     private var hasChoices: Bool { guestsConfirmed || dateConfirmed || nightsConfirmed }
 
     /// How many nights each stop probably gets, from the stay the user gave
@@ -522,6 +539,8 @@ struct LennySummaryView: View {
             dateConfirmed = true
         }
         stage = !guestsConfirmed ? .guests : (!dateConfirmed ? .date : .nights)
+        // Nothing here to book in the app: no questions to ask.
+        if bookableCount == 0 { stage = .review }
     }
 
     // MARK: - The choices
@@ -577,10 +596,13 @@ struct LennySummaryView: View {
     /// Lenny's line: the question, then the answer. `nil` (typing dots)
     /// while it books.
     private var replyMessage: String? {
-        switch status {
+        if bookableCount == 0 {
+            return "These huts take their bookings themselves. Open one to call, email or visit its site."
+        }
+        return switch status {
         case .booking: nil
         case .booked:
-            "Booked! \(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), all set."
+            "Booked! \(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), all set.\(listedNote.map { " " + $0 } ?? "")"
         case .failed(let message): message
         case .idle:
             switch stage {
@@ -594,7 +616,7 @@ struct LennySummaryView: View {
                 } else {
                     "How many nights per stop?"
                 }
-            case .review: "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?"
+            case .review: "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?\(listedNote.map { " " + $0 } ?? "")"
             }
         }
     }
@@ -606,13 +628,13 @@ struct LennySummaryView: View {
         Task {
             // A beat of typing dots, so it reads as Lenny doing it.
             try? await Task.sleep(nanoseconds: 700_000_000)
-            for (index, entry) in entries.enumerated() where !bookedPodIDs.contains(entry.pod.id) {
+            for (index, entry) in entries.enumerated() where entry.pod.isBookable && !bookedPodIDs.contains(entry.pod.id) {
                 let checkIn = date(forStop: index)
                 let checkOut = shifted(checkIn, by: nightsFor(index))
                 let success = await reservationsStore.create(podId: entry.pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests)
                 guard success else {
                     let booked = bookedPodIDs.count
-                    let started = booked == 0 ? "" : "I booked \(booked) of \(entries.count). "
+                    let started = booked == 0 ? "" : "I booked \(booked) of \(bookableCount). "
                     status = .failed("\(started)I couldn't book \(entry.pod.name) for \(checkIn.formatted(.dateTime.day().month(.abbreviated))). It may be full, so try other dates.")
                     return
                 }
@@ -681,6 +703,12 @@ struct LennySummaryView: View {
                             if !entry.detail.isEmpty {
                                 Text(entry.detail)
                                     .font(AppFont.regularLabel(13))
+                                    .foregroundColor(.homeSubtitle)
+                                    .lineLimit(1)
+                            }
+                            if !entry.pod.isBookable {
+                                Text("Listed  ·  book through the hut")
+                                    .font(AppFont.regularLabel(12))
                                     .foregroundColor(.homeSubtitle)
                                     .lineLimit(1)
                             }
