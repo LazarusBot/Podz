@@ -46,6 +46,7 @@ final class PodsStore: ObservableObject {
                 let page: [Pod] = try await supabase
                     .from("pods")
                     .select()
+                    .eq("is_active", value: true)
                     .order("name")
                     .order("id")
                     .range(from: all.count, to: all.count + pageSize - 1)
@@ -68,13 +69,23 @@ final class PodsStore: ObservableObject {
     /// screen, not needed for the list view.
     private func fetchPrimaryPhotos() async {
         do {
-            let photos: [PodPhotoRow] = try await supabase
-                .from("pod_photos")
-                .select("pod_id, url, position")
-                .eq("position", value: 0)
-                .execute()
-                .value
-            primaryPhotoByPodId = photos.reduce(into: [:]) { result, photo in
+            // Page by page: PostgREST returns at most 1,000 rows a request and
+            // there are more photos than that.
+            var all: [PodPhotoRow] = []
+            let pageSize = 1000
+            while true {
+                let page: [PodPhotoRow] = try await supabase
+                    .from("pod_photos")
+                    .select("pod_id, url, position")
+                    .eq("position", value: 0)
+                    .order("pod_id")
+                    .range(from: all.count, to: all.count + pageSize - 1)
+                    .execute()
+                    .value
+                all += page
+                if page.count < pageSize { break }
+            }
+            primaryPhotoByPodId = all.reduce(into: [:]) { result, photo in
                 result[photo.podId] = photo.url  // last one wins, never crashes on duplicates
             }
         } catch {
