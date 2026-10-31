@@ -108,7 +108,7 @@ struct LennySummaryView: View {
                     }
 
                     // Room under the list for the pills and Lenny's bubble.
-                    Color.clear.frame(height: 250 + (quickReply != nil ? 44 : 0))
+                    Color.clear.frame(height: 250 + (quickReply != nil ? 36 : 0))
                 }
             }
 
@@ -119,8 +119,8 @@ struct LennySummaryView: View {
                 LennyReply(message: replyMessage, mood: mood)
                 if let reply = quickReply {
                     quickReplyPill(reply)
-                        // Lined up under the bubble, past the avatar.
-                        .padding(.leading, 38)
+                        // Lined up with the bubble's text, past the avatar.
+                        .padding(.leading, 38 + 18)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
@@ -320,17 +320,23 @@ struct LennySummaryView: View {
         return QuickReply(title: "Previous stop") { nightsScope = stop - 1 }
     }
 
-    /// A flat pill in Lenny's area, not in the control stack.
+    /// A small caption under Lenny's bubble, not a button-shaped control.
     private func quickReplyPill(_ reply: QuickReply) -> some View {
         Button(action: reply.action) {
-            Text(reply.title)
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeText)
-                .padding(.horizontal, 16)
-                .frame(height: 36)
-                .background(Capsule().fill(Color.homePill))
+            HStack(spacing: 5) {
+                Text(reply.title)
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .underline(color: Color.homeSubtitle.opacity(0.5))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.homeSubtitle)
+            }
+            // A comfortable tap area for a small caption.
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(TapScaleButtonStyle())
+        .buttonStyle(.plain)
     }
 
     /// Lenny asks the nights one stop at a time, starting with the first.
