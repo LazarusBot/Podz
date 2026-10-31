@@ -17,7 +17,10 @@ struct MinimalHomeView: View {
     @State private var isLennyMode = false
     @FocusState private var searchFocused: Bool
     @State private var selectedPod: Pod?
-    @State private var showAllPods = false
+    /// The shelf whose "See all" is open.
+    @State private var seeAll: HomeSection?
+    /// Which card was tapped, to zoom from it (a pod can be on several shelves).
+    @State private var selectedZoomID: AnyHashable?
     @State private var showLenny = false
     @Namespace private var zoomNamespace
 
@@ -42,8 +45,18 @@ struct MinimalHomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 title
                 searchPill
-                sectionHeader
+                sectionHeader(title: "Available tonight", pods: podsStore.pods, id: "tonight")
                 feed.padding(.top, 16)
+
+                // More ways in than the search bar: shelves by what you liked,
+                // altitude, groups, region and kind. Searching hides them.
+                if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                    ForEach(discoverySections) { section in
+                        sectionHeader(title: section.title, pods: section.pods, id: section.id)
+                        shelf(section)
+                            .padding(.top, 16)
+                    }
+                }
 
                 // Room so the cards' captions clear the floating tab bar.
                 Color.clear.frame(height: 110)
@@ -61,15 +74,15 @@ struct MinimalHomeView: View {
             scrollState.updateOffset(offset)
         }
         .background(Color.homeBackground.ignoresSafeArea())
-        .sheet(isPresented: $showAllPods) {
-            HomeAllPodsSheet(pods: podsStore.pods, photoURLs: podsStore.primaryPhotoByPodId)
+        .sheet(item: $seeAll) { section in
+            HomeAllPodsSheet(pods: section.pods, photoURLs: podsStore.primaryPhotoByPodId)
         }
         // Zoom cover, same as the old Home: the tapped card's photo grows
         // into the detail and shrinks back on close. A pod with no card
         // here (a deep link) falls back to the default cover animation.
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
-                .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
+                .navigationTransition(.zoom(sourceID: selectedZoomID ?? AnyHashable(pod.id), in: zoomNamespace))
         }
         // A route sent to Lenny opens its search screen.
         .fullScreenCover(isPresented: $showLenny) {
@@ -121,19 +134,89 @@ struct MinimalHomeView: View {
             .padding(.top, 20)
     }
 
-    private var sectionHeader: some View {
+    /// A shelf's title and its "See all".
+    private func sectionHeader(title: String, pods: [Pod], id: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("Available tonight")
+            Text(title)
                 .font(AppFont.semiBoldLabel(16))
                 .foregroundColor(.homeText)
             Spacer()
-            Button("See all") { showAllPods = true }
+            Button("See all") { seeAll = HomeSection(id: id, title: title, pods: pods) }
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
-                .disabled(podsStore.pods.isEmpty)
+                .disabled(pods.isEmpty)
         }
         .padding(.horizontal, 24)
         .padding(.top, 40)
+    }
+
+    /// The shelves under "Available tonight".
+    private var discoverySections: [HomeSection] {
+        HomeSection.discovery(from: podsStore.pods)
+    }
+
+    /// A shelf in its own layout: carousel, tall cards or a mosaic.
+    @ViewBuilder
+    private func shelf(_ section: HomeSection) -> some View {
+        switch section.layout {
+        case .hero:
+            cardsRow(section.pods, idPrefix: section.id, subtitle: section.subtitle)
+        case .tall:
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(section.pods) { pod in
+                        let zoomID = AnyHashable("\(section.id)-\(pod.id)")
+                        HomeTallCard(
+                            pod: pod,
+                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
+                            zoomNamespace: zoomNamespace,
+                            zoomID: zoomID,
+                            onTap: {
+                                selectedZoomID = zoomID
+                                selectedPod = pod
+                            }
+                        )
+                    }
+                }
+            }
+            .contentMargins(.horizontal, 24, for: .scrollContent)
+        case .mosaic:
+            HomeMosaic(
+                pods: section.pods,
+                photoURLs: podsStore.primaryPhotoByPodId,
+                zoomNamespace: zoomNamespace,
+                zoomIDPrefix: section.id
+            ) { pod, zoomID in
+                selectedZoomID = zoomID
+                selectedPod = pod
+            }
+        }
+    }
+
+    /// One row of big cards, scrolling sideways with the next one peeking.
+    private func cardsRow(_ pods: [Pod], idPrefix: String, subtitle: ((Pod) -> String)?) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(alignment: .top, spacing: 12) {
+                ForEach(pods) { pod in
+                    let zoomID = AnyHashable("\(idPrefix)-\(pod.id)")
+                    HomePodCard(
+                        pod: pod,
+                        photoURL: podsStore.primaryPhotoByPodId[pod.id],
+                        zoomNamespace: zoomNamespace,
+                        zoomID: zoomID,
+                        subtitleOverride: subtitle?(pod),
+                        onTap: {
+                            selectedZoomID = zoomID
+                            selectedPod = pod
+                        }
+                    )
+                    .frame(width: Self.cardWidth)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.viewAligned)
+        .contentMargins(.horizontal, 24, for: .scrollContent)
     }
 
     @ViewBuilder
@@ -147,22 +230,7 @@ struct MinimalHomeView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 60)
         } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 12) {
-                    ForEach(visiblePods) { pod in
-                        HomePodCard(
-                            pod: pod,
-                            photoURL: podsStore.primaryPhotoByPodId[pod.id],
-                            zoomNamespace: zoomNamespace,
-                            onTap: { selectedPod = pod }
-                        )
-                        .frame(width: Self.cardWidth)
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollTargetBehavior(.viewAligned)
-            .contentMargins(.horizontal, 24, for: .scrollContent)
+            cardsRow(visiblePods, idPrefix: "tonight", subtitle: nil)
         }
     }
 
@@ -217,6 +285,7 @@ struct MinimalHomeView: View {
     private func resolveDeepLink() {
         guard let podId = deepLinkRouter.pendingPodId else { return }
         guard let pod = podsStore.pods.first(where: { $0.id == podId }) else { return }
+        selectedZoomID = nil
         selectedPod = pod
         deepLinkRouter.pendingPodId = nil
     }

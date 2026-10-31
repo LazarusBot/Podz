@@ -9,7 +9,7 @@ extension View {
     /// no-op, for cards that can be shown somewhere with no zoom wired up.
     @ViewBuilder
     func podZoomSource(
-        id: UUID,
+        id: some Hashable,
         in namespace: Namespace.ID?,
         cornerRadius: CGFloat,
         style: RoundedCornerStyle = .continuous
