@@ -42,6 +42,18 @@ struct Pod: Codable, Identifiable, Equatable {
     var source: String?
     /// What the hut has on site ("Meals", "Showers"...). Nil = not known.
     var facilities: [String]?
+    /// What a night costs per person (nil = not known: the hut sets it).
+    var pricePerNight: Double?
+    var priceCurrency: String?
+
+    /// "45 € / night", when the price is known.
+    var priceText: String? {
+        guard let price = pricePerNight else { return nil }
+        let currency = priceCurrency ?? "EUR"
+        let symbol = currency == "EUR" ? "€" : currency
+        let amount = price.rounded() == price ? String(Int(price)) : String(format: "%.2f", price)
+        return "\(amount) \(symbol) / night"
+    }
 
     /// A partner hut is reserved in the app; a listed one is booked through
     /// the hut itself.
@@ -66,6 +78,8 @@ struct Pod: Codable, Identifiable, Equatable {
         case bookingURL = "booking_url"
         case openingHours = "opening_hours"
         case source, facilities
+        case pricePerNight = "price_per_night"
+        case priceCurrency = "price_currency"
     }
 }
 
