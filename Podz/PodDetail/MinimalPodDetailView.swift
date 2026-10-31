@@ -58,7 +58,7 @@ struct MinimalPodDetailView: View {
                                 section: activeSection,
                                 available: PodDetailSection.available(for: pod, photoCredit: currentPhotoCredit),
                                 onGo: { section in withAnimation(.smooth(duration: 0.5)) { activeSection = section } },
-                                onWriteMessage: { showHutContact = true }
+                                onContact: { showHutContact = true }
                             )
                             .padding(.horizontal, 24)
                             .padding(.top, 16)
@@ -132,11 +132,7 @@ struct MinimalPodDetailView: View {
         // Back is the only way out. The zoom transition's own swipe-to-
         // dismiss fought with paging through the photos.
         .interactiveDismissDisabled()
-        .sheet(isPresented: $showHutContact) {
-            HutRequestSheet(pod: pod) { showHutContact = false }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.hidden)
-        }
+        .hutContactDialog(for: pod, isPresented: $showHutContact)
         .sheet(isPresented: $showBooking) {
             ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable) { showBooking = false }
                 .background(Color.appHomeBackground)

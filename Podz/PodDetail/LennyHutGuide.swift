@@ -53,7 +53,7 @@ struct LennyHutGuide: View {
     let section: PodDetailSection?
     let available: [PodDetailSection]
     var onGo: (PodDetailSection) -> Void = { _ in }
-    var onWriteMessage: () -> Void = {}
+    var onContact: () -> Void = {}
     /// On the stack (over the photo): just the overview and a nudge to open
     /// the page, no next step.
     var inStack = false
@@ -109,7 +109,7 @@ struct LennyHutGuide: View {
     private var action: (title: String, run: () -> Void)? {
         if inStack { return nil }
         if !pod.isBookable, pod.hasContact, current == .contact || next == nil {
-            return ("Write the message", onWriteMessage)
+            return ("Contact the hut", onContact)
         }
         if let next { return ("Next: \(next.title)", { onGo(next) }) }
         if let first = available.first, first != current { return ("Back to top", { onGo(first) }) }
@@ -144,7 +144,7 @@ struct LennyHutGuide: View {
         case .contact:
             if pod.isBookable { return "Happy with this hut? Tap Book and you're reserved in a minute." }
             return pod.hasContact
-                ? "This is how to reach the hut. I can write the message for you, so you only have to send it."
+                ? "This is how to reach the hut. Tap Book through the hut, or the caption below, and pick call, email or website."
                 : "I have no way to reach this hut. Check it's open before you set off."
         case .source:
             return "OpenStreetMap is edited by volunteers, so details can be out of date. When it matters, ask the hut."
