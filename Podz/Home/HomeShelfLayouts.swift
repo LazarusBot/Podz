@@ -23,7 +23,7 @@ struct HomeTallCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 Color.clear
                     .frame(width: Self.width, height: Self.photoHeight)
-                    .overlay { PodPhoto(url: photoURL) }
+                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate) }
                     .overlay(alignment: .bottom) {
                         LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom)
                             .frame(height: 100)
@@ -107,7 +107,7 @@ struct HomeMosaic: View {
         return Button { onTap(pod, zoomID) } label: {
             Color.clear
                 .frame(width: width, height: height)
-                .overlay { PodPhoto(url: photoURLs[pod.id]) }
+                .overlay { PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate) }
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                         .frame(height: large ? 110 : 70)

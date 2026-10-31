@@ -160,7 +160,7 @@ struct ReservationSheet: View {
             // circle read as decorative; this reads as "here's the
             // actual place," which is the point.
             ZStack(alignment: .bottomLeading) {
-                PodPhoto(url: podsStore.primaryPhotoByPodId[pod.id])
+                PodPhoto(url: podsStore.primaryPhotoByPodId[pod.id], coordinate: pod.coordinate)
                     .frame(height: 150)
                     .frame(maxWidth: .infinity)
                     .clipped()

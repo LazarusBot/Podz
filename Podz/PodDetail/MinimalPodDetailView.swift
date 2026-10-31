@@ -14,6 +14,8 @@ struct MinimalPodDetailView: View {
     var onBack: () -> Void
 
     @State private var photoURLs: [String]
+    /// Author and licence of each photo that has one (Wikimedia Commons), by url.
+    @State private var photoCredits: [String: String] = [:]
     /// Optional — `.scrollPosition(id:)` needs it.
     @State private var pageIndex: Int? = 0
     @State private var liveBedsAvailable: Int?
@@ -39,7 +41,7 @@ struct MinimalPodDetailView: View {
             let photoHeight = DetailLayout.photoHeight(screenHeight: screenHeight, isExtended: isExtended)
 
             VStack(spacing: 0) {
-                DetailPhotoPager(slots: photoURLs.map { Optional($0) }, pageIndex: $pageIndex, width: proxy.size.width, height: photoHeight)
+                DetailPhotoPager(slots: photoURLs.map { Optional($0) }, pageIndex: $pageIndex, width: proxy.size.width, height: photoHeight, coordinate: pod.coordinate)
 
                 // Everything between the photo and the buttons is one tap
                 // target: a tap anywhere here extends or collapses.
@@ -78,10 +80,13 @@ struct MinimalPodDetailView: View {
                 .preferredColorScheme(.light)
         }
         .task {
-            async let photos = PodsStore.shared.photos(forPodId: pod.id)
+            async let photos = PodsStore.shared.photoRows(forPodId: pod.id)
             async let beds = pod.isBookable ? PodsStore.shared.bedsAvailableNow(forPodId: pod.id) : nil
-            let (fetchedPhotos, fetchedBeds) = await (photos, beds)
-            if !fetchedPhotos.isEmpty { photoURLs = fetchedPhotos }
+            let (fetchedRows, fetchedBeds) = await (photos, beds)
+            if !fetchedRows.isEmpty {
+                photoURLs = fetchedRows.map(\.url)
+                photoCredits = Dictionary(fetchedRows.compactMap { row in row.credit.map { (row.url, $0) } }, uniquingKeysWith: { first, _ in first })
+            }
             liveBedsAvailable = fetchedBeds
         }
     }
@@ -211,6 +216,10 @@ struct MinimalPodDetailView: View {
         }
         if let altitude = pod.altitudeM { lines.append("\(altitude) m altitude") }
         if let address = pod.address, !address.isEmpty { lines.append(address) }
+        // The photo's credit, when it comes from Wikimedia Commons.
+        if let url = photoURLs.indices.contains(pageIndex ?? 0) ? photoURLs[pageIndex ?? 0] : nil, let credit = photoCredits[url] {
+            lines.append("Photo: \(credit)")
+        }
         if !pod.isBookable {
             if let hours = pod.openingHours, !hours.isEmpty { lines.append("Open: \(hours)") }
             lines.append("Listed hut: book through the hut")

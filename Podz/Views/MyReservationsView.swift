@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 /// Your own reservations — reached from ProfileView's "Reservations" row, and
 /// from Lenny's plan once it's booked.
@@ -177,7 +178,7 @@ struct MyReservationsView: View {
             HStack(spacing: 14) {
                 Color.clear
                     .frame(width: 64, height: 64)
-                    .overlay { PodPhoto(url: pass.photoURL) }
+                    .overlay { PodPhoto(url: pass.photoURL, coordinate: pass.latitude.flatMap { lat in pass.longitude.map { CLLocationCoordinate2D(latitude: lat, longitude: $0) } }) }
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(pass.podName)
@@ -283,7 +284,7 @@ struct MyReservationsView: View {
                 HStack(spacing: 14) {
                     Color.clear
                         .frame(width: 64, height: 64)
-                        .overlay { PodPhoto(url: podsStore.primaryPhotoByPodId[reservation.podId]) }
+                        .overlay { PodPhoto(url: podsStore.primaryPhotoByPodId[reservation.podId], coordinate: pod?.coordinate) }
                         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {

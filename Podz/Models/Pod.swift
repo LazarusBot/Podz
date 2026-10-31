@@ -7,6 +7,7 @@
 
 // Models/Pod.swift
 import Foundation
+import CoreLocation
 
 struct Pod: Codable, Identifiable, Equatable {
     let id: UUID
@@ -117,10 +118,20 @@ struct PodRoom: Codable, Identifiable, Equatable {
 struct PodPhotoRow: Codable {
     let podId: UUID
     let url: String
+    /// Author and licence of a photo taken from Wikimedia Commons.
+    var credit: String?
 
     enum CodingKeys: String, CodingKey {
         case podId = "pod_id"
-        case url
+        case url, credit
+    }
+}
+
+extension Pod {
+    /// Where it is, for the satellite picture a pod gets when it has no photo.
+    var coordinate: CLLocationCoordinate2D? {
+        guard let latitude, let longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 

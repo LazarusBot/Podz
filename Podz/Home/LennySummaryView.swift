@@ -692,7 +692,7 @@ struct LennySummaryView: View {
                     HStack(alignment: .center, spacing: 16) {
                         Color.clear
                             .frame(width: photoSize, height: photoSize)
-                            .overlay { PodPhoto(url: photoURLs[entry.pod.id]) }
+                            .overlay { PodPhoto(url: photoURLs[entry.pod.id], coordinate: entry.pod.coordinate) }
                             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
 
                         VStack(alignment: .leading, spacing: 5) {

@@ -30,7 +30,7 @@ struct HomePodCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 Color.clear
                     .aspectRatio(296.0 / 340.0, contentMode: .fit)
-                    .overlay { PodPhoto(url: photoURL) }
+                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate) }
                     .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
                     .podZoomSource(id: zoomID ?? AnyHashable(pod.id), in: zoomNamespace, cornerRadius: 36)
 
