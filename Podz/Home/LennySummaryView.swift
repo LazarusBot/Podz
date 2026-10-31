@@ -49,6 +49,8 @@ struct LennySummaryView: View {
     /// number in the picker); `nights` applies to all of them otherwise.
     @State private var nightsByStop: [Int] = []
     @State private var usesPerStop = false
+    /// Which stop the nights picker is changing: nil is all of them.
+    @State private var nightsScope: Int?
     @State private var stage = Stage.guests
     /// On a question: false shows a plain button ("Add guest", "Add date"),
     /// true opens the picker across the whole stack.
@@ -97,17 +99,7 @@ struct LennySummaryView: View {
                     choiceChips
 
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        row(entry, number: index + 1, isLast: index == entries.count - 1, date: showsDates && !isSettingNightsPerStop ? date(forStop: index) : nil, nights: nightsFor(index))
-                            // While the nights are set one stop at a time, each
-                            // stop carries its own stepper.
-                            .overlay(alignment: .topTrailing) {
-                                if isSettingNightsPerStop {
-                                    stopStepper(index)
-                                        .padding(.trailing, 24)
-                                        .padding(.top, -3)
-                                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                                }
-                            }
+                        row(entry, number: index + 1, isLast: index == entries.count - 1, date: showsDates ? date(forStop: index) : nil, nights: nightsFor(index))
                             // Each stop settles in a beat after the one before.
                             .opacity(appeared || reduceMotion ? 1 : 0)
                             .offset(y: appeared || reduceMotion ? 0 : 14)
@@ -115,7 +107,7 @@ struct LennySummaryView: View {
                     }
 
                     // Room under the list for the pills and Lenny's bubble.
-                    Color.clear.frame(height: 250)
+                    Color.clear.frame(height: 250 + (showsScopePill ? scopePillHeight + 13 : 0))
                 }
             }
 
@@ -124,23 +116,25 @@ struct LennySummaryView: View {
             LennyReply(message: replyMessage, mood: mood)
                 .padding(.horizontal, 24)
                 // Just above the control stack.
-                .padding(.bottom, 40 + 83 + 20)
+                .padding(.bottom, 40 + 83 + 20 + (showsScopePill ? scopePillHeight + 13 : 0))
 
             // The control stack. Resting: back and the pill (a plain button
             // for the question, then Reserve). While a picker is open it takes
-            // the whole stack: minus, the answer, plus, continue.
-            HStack(spacing: 13) {
-                if isSettingNightsPerStop {
-                    // Per-stop nights: back returns to the single number,
-                    // and the steppers are on the stops themselves.
-                    DetailBackButton { usesPerStop = false }
-                    DetailTextButton(title: "Continue", isHighlighted: true, action: confirm)
-                } else if isPicking && status != .booking && status != .booked {
-                    picker
-                        .transition(.opacity)
-                } else {
-                    DetailBackButton(action: back)
-                    primaryPill
+            // the whole stack: minus, the answer, plus, continue. The nights
+            // picker has one more pill on top, to pick which stop it changes.
+            VStack(spacing: 13) {
+                if showsScopePill {
+                    scopePill
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+                HStack(spacing: 13) {
+                    if isPickerOpen {
+                        picker
+                            .transition(.opacity)
+                    } else {
+                        DetailBackButton(action: back)
+                        primaryPill
+                    }
                 }
             }
             .padding(.horizontal, 24)
@@ -151,7 +145,7 @@ struct LennySummaryView: View {
         .background(Color.homeBackground.ignoresSafeArea())
         .animation(.smooth(duration: 0.35), value: stage)
         .animation(.smooth(duration: 0.35), value: isPicking)
-        .animation(.smooth(duration: 0.35), value: usesPerStop)
+        .animation(.smooth(duration: 0.35), value: nightsScope)
         .animation(.smooth(duration: 0.35), value: status)
         .animation(.smooth(duration: 0.35), value: guestsConfirmed)
         .animation(.smooth(duration: 0.35), value: dateConfirmed)
@@ -209,15 +203,10 @@ struct LennySummaryView: View {
                     case .guests:
                         pickerAnswer("\(guests)", caption: guests == 1 ? "guest" : "guests")
                     case .nights:
-                        // Tap the number to set each stop on its own.
-                        Button {
-                            nightsByStop = Array(repeating: nights, count: entries.count)
-                            usesPerStop = true
-                        } label: {
-                            pickerAnswer("\(nights)", caption: nights == 1 ? "night each" : "nights each")
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("\(nightsText). Set the nights for each stop")
+                        let shown = nightsScope.map(nightsFor) ?? nights
+                        pickerAnswer("\(shown)", caption: nightsScope == nil
+                            ? (shown == 1 ? "night per stop" : "nights per stop")
+                            : (shown == 1 ? "night" : "nights"))
                     default:
                         // Tap the date for the calendar, to jump further.
                         Button { showsDatePicker = true } label: {
@@ -299,48 +288,79 @@ struct LennySummaryView: View {
         }
     }
 
-    /// The nights are being set stop by stop.
-    private var isSettingNightsPerStop: Bool {
-        stage == .nights && isPicking && usesPerStop && status != .booking && status != .booked
-    }
-
     private func nightsFor(_ index: Int) -> Int {
         usesPerStop && nightsByStop.indices.contains(index) ? nightsByStop[index] : nights
     }
 
-    /// A stop's own nights: a small round minus, the count, a round plus.
-    private func stopStepper(_ index: Int) -> some View {
-        HStack(spacing: 10) {
-            smallStepButton("minus", label: "Fewer nights at stop \(index + 1)") {
-                if nightsByStop[index] > 1 { nightsByStop[index] -= 1 }
+    private let scopePillHeight: CGFloat = 60
+
+    /// The nights picker is open, so the stop pill is too.
+    private var showsScopePill: Bool { stage == .nights && isPickerOpen }
+
+    private var isPickerOpen: Bool { isPicking && status != .booking && status != .booked }
+
+    /// Which stop the − / + below changes: all of them, or one on its own.
+    private var scopePill: some View {
+        HStack(spacing: 0) {
+            scopeChevron(forward: false) { moveScope(by: -1) }
+            VStack(spacing: 2) {
+                Text(nightsScope.map { entries[$0].stopName } ?? "All stops")
+                    .font(AppFont.semiBoldLabel(14))
+                    .foregroundColor(.homeText)
+                    .lineLimit(1)
+                Text(nightsScope.map { "Stop \($0 + 1) of \(entries.count)" } ?? "\(entries.count) stops")
+                    .font(AppFont.regularLabel(11))
+                    .foregroundColor(.homeSubtitle)
             }
-            Text("\(nightsFor(index)) \(nightsFor(index) == 1 ? "night" : "nights")")
-                .font(AppFont.semiBoldLabel(13))
-                .foregroundColor(.homeText)
-                .frame(minWidth: 58)
-            smallStepButton("plus", label: "More nights at stop \(index + 1)") {
-                if nightsByStop[index] < Self.maxNights { nightsByStop[index] += 1 }
-            }
+            .frame(maxWidth: .infinity)
+            scopeChevron(forward: true) { moveScope(by: 1) }
         }
+        .frame(height: scopePillHeight)
+        .background(DetailPill())
+        .accessibilityElement(children: .contain)
     }
 
-    private func smallStepButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+    /// The back pill's chevron, thin, at the end of the stop pill.
+    private func scopeChevron(forward: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.homeText)
-                .frame(width: 30, height: 30)
-                .background(Color.homePill, in: Circle())
-                .overlay(Circle().strokeBorder(Color.homeText.opacity(0.25), lineWidth: 0.5))
+            DetailBackChevron()
+                .stroke(Color.homeText.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                .frame(width: 8, height: 12)
+                .scaleEffect(x: forward ? -1 : 1)
+                .frame(width: 60, height: scopePillHeight)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(TapScaleButtonStyle())
-        .accessibilityLabel(label)
+        .buttonStyle(.plain)
+        .accessibilityLabel(forward ? "Next stop" : "Previous stop")
+    }
+
+    /// All stops, then each stop in turn, then round to all stops again.
+    private func moveScope(by step: Int) {
+        let positions = entries.count + 1   // 0 is "all", 1... are the stops
+        let current = (nightsScope ?? -1) + 1
+        let next = (current + step + positions) % positions
+        nightsScope = next == 0 ? nil : next - 1
+    }
+
+    /// Changes the nights of the stop the pill on top points at, or of all of
+    /// them (which also makes them equal again).
+    private func adjustNights(by delta: Int) {
+        if let stop = nightsScope, nightsByStop.indices.contains(stop) {
+            if !usesPerStop {
+                nightsByStop = Array(repeating: nights, count: entries.count)
+                usesPerStop = true
+            }
+            nightsByStop[stop] = min(max(1, nightsByStop[stop] + delta), Self.maxNights)
+        } else {
+            nights = min(max(1, nights + delta), Self.maxNights)
+            usesPerStop = false
+        }
     }
 
     private func decrease() {
         switch stage {
         case .guests: if guests > 1 { guests -= 1 }
-        case .nights: if nights > 1 { nights -= 1 }
+        case .nights: adjustNights(by: -1)
         default: if canGoEarlier { startDate = shifted(startDate, by: -1) }
         }
     }
@@ -348,7 +368,7 @@ struct LennySummaryView: View {
     private func increase() {
         switch stage {
         case .guests: if guests < maxGuests { guests += 1 }
-        case .nights: if nights < Self.maxNights { nights += 1 }
+        case .nights: adjustNights(by: 1)
         default: startDate = shifted(startDate, by: 1)
         }
     }
@@ -373,6 +393,7 @@ struct LennySummaryView: View {
     /// the review when they're all answered (also after changing one answer).
     private func confirm() {
         isPicking = false
+        nightsScope = nil
         switch stage {
         case .guests: guestsConfirmed = true
         case .date: dateConfirmed = true
@@ -457,12 +478,12 @@ struct LennySummaryView: View {
         startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
     }
 
-    /// "2 nights each", or "2 · 3 · 1 nights" when they're set per stop.
+    /// "2 nights per stop", or "2 · 3 · 1 nights" when they differ.
     private var nightsText: String {
         if usesPerStop {
             return entries.indices.map { "\(nightsFor($0))" }.joined(separator: " · ") + " nights"
         }
-        return "\(nights) \(nights == 1 ? "night" : "nights") each"
+        return "\(nights) \(nights == 1 ? "night" : "nights") per stop"
     }
 
     private var totalNights: Int { entries.indices.reduce(0) { $0 + nightsFor($1) } }
@@ -507,6 +528,7 @@ struct LennySummaryView: View {
             guard status != .booking, status != .booked else { return }
             status = .idle
             stage = target
+            nightsScope = nil
             isPicking = true
         } label: {
             Text(title)
@@ -543,12 +565,12 @@ struct LennySummaryView: View {
             case .guests: "How many of you are going?"
             case .date: "And when do you start?"
             case .nights:
-                if usesPerStop {
-                    "Set the nights for each stop."
+                if let stop = nightsScope {
+                    "How many nights at \(entries[stop].stopName)?"
                 } else if let suggestion = suggestedNights {
-                    "I'd say \(suggestion) \(suggestion == 1 ? "night" : "nights") at each stop. Does that work? Tap the number to set each stop on its own."
+                    "I'd say \(suggestion) \(suggestion == 1 ? "night" : "nights") per stop. Does that work? Pick a stop above to change just that one."
                 } else {
-                    "How many nights at each stop? Tap the number to set each stop on its own."
+                    "How many nights per stop? Pick a stop above to change just that one."
                 }
             case .review: "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?"
             }
