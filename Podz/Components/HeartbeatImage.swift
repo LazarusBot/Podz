@@ -9,7 +9,7 @@ import SwiftUI
 
 /// An image that idles with periodic "heartbeat" pulses — a quick
 /// rotate+scale+bounce, then a rest, repeated `beatCount` times per loop —
-/// rather than `WobblingImage`'s continuous back-and-forth. Matches the
+/// rather than a continuous back-and-forth. Matches the
 /// shape of motion Figma's own `get_motion_context` returned for
 /// LikesView's small broken-heart accents (node 4512:392): each one beats
 /// on its own period with a small phase offset from the others, via
