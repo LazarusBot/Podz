@@ -13,7 +13,7 @@ struct FolderPodTile: View {
         Button(action: onTap) {
             Color.clear
                 .aspectRatio(166.0 / 216.0, contentMode: .fit)
-                .overlay { PodPhoto(url: photoURL) }
+                .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate) }
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                         .frame(height: 90)

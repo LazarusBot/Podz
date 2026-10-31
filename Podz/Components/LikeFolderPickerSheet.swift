@@ -92,7 +92,7 @@ struct LikeFolderPickerSheet: View {
                 // its center.
                 incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
                     AnyView(
-                        BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id])
+                        BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], coordinate: pod.coordinate)
                             .scaleEffect(dropStage.scale * diameter / (FolderBubble.referenceRadius * 2))
                             .rotationEffect(.degrees(dropStage.rotationDegrees))
                             .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)

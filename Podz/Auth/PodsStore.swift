@@ -133,16 +133,31 @@ final class PodsStore: ObservableObject {
     /// Full ordered photo set for a pod's detail screen — fetchPrimaryPhotos
     /// only grabs position 0, enough for the Home cards.
     func photos(forPodId podId: UUID) async -> [String] {
+        await photoRows(forPodId: podId).map(\.url)
+    }
+
+    /// The same photos with their credit, for the ones taken from Wikimedia
+    /// Commons.
+    func photoRows(forPodId podId: UUID) async -> [PodPhotoRow] {
         do {
-            let rows: [PodPhotoRow] = try await supabase
+            return try await supabase
+                .from("pod_photos")
+                .select("pod_id, url, position, credit")
+                .eq("pod_id", value: podId)
+                .order("position")
+                .execute()
+                .value
+        } catch {
+            // Before the credit column exists, ask for the plain columns.
+            if let plain: [PodPhotoRow] = try? await supabase
                 .from("pod_photos")
                 .select("pod_id, url, position")
                 .eq("pod_id", value: podId)
                 .order("position")
                 .execute()
-                .value
-            return rows.map { $0.url }
-        } catch {
+                .value {
+                return plain
+            }
             lastError = error.localizedDescription
             return []
         }

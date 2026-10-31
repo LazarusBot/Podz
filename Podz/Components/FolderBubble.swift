@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 /// One folder as a bubble (Paper "LikesFolderSheet"): a flat shape in the
 /// pill color with the folder's name in the middle, and up to two of its
@@ -49,7 +50,7 @@ struct FolderBubble: View {
             ZStack {
                 ForEach(Array(pods.prefix(2).enumerated()), id: \.element.id) { index, pod in
                     let offset = Self.photoOffsets[index]
-                    BubblePhoto(url: photoURLs[pod.id])
+                    BubblePhoto(url: photoURLs[pod.id], coordinate: pod.coordinate)
                         .scaleEffect(scale)
                         .opacity(0.55)
                         .offset(x: (mirrored ? -offset.width : offset.width) * scale, y: offset.height * scale)
@@ -166,9 +167,10 @@ struct FolderBubble: View {
 /// A pod photo as it sits against a bubble (119 x 141, radius 30).
 struct BubblePhoto: View {
     let url: String?
+    var coordinate: CLLocationCoordinate2D?
 
     var body: some View {
-        PodPhoto(url: url)
+        PodPhoto(url: url, coordinate: coordinate)
             .frame(width: FolderBubble.photoSize.width, height: FolderBubble.photoSize.height)
             .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
     }
