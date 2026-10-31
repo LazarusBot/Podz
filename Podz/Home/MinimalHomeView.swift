@@ -141,11 +141,32 @@ struct MinimalHomeView: View {
         if podsStore.isLoading && podsStore.pods.isEmpty {
             loading
         } else if visiblePods.isEmpty {
-            Text(query.isEmpty ? "No pods available yet." : "No pods match “\(query)”.")
-                .font(AppFont.regularLabel(14))
-                .foregroundColor(.homeSubtitle)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 60)
+            VStack(spacing: 6) {
+                Text(query.isEmpty ? "No pods available yet." : "No pods match “\(query)”.")
+                    .font(AppFont.regularLabel(14))
+                    .foregroundColor(.homeSubtitle)
+
+                // The search found nothing: the moment to offer Lenny, with
+                // what was typed.
+                if !query.isEmpty {
+                    Button(action: handToLenny) {
+                        HStack(spacing: 5) {
+                            Text("Ask Lenny to find it")
+                                .font(AppFont.regularLabel(13))
+                                .foregroundColor(.homeSubtitle)
+                                .underline(color: Color.homeSubtitle.opacity(0.5))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.homeSubtitle)
+                        }
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 60)
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 12) {
@@ -192,6 +213,15 @@ struct MinimalHomeView: View {
         guard isLennyMode, !route.isEmpty else { return }
         LennySearchViewModel.shared.start(route)
         showLenny = true
+    }
+
+    /// The search found nothing: what was typed becomes the route in Lenny's
+    /// field, ready to edit and send.
+    private func handToLenny() {
+        lennyQuery = query
+        query = ""
+        isLennyMode = true
+        searchFocused = true
     }
 
     /// Something asked for Lenny (the empty Reservations page): the pill rolls
