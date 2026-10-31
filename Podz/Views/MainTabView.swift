@@ -5,16 +5,7 @@ struct MainTabView: View {
     @StateObject private var scrollState = ScrollTrackingState.shared
     @StateObject private var tabBarVisibility = TabBarVisibilityState.shared
     @StateObject private var appearance = AppearanceState.shared
-    // Loaded here, not just from MailboxView's own `.task` — the tab
-    // bar's unread badge needs to be accurate from the moment the app
-    // opens, not only after the user has visited Mailbox at least once
-    // this session.
-    @StateObject private var messagesStore = MessagesStore.shared
-    // Same reasoning — the Profile tab's activity dot needs real data
-    // from launch, not only after HomeView's own fetch (or a Profile
-    // visit) happens to run first.
-    @StateObject private var postsStore = PostsStore.shared
-    @State private var selectedTab: HomeTab = .feed
+    @State private var selectedTab: TravelerTab = .feed
     @StateObject private var tabRouter = TabRouter.shared
 
     /// Distance from the bar's bottom edge to the true screen edge —
@@ -32,10 +23,6 @@ struct MainTabView: View {
                         ProfileView()
                     case .likes:
                         LikesView()
-                    case .mailbox:
-                        MailboxView()
-                    case .pods:
-                        PodsView()
                     }
                 }
                 .ignoresSafeArea(edges: .bottom)
@@ -89,11 +76,6 @@ struct MainTabView: View {
             if requested { selectedTab = .feed }
         }
         .preferredColorScheme(selectedTab == .feed || selectedTab == .likes || appearance.followsSystem ? nil : .light)
-        .task {
-            await messagesStore.fetchAll()
-            messagesStore.startRealtimeIfNeeded()
-        }
-        .task { await postsStore.fetchFeed() }
     }
 }
 

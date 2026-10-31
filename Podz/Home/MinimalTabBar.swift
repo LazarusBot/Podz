@@ -1,12 +1,19 @@
 import SwiftUI
 
+/// The traveler's three tabs.
+enum TravelerTab: String, CaseIterable {
+    case feed = "Home"
+    case likes = "Likes"
+    case profile = "Profile"
+}
+
 /// The floating three-icon pill from the Paper Home frame — home, likes,
 /// profile. Flat grey capsule, thin line icons, the active one full
 /// strength and the others dimmed.
 struct MinimalTabBar: View {
-    @Binding var selected: HomeTab
+    @Binding var selected: TravelerTab
 
-    private static let tabs: [HomeTab] = [.feed, .likes, .profile]
+    private static let tabs = TravelerTab.allCases
 
     var body: some View {
         HStack(spacing: 0) {
@@ -32,7 +39,7 @@ struct MinimalTabBar: View {
 
     private static let iconStyle = StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round)
 
-    private func tabIcon(_ tab: HomeTab) -> some View {
+    private func tabIcon(_ tab: TravelerTab) -> some View {
         let isSelected = tab == selected
         return icon(for: tab)
             .stroke(Color.homeText, style: Self.iconStyle)
@@ -42,11 +49,11 @@ struct MinimalTabBar: View {
             .contentShape(Rectangle())
     }
 
-    private func icon(for tab: HomeTab) -> AnyShape {
+    private func icon(for tab: TravelerTab) -> AnyShape {
         switch tab {
         case .feed: AnyShape(HomeIconShape())
         case .likes: AnyShape(HeartIconShape())
-        default: AnyShape(ProfileIconShape())
+        case .profile: AnyShape(ProfileIconShape())
         }
     }
 }

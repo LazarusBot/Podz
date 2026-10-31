@@ -13,7 +13,6 @@ internal import Auth
 /// The pages it leads to are built on `SectionPage`.
 struct ProfileView: View {
     @StateObject private var auth = AuthManager.shared
-    @StateObject private var postsStore = PostsStore.shared
     @StateObject private var friendsStore = FriendsStore.shared
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var appMode = AppModeStore.shared
@@ -21,7 +20,6 @@ struct ProfileView: View {
     @State private var showEditProfile = false
     @State private var showsAvatarEditor = false
     @State private var showFriends = false
-    @State private var showMyPosts = false
     @State private var showReservations = false
     @State private var showLoginSecurity = false
     @State private var showAccessibility = false
@@ -34,8 +32,6 @@ struct ProfileView: View {
                 ProfileEditView(onBack: { showEditProfile = false })
             } else if showFriends {
                 FriendsView(onBack: { showFriends = false })
-            } else if showMyPosts {
-                MyPostsView(onBack: { showMyPosts = false })
             } else if showReservations {
                 MyReservationsView(onBack: { showReservations = false })
             } else if showLoginSecurity {
@@ -79,7 +75,7 @@ struct ProfileView: View {
     }
 
     private var isShowingSection: Bool {
-        showEditProfile || showFriends || showMyPosts || showReservations || showLoginSecurity || showAccessibility
+        showEditProfile || showFriends || showReservations || showLoginSecurity || showAccessibility
     }
 
     // MARK: - Main screen
@@ -104,7 +100,6 @@ struct ProfileView: View {
 
                 VStack(spacing: 0) {
                     ProfileListRow(title: "Friends") { showFriends = true }
-                    ProfileListRow(title: "Posts", badgeCount: postsActivityCount) { showMyPosts = true }
                     ProfileListRow(title: "Reservations") { showReservations = true }
                     hostingRow
                     ProfileListRow(title: "Login and security") { showLoginSecurity = true }
@@ -165,7 +160,7 @@ struct ProfileView: View {
                         .foregroundColor(.homeSubtitle)
                 }
 
-                Text("\(friendsStore.friends.count) friends · \(myPostsCount) posts · \(likesStore.likes.count) likes")
+                Text("\(friendsStore.friends.count) friends · \(likesStore.likes.count) likes")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .lineLimit(1)
@@ -203,18 +198,6 @@ struct ProfileView: View {
                 showAddPod = true
             }
         }
-    }
-
-    // MARK: - Counts
-
-    private var myPostsCount: Int {
-        guard let userId = auth.session?.user.id else { return 0 }
-        return postsStore.posts.filter { $0.authorId == userId }.count
-    }
-
-    private var postsActivityCount: Int {
-        guard let userId = auth.session?.user.id else { return 0 }
-        return postsStore.newActivityCount(onPostsAuthoredBy: userId)
     }
 }
 
