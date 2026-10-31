@@ -20,6 +20,12 @@ struct HomeSearchPill: View {
 
     private let buttonSize: CGFloat = 40
     private let inset: CGFloat = 9
+    /// Lenny's button with its label ("Ask Lenny"): it opens up to this width
+    /// while the search field has the keyboard, and is the round mark otherwise.
+    private let askWidth: CGFloat = 118
+
+    /// Searching in the plain field (not in Lenny mode): Lenny is offered.
+    private var offersAsk: Bool { isFocused.wrappedValue && !isLennyMode }
 
     var body: some View {
         ZStack(alignment: isLennyMode ? .leading : .trailing) {
@@ -32,13 +38,14 @@ struct HomeSearchPill: View {
         .contentShape(Capsule())
         .onTapGesture { isFocused.wrappedValue = true }
         .animation(.smooth(duration: 0.4), value: isLennyMode)
+        .animation(.smooth(duration: 0.35), value: isFocused.wrappedValue)
     }
 
     private var field: some View {
         TextField(
             "",
             text: $text,
-            prompt: Text(isLennyMode ? "Chamonix to Zermatt in 5 days" : "Search a region or ask Lenny")
+            prompt: Text(isLennyMode ? "Chamonix to Zermatt in 5 days" : "Search a region")
                 .foregroundColor(isLennyMode ? .homeSubtitleOnInverse : .homeSubtitle)
         )
         .font(AppFont.regularLabel(14))
@@ -53,29 +60,44 @@ struct HomeSearchPill: View {
         .onSubmit(onSubmit)
         // Room for the mark on whichever side it's on, plus the gap.
         .padding(.leading, isLennyMode ? inset + buttonSize + 20 : 28)
-        .padding(.trailing, isLennyMode ? 28 : inset + buttonSize + 8)
+        .padding(.trailing, isLennyMode ? 28 : inset + (offersAsk ? askWidth : buttonSize) + 8)
     }
 
-    /// Same disc and glyph colors in both modes — it's the bar that
-    /// changes, which is what makes the disc disappear into it.
+    /// Lenny's button. At rest it is the round mark. When you start searching
+    /// in the field it opens into "Ask Lenny" on a solid capsule, an offer
+    /// at the moment you're looking for a pod. In Lenny mode it is the round
+    /// mark again, rolled to the leading end and melted into the bar so only
+    /// the eyes and the mouth stay visible.
     private var lennyMark: some View {
         Button {
             isLennyMode.toggle()
             isFocused.wrappedValue = true
         } label: {
-            Image("lenny")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 20, height: 20)
-                .foregroundColor(.homeBackground)
-                .frame(width: buttonSize, height: buttonSize)
-                .background(Color.homeText, in: Circle())
-                // One full turn as it slides across — the "roll".
-                .rotationEffect(.degrees(isLennyMode ? 360 : 0))
+            HStack(spacing: 7) {
+                Image("lenny")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                    // One full turn as it slides across: the "roll".
+                    .rotationEffect(.degrees(isLennyMode ? 360 : 0))
+
+                if offersAsk {
+                    Text("Ask Lenny")
+                        .font(AppFont.semiBoldLabel(13))
+                        .lineLimit(1)
+                        .fixedSize()
+                        .transition(.opacity)
+                }
+            }
+            .foregroundColor(.homeBackground)
+            .frame(width: offersAsk ? askWidth : buttonSize, height: buttonSize)
+            .background(Color.homeText, in: Capsule())
+            .clipped()
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel("Ask Lenny")
+        .accessibilityHint("Describe your trip and Lenny finds the pods")
         .accessibilityAddTraits(isLennyMode ? .isSelected : [])
     }
 }
