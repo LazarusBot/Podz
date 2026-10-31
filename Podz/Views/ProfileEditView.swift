@@ -17,6 +17,7 @@ struct ProfileEditView: View {
     @StateObject private var auth = AuthManager.shared
     @FocusState private var focused: Field?
     @State private var showsPhotoPicker = false
+    @State private var showsAvatarEditor = false
     @State private var username = ""
     @State private var fullName = ""
     @State private var age = ""
@@ -94,18 +95,27 @@ struct ProfileEditView: View {
     /// photo picker (the upload itself is `AvatarPicker`'s).
     private var photo: some View {
         HStack(spacing: 20) {
-            Button { showsPhotoPicker = true } label: {
-                AvatarPicker(
-                    currentImageURL: auth.profile?.avatarURL,
-                    size: 96,
-                    cornerRadius: nil,
-                    showsStroke: false,
-                    isPickerPresented: $showsPhotoPicker,
-                    isInteractive: false
-                )
+            AvatarPicker(
+                currentImageURL: auth.profile?.avatarURL,
+                size: 96,
+                cornerRadius: nil,
+                showsStroke: false,
+                isPickerPresented: $showsPhotoPicker,
+                isInteractive: false
+            )
+            .contentShape(Circle())
+            // A tap picks another photo; press and hold adjusts the current one.
+            .onTapGesture { showsPhotoPicker = true }
+            .onLongPressGesture(minimumDuration: 0.4) {
+                guard auth.profile?.avatarURL != nil else { return }
+                showsAvatarEditor = true
             }
-            .buttonStyle(TapScaleButtonStyle())
-            .accessibilityLabel("Change profile photo")
+            .sensoryFeedback(.impact(weight: .medium), trigger: showsAvatarEditor) { _, shown in shown }
+            .fullScreenCover(isPresented: $showsAvatarEditor) {
+                AvatarEditorView(imageURL: auth.profile?.avatarURL) { showsAvatarEditor = false }
+            }
+            .accessibilityLabel("Profile photo. Double tap to change, press and hold to adjust")
+            .accessibilityAddTraits(.isButton)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Your photo")
@@ -125,6 +135,10 @@ struct ProfileEditView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+
+                Text("Press and hold the photo to adjust it")
+                    .font(AppFont.regularLabel(12))
+                    .foregroundColor(.homeSubtitle.opacity(0.8))
             }
             Spacer(minLength: 0)
         }
