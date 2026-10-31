@@ -39,6 +39,8 @@ struct Pod: Codable, Identifiable, Equatable {
     var openingHours: String?
     /// Where a listed hut's information comes from ("osm"), for the credit.
     var source: String?
+    /// What the hut has on site ("Meals", "Showers"...). Nil = not known.
+    var facilities: [String]?
 
     /// A partner hut is reserved in the app; a listed one is booked through
     /// the hut itself.
@@ -62,7 +64,7 @@ struct Pod: Codable, Identifiable, Equatable {
         case phone, email, website
         case bookingURL = "booking_url"
         case openingHours = "opening_hours"
-        case source
+        case source, facilities
     }
 }
 

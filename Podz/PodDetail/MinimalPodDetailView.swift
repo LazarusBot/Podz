@@ -123,11 +123,14 @@ struct MinimalPodDetailView: View {
     // MARK: - Text
 
     private var titleBlock: some View {
-        titleText
-            .foregroundColor(.homeText)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 24)
-            .padding(.top, 50)
+        VStack(spacing: 12) {
+            titleText
+                .foregroundColor(.homeText)
+                .multilineTextAlignment(.center)
+            if !pod.isBookable { UnverifiedBadge() }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 50)
     }
 
     private var titleText: Text {
@@ -161,6 +164,8 @@ struct MinimalPodDetailView: View {
                     .foregroundColor(.homeBodyText)
                     .multilineTextAlignment(.center)
 
+                onSite
+
                 VStack(spacing: 6) {
                     ForEach(facts, id: \.self) { fact in
                         Text(fact)
@@ -177,6 +182,25 @@ struct MinimalPodDetailView: View {
         .frame(maxHeight: .infinity)
     }
 
+    /// What the hut has on site. A listed hut with nothing known says so and
+    /// sends the traveler to the hut, rather than leaving a gap.
+    @ViewBuilder
+    private var onSite: some View {
+        if let facilities = pod.facilities, !facilities.isEmpty {
+            VStack(spacing: 12) {
+                Text("On site")
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                FacilityChips(facilities: facilities)
+            }
+        } else if !pod.isBookable {
+            Text("Facilities aren't listed. Ask the hut before you go.")
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.homeSubtitle)
+                .multilineTextAlignment(.center)
+        }
+    }
+
     private var facts: [String] {
         var lines = [[pod.region, pod.country].compactMap { $0 }.joined(separator: " · ")]
         if !pod.podType.isEmpty { lines.append(pod.podType.capitalized) }
@@ -190,7 +214,9 @@ struct MinimalPodDetailView: View {
         if !pod.isBookable {
             if let hours = pod.openingHours, !hours.isEmpty { lines.append("Open: \(hours)") }
             lines.append("Listed hut: book through the hut")
-            if pod.source == "osm" { lines.append("Information © OpenStreetMap contributors") }
+            if pod.source == "osm" {
+                lines.append("Information © OpenStreetMap contributors, not checked by Podz")
+            }
         }
         return lines.filter { !$0.isEmpty }
     }
