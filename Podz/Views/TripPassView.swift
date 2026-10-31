@@ -11,25 +11,27 @@ import PassKit
 import MapKit
 import Supabase
 
-/// The pass for one upcoming stay: what you show at the door, and what you
-/// need on the way, saved on the phone so it opens with no signal (a refuge is
-/// exactly where there's none).
+/// The pass for one upcoming stay: what you show at the door, saved on the
+/// phone so it opens with no signal (a refuge is exactly where there's none).
+///
+/// It's built like the pod detail, the app's signature page: a tall photo with
+/// its big rounded bottom, the pod's name and altitude centered under it, then
+/// the stay, the confirmation code and its barcode. Tap anywhere between the
+/// photo and the buttons for the details (where it is, how to get there, Apple
+/// Wallet); tap again to go back. The pills are back and **Directions**.
 ///
 /// Everything renders from `TripPass`, the snapshot `TripPassStore` keeps on
 /// disk: the photo comes from the disk-backed image cache and the barcode is
 /// drawn on the device. Only "Add to Apple Wallet" needs the network, because
 /// a real `.pkpass` is signed with a key that lives on the server
 /// (`supabase/functions/generate-trip-pass`).
-///
-/// Same page recipe as the pages Profile opens (`design.md`): a 30 semiBold
-/// title, flat content, the back pill and the page's action (**Directions**)
-/// in the control stack.
 struct TripPassView: View {
     let pass: TripPass
     var onBack: () -> Void
 
     @StateObject private var podsStore = PodsStore.shared
     @State private var showsPod = false
+    @State private var isExtended = false
     @State private var isFetchingPass = false
     @State private var passFetchError: String?
     @State private var didCopyCode = false
@@ -44,7 +46,7 @@ struct TripPassView: View {
         [pass.region, pass.country].compactMap { $0 }.joined(separator: ", ")
     }
 
-    /// "Starts in 5 days", "Starts tomorrow", "Today"; nil once it's under way.
+    /// "Starts in 5 days", "Starts tomorrow", "Starts today"; nil once it's under way.
     private var countdown: String? {
         guard let start = Reservation.date(from: pass.checkIn) else { return nil }
         let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: start).day ?? 0
@@ -58,6 +60,12 @@ struct TripPassView: View {
 
     private var canOpenMaps: Bool { pass.latitude != nil && pass.longitude != nil }
 
+    /// Photo heights as a share of the screen: shorter than the pod detail's,
+    /// since the code and barcode need the room.
+    private func photoHeight(_ screenHeight: CGFloat) -> CGFloat {
+        screenHeight * (isExtended ? 200.0 / 852 : 360.0 / 852)
+    }
+
     var body: some View {
         if let matchedPod, showsPod {
             MinimalPodDetailView(pod: matchedPod, onBack: { showsPod = false })
@@ -69,52 +77,49 @@ struct TripPassView: View {
     // MARK: - The page
 
     private var page: some View {
-        ZStack(alignment: .bottom) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(pass.podName)
-                        .font(AppFont.semiBoldLabel(30))
-                        .tracking(-0.6)
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                // The whole screen: this page ignores every safe area.
+                Color.clear
+                    .frame(width: proxy.size.width, height: photoHeight(proxy.size.height))
+                    .overlay { PodPhoto(url: pass.photoURL) }
+                    .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 75, bottomTrailingRadius: 75, style: .continuous))
+
+                // Everything between the photo and the buttons is one tap
+                // target: a tap anywhere here opens or closes the details.
+                VStack(spacing: 0) {
+                    detailTitle(pass.podName, detail: pass.altitudeM.map { "\($0)m" })
                         .foregroundColor(.homeText)
+                        .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
-                        .padding(.top, 25)
+                        .padding(.top, 50)
 
-                    if !place.isEmpty || pass.altitudeM != nil {
-                        Text([place.isEmpty ? nil : place, pass.altitudeM.map { "\($0) m" }].compactMap { $0 }.joined(separator: "  ·  "))
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .padding(.horizontal, 24)
-                            .padding(.top, 6)
+                    if isExtended {
+                        details
+                            .transition(.opacity)
+                    } else {
+                        stay
+                            .transition(.opacity)
+                        Spacer(minLength: 0)
                     }
-
-                    Color.clear
-                        .frame(height: 200)
-                        .overlay { PodPhoto(url: pass.photoURL) }
-                        .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
-                        .padding(.horizontal, 24)
-                        .padding(.top, 20)
-
-                    stay
-                    code
-                    gettingThere
-                    extras
-
-                    Color.clear.frame(height: 190)
                 }
-            }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture { withAnimation(.smooth(duration: 0.45)) { isExtended.toggle() } }
 
-            BottomFade()
-
-            HStack(spacing: 13) {
-                DetailBackButton(action: onBack)
-                DetailTextButton(title: "Directions", isHighlighted: canOpenMaps, action: openDirections)
-                    .disabled(!canOpenMaps)
-                    .opacity(canOpenMaps ? 1 : 0.45)
+                HStack(spacing: 13) {
+                    DetailBackButton(action: onBack)
+                    DetailTextButton(title: "Directions", isHighlighted: canOpenMaps, action: openDirections)
+                        .disabled(!canOpenMaps)
+                        .opacity(canOpenMaps ? 1 : 0.45)
+                }
+                .padding(.horizontal, 40)
+                .padding(.top, 24)
+                .controlStackPadding()
             }
-            .padding(.horizontal, 24)
-            // A cover respects the safe area: 40 here is the 74 from the edge.
-            .padding(.bottom, 40)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
+        .ignoresSafeArea()
         .background(Color.homeBackground.ignoresSafeArea())
         .alert("Couldn't add to Wallet", isPresented: Binding(
             get: { passFetchError != nil },
@@ -126,42 +131,26 @@ struct TripPassView: View {
         }
     }
 
-    // MARK: - Stay
+    // MARK: - The stay and its code
 
-    /// When, for how long, for how many, and how soon.
+    /// When, for how many, the code, and the barcode.
     private var stay: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(pass.rangeText)
-                .font(AppFont.semiBoldLabel(22))
-                .tracking(-0.4)
-                .foregroundColor(.homeText)
-            Text("\(pass.nights) \(pass.nights == 1 ? "night" : "nights")  ·  \(pass.guests) \(pass.guests == 1 ? "guest" : "guests")")
-                .font(AppFont.regularLabel(14))
-                .foregroundColor(.homeSubtitle)
+        VStack(spacing: 0) {
+            Text("\(pass.rangeText)  ·  \(pass.nights) \(pass.nights == 1 ? "night" : "nights")  ·  \(pass.guests) \(pass.guests == 1 ? "guest" : "guests")")
+                .font(AppFont.regularLabel(15))
+                .foregroundColor(.homeBodyText)
+                .multilineTextAlignment(.center)
+                .padding(.top, 14)
+                .padding(.horizontal, 32)
+
             if let countdown {
                 Text(countdown)
                     .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeText)
-                    .padding(.horizontal, 14)
-                    .frame(height: 32)
-                    .background(Capsule().fill(Color.homePill))
-                    .padding(.top, 8)
+                    .foregroundColor(.homeSubtitle)
+                    .padding(.top, 4)
             }
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 28)
-    }
 
-    // MARK: - Code
-
-    /// The confirmation code, big, and the barcode under it. The barcode sits
-    /// on white in both modes: dark bars on a light ground are what scan.
-    private var code: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Confirmation code")
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
-
+            // The code, big; tap it to copy.
             Button {
                 UIPasteboard.general.string = pass.confirmationCode
                 didCopyCode = true
@@ -170,103 +159,98 @@ struct TripPassView: View {
                     didCopyCode = false
                 }
             } label: {
-                HStack(spacing: 10) {
+                VStack(spacing: 4) {
                     Text(pass.confirmationCode)
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(3)
                         .foregroundColor(.homeText)
-                    Text(didCopyCode ? "Copied" : "Copy")
-                        .font(AppFont.regularLabel(13))
+                    Text(didCopyCode ? "Copied" : "Confirmation code")
+                        .font(AppFont.regularLabel(12))
                         .foregroundColor(.homeSubtitle)
-                        .underline(color: Color.homeSubtitle.opacity(0.5))
                 }
             }
             .buttonStyle(.plain)
+            .padding(.top, 26)
             .accessibilityLabel("Confirmation code \(pass.confirmationCode). Double tap to copy")
 
+            // On white in both modes: dark bars on a light ground are what scan.
             BarcodeView(payload: pass.barcodePayload)
-                .frame(height: 80)
-                .padding(18)
-                .frame(maxWidth: .infinity)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 32)
-    }
-
-    // MARK: - Getting there
-
-    @ViewBuilder
-    private var gettingThere: some View {
-        let rows = detailRows
-        if !rows.isEmpty {
-            SectionHeading(title: "Getting there")
-                .padding(.top, 12)
-            ForEach(rows, id: \.label) { row in
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(row.label)
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.homeSubtitle)
-                    Text(row.value)
-                        .font(AppFont.semiBoldLabel(16))
-                        .foregroundColor(.homeText)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
+                .frame(height: 64)
+                .padding(.horizontal, 20)
                 .padding(.vertical, 14)
-                .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
-            }
-        }
-    }
-
-    private var detailRows: [(label: String, value: String)] {
-        var rows: [(String, String)] = []
-        if let address = pass.address, !address.isEmpty { rows.append(("Address", address)) }
-        if let lat = pass.latitude, let lng = pass.longitude {
-            rows.append(("Coordinates", String(format: "%.4f, %.4f", lat, lng)))
-        }
-        if let altitude = pass.altitudeM { rows.append(("Altitude", "\(altitude) m")) }
-        return rows
-    }
-
-    // MARK: - Extras
-
-    /// Saved offline, view the pod, add to Wallet.
-    private var extras: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Saved on this phone. It opens without signal.")
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
+                .frame(width: 300)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
                 .padding(.top, 20)
-
-            if matchedPod != nil {
-                Button { showsPod = true } label: {
-                    HStack(spacing: 5) {
-                        Text("View pod")
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Apple asks for its own button for this, not a lookalike.
-            AddToWalletButton {
-                Task { await addToWallet() }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .opacity(isFetchingPass ? 0.5 : 1)
-            .disabled(isFetchingPass)
-            .padding(.top, 12)
         }
-        .padding(.horizontal, 24)
+    }
+
+    // MARK: - Details
+
+    /// Where it is and how to get there, for when you tap.
+    private var details: some View {
+        ScrollView {
+            VStack(spacing: 22) {
+                if !place.isEmpty {
+                    Text(place)
+                        .font(AppFont.regularLabel(15))
+                        .foregroundColor(.homeBodyText)
+                        .multilineTextAlignment(.center)
+                }
+
+                VStack(spacing: 6) {
+                    ForEach(detailLines, id: \.self) { line in
+                        Text(line)
+                            .font(AppFont.regularLabel(14))
+                            .foregroundColor(.homeSubtitle)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+
+                Text("Saved on this phone. It opens without signal.")
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+
+                if matchedPod != nil {
+                    Button { showsPod = true } label: {
+                        HStack(spacing: 5) {
+                            Text("View pod")
+                                .font(AppFont.regularLabel(13))
+                                .foregroundColor(.homeSubtitle)
+                                .underline(color: Color.homeSubtitle.opacity(0.5))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.homeSubtitle)
+                        }
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Apple asks for its own button for this, not a lookalike.
+                AddToWalletButton {
+                    Task { await addToWallet() }
+                }
+                .frame(width: 240, height: 46)
+                .opacity(isFetchingPass ? 0.5 : 1)
+                .disabled(isFetchingPass)
+            }
+            .frame(maxWidth: 329)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var detailLines: [String] {
+        var lines: [String] = []
+        if let address = pass.address, !address.isEmpty { lines.append(address) }
+        if let lat = pass.latitude, let lng = pass.longitude {
+            lines.append(String(format: "%.4f, %.4f", lat, lng))
+        }
+        if let altitude = pass.altitudeM { lines.append("\(altitude) m altitude") }
+        return lines
     }
 
     // MARK: - Actions
