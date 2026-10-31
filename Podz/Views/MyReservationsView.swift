@@ -22,6 +22,8 @@ struct MyReservationsView: View {
     @StateObject private var podsStore = PodsStore.shared
     @State private var pendingCancellation: [Reservation] = []
     @State private var selectedPod: Pod?
+    /// Which of Lenny's tips is showing.
+    @State private var tipIndex = 0
 
     private var upcoming: [ReservationTrip] {
         ReservationTrip.group(reservationsStore.reservations.filter { $0.isUpcoming })
@@ -49,6 +51,7 @@ struct MyReservationsView: View {
                     emptyState
                 } else {
                     if !upcoming.isEmpty {
+                        lennyTips
                         SectionHeading(title: "Upcoming")
                         ForEach(upcoming) { trip in
                             tripBlock(trip)
@@ -86,6 +89,49 @@ struct MyReservationsView: View {
             Text(pendingCancellation.count > 1
                  ? "This cancels all \(pendingCancellation.count) stays and can't be undone."
                  : "This can't be undone — you'll need to reserve again if you change your mind.")
+        }
+    }
+
+    // MARK: - Lenny's tips
+
+    private var tips: [String] {
+        guard let next = upcoming.first else { return [] }
+        return LennyTripTips.tips(for: next, pods: podsStore.pods)
+    }
+
+    /// Lenny talking about the next trip: one tip in its bubble (typing, then
+    /// the text), and a caption to hear another.
+    @ViewBuilder
+    private var lennyTips: some View {
+        if !tips.isEmpty {
+            let message = tips[tipIndex % tips.count]
+            VStack(alignment: .leading, spacing: 4) {
+                LennyReply(message: message, mood: .idle)
+                    .padding(.horizontal, 24)
+
+                if tips.count > 1 {
+                    Button {
+                        withAnimation(.smooth(duration: 0.3)) { tipIndex = (tipIndex + 1) % tips.count }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text("Another tip")
+                                .font(AppFont.regularLabel(13))
+                                .foregroundColor(.homeSubtitle)
+                                .underline(color: Color.homeSubtitle.opacity(0.5))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.homeSubtitle)
+                        }
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    // Lined up with the bubble's text, past the avatar.
+                    .padding(.leading, 24 + 38 + 18)
+                }
+            }
+            .padding(.top, 4)
+            .padding(.bottom, 8)
         }
     }
 
