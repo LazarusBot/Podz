@@ -141,7 +141,8 @@ enum LennyRequestParser {
         var taken: [NSRange] = []
         var found: [LennyRequest.Mention] = []
         // Longest names first, so "Refuge du Dôme" wins over "Dôme".
-        for candidate in candidates.sorted(by: { $0.key.count > $1.key.count }) where candidate.key.count >= 3 {
+        // With thousands of pods, skip the regex unless the name is even there.
+        for candidate in candidates.sorted(by: { $0.key.count > $1.key.count }) where candidate.key.count >= 3 && folded.contains(candidate.key) {
             let pattern = "(?<![\\p{L}\\p{N}])" + NSRegularExpression.escapedPattern(for: candidate.key) + "(?![\\p{L}\\p{N}])"
             guard let regex = try? NSRegularExpression(pattern: pattern),
                   let match = regex.firstMatch(in: folded, range: whole),

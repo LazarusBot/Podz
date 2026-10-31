@@ -30,14 +30,38 @@ struct MinimalHomeView: View {
     /// infinite width and crashed the layer tree.
     private static var cardWidth: CGFloat { UIScreen.main.bounds.width - 97 }
 
+    /// What the feed shows. With thousands of listed huts, these are worked out
+    /// when the pods or the query change, not on every redraw (scrolling
+    /// redraws many times a second).
+    @State private var tonightPods: [Pod] = []
+    @State private var searchResults: [Pod] = []
+    @State private var discovery: [HomeSection] = []
+
     private var visiblePods: [Pod] {
-        let query = query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return podsStore.pods }
-        return podsStore.pods.filter { pod in
-            pod.name.localizedCaseInsensitiveContains(query)
-                || pod.country.localizedCaseInsensitiveContains(query)
-                || (pod.region?.localizedCaseInsensitiveContains(query) ?? false)
+        query.trimmingCharacters(in: .whitespaces).isEmpty ? tonightPods : searchResults
+    }
+
+    /// "Available tonight" is what can be booked in the app; the listed huts
+    /// are found by searching, the shelves and Lenny.
+    private func rebuildShelves() {
+        tonightPods = podsStore.pods.filter(\.isBookable)
+        discovery = HomeSection.discovery(from: podsStore.pods)
+        updateSearch()
+    }
+
+    /// Partner huts first, then the listed ones, each by name.
+    private func updateSearch() {
+        let text = query.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else {
+            searchResults = []
+            return
         }
+        let found = podsStore.pods.filter { pod in
+            pod.name.localizedCaseInsensitiveContains(text)
+                || pod.country.localizedCaseInsensitiveContains(text)
+                || (pod.region?.localizedCaseInsensitiveContains(text) ?? false)
+        }
+        searchResults = found.filter(\.isBookable) + found.filter { !$0.isBookable }
     }
 
     var body: some View {
@@ -45,7 +69,7 @@ struct MinimalHomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 title
                 searchPill
-                sectionHeader(title: "Available tonight", pods: podsStore.pods, id: "tonight")
+                sectionHeader(title: "Available tonight", pods: tonightPods, id: "tonight")
                 feed.padding(.top, 16)
 
                 // More ways in than the search bar: shelves by what you liked,
@@ -100,11 +124,16 @@ struct MinimalHomeView: View {
         // fetchPods() against .onOpenURL, so pods finishing the fetch is
         // what resolves it there.
         .onChange(of: deepLinkRouter.pendingPodId) { _, _ in resolveDeepLink() }
-        .onChange(of: podsStore.pods) { _, _ in resolveDeepLink() }
+        .onChange(of: podsStore.pods) { _, _ in
+            rebuildShelves()
+            resolveDeepLink()
+        }
+        .onChange(of: query) { _, _ in updateSearch() }
         .onChange(of: router.lennyRequested) { _, requested in
             if requested { openLenny() }
         }
         .onAppear {
+            rebuildShelves()
             if router.lennyRequested { openLenny() }
             resolveDeepLink()
             // ScrollTrackingState is shared by every scrollable tab —
@@ -151,9 +180,7 @@ struct MinimalHomeView: View {
     }
 
     /// The shelves under "Available tonight".
-    private var discoverySections: [HomeSection] {
-        HomeSection.discovery(from: podsStore.pods)
-    }
+    private var discoverySections: [HomeSection] { discovery }
 
     /// A shelf in its own layout: carousel, tall cards or a mosaic.
     @ViewBuilder

@@ -20,6 +20,8 @@ struct HomePodCard: View {
         if let beds = pod.bedsTotal {
             parts.append("\(beds) \(beds == 1 ? "bed" : "beds")")
         }
+        // A listed hut can't be booked in the app: say so on the card.
+        if !pod.isBookable { parts.append("Listed") }
         return parts.joined(separator: " · ")
     }
 

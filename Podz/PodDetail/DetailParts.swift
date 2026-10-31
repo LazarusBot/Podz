@@ -121,6 +121,11 @@ struct DetailTextButton: View {
             Text(title)
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(isHighlighted ? .homeBackground : .homeText)
+                // A long label ("Book through the hut") takes two centered lines.
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.9)
+                .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity)
                 .frame(height: 83)
                 .background {

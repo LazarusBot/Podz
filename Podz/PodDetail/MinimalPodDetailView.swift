@@ -19,6 +19,7 @@ struct MinimalPodDetailView: View {
     @State private var liveBedsAvailable: Int?
     @State private var isExtended = false
     @State private var showBooking = false
+    @State private var showHutContact = false
     @State private var showFolderPicker = false
     @ObservedObject private var likesStore = LikesStore.shared
 
@@ -68,6 +69,7 @@ struct MinimalPodDetailView: View {
         // Back is the only way out. The zoom transition's own swipe-to-
         // dismiss fought with paging through the photos.
         .interactiveDismissDisabled()
+        .hutContactDialog(for: pod, isPresented: $showHutContact)
         .sheet(isPresented: $showBooking) {
             ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable) { showBooking = false }
                 .background(Color.appHomeBackground)
@@ -77,7 +79,7 @@ struct MinimalPodDetailView: View {
         }
         .task {
             async let photos = PodsStore.shared.photos(forPodId: pod.id)
-            async let beds = PodsStore.shared.bedsAvailableNow(forPodId: pod.id)
+            async let beds = pod.isBookable ? PodsStore.shared.bedsAvailableNow(forPodId: pod.id) : nil
             let (fetchedPhotos, fetchedBeds) = await (photos, beds)
             if !fetchedPhotos.isEmpty { photoURLs = fetchedPhotos }
             liveBedsAvailable = fetchedBeds
@@ -180,11 +182,16 @@ struct MinimalPodDetailView: View {
         if !pod.podType.isEmpty { lines.append(pod.podType.capitalized) }
         if let total = pod.bedsTotal {
             var beds = "\(total) \(total == 1 ? "bed" : "beds")"
-            if let live = liveBedsAvailable { beds += " · \(live) free now" }
+            if pod.isBookable, let live = liveBedsAvailable { beds += " · \(live) free now" }
             lines.append(beds)
         }
         if let altitude = pod.altitudeM { lines.append("\(altitude) m altitude") }
         if let address = pod.address, !address.isEmpty { lines.append(address) }
+        if !pod.isBookable {
+            if let hours = pod.openingHours, !hours.isEmpty { lines.append("Open: \(hours)") }
+            lines.append("Listed hut: book through the hut")
+            if pod.source == "osm" { lines.append("Information © OpenStreetMap contributors") }
+        }
         return lines.filter { !$0.isEmpty }
     }
 
@@ -194,7 +201,14 @@ struct MinimalPodDetailView: View {
         HStack(spacing: 13) {
             DetailBackButton(action: onBack)
             likeButton
-            DetailTextButton(title: "Book") { showBooking = true }
+            if pod.isBookable {
+                DetailTextButton(title: "Book") { showBooking = true }
+            } else {
+                // A listed hut takes its bookings itself.
+                DetailTextButton(title: "Book through the hut", isHighlighted: pod.hasContact) { showHutContact = true }
+                    .disabled(!pod.hasContact)
+                    .opacity(pod.hasContact ? 1 : 0.45)
+            }
         }
         .padding(.horizontal, 40)
         .padding(.top, 24)
