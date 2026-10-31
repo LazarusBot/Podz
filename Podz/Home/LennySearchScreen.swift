@@ -13,6 +13,9 @@ struct LennySearchScreen: View {
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var podsStore = PodsStore.shared
     @State private var showsPlan = false
+    /// What's typed in the route pill when it's open again after an error.
+    @State private var draft = ""
+    @FocusState private var fieldFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedPod: Pod?
     @Namespace private var zoomNamespace
@@ -162,16 +165,50 @@ struct LennySearchScreen: View {
                 .foregroundColor(.homeBackground)
                 .frame(width: 40, height: 40)
 
-            Text(lenny.itineraryText)
+            if failed {
+                // After an error the route is yours to change: tap, edit,
+                // Search.
+                TextField(
+                    "",
+                    text: $draft,
+                    prompt: Text("Chamonix to Zermatt in 5 days").foregroundColor(.homeSubtitleOnInverse)
+                )
                 .font(AppFont.regularLabel(16))
                 .foregroundColor(.homeBackground)
-                .lineLimit(1)
+                .tint(.homeBackground)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .focused($fieldFocused)
+                .onSubmit(retry)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(lenny.itineraryText)
+                    .font(AppFont.regularLabel(16))
+                    .foregroundColor(.homeBackground)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.leading, 9)
         .padding(.trailing, 28)
         .frame(height: 60)
         .background(Color.homeText, in: Capsule())
+        .contentShape(Capsule())
+        .onTapGesture { if failed { fieldFocused = true } }
+        // The route comes back into the field when the search fails.
+        .onChange(of: failed) { _, isFailed in
+            if isFailed { draft = lenny.itineraryText }
+        }
+    }
+
+    /// Searches again with the edited route.
+    private func retry() {
+        let route = draft.trimmingCharacters(in: .whitespaces)
+        guard !route.isEmpty else { return }
+        fieldFocused = false
+        showsPlan = false
+        lenny.start(route)
     }
 
     // MARK: - The plan
