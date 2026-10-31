@@ -2,13 +2,13 @@ import SwiftUI
 
 /// The minimalist pod detail (Paper "DetailView" frames).
 ///
-/// **Stack:** a tall photo you swipe through (its pager dots fan out above
-/// Lenny's badge), the pod's name and altitude, a two-line teaser and the
-/// back / Book pills.
+/// **Stack:** a shorter photo you swipe through (its pager dots fan out above
+/// Lenny's badge), the pod's name and altitude, the key facts and facility
+/// chips, Lenny's word on the hut (speaking from the badge) and the back /
+/// like / Book pills.
 /// **Extended:** tap anywhere between the photo and the buttons and the
-/// photo shrinks to make room for the full description and the pod's
-/// details; tap again to go back. Paging through the photos is the only
-/// swipe on this screen.
+/// photo shrinks to a thumbnail beside the name; Lenny guides you down the
+/// sections (`PodDetailSections`). Tap the header to go back.
 struct MinimalPodDetailView: View {
     let pod: Pod
     var onBack: () -> Void
@@ -18,6 +18,8 @@ struct MinimalPodDetailView: View {
     @State private var photoCredits: [String: String] = [:]
     /// Optional — `.scrollPosition(id:)` needs it.
     @State private var pageIndex: Int? = 0
+    /// The section at the top of the extended page: what Lenny talks about.
+    @State private var activeSection: PodDetailSection?
     @State private var liveBedsAvailable: Int?
     @State private var isExtended = false
     @State private var showBooking = false
@@ -38,33 +40,92 @@ struct MinimalPodDetailView: View {
         GeometryReader { proxy in
             // The whole screen: this view ignores every safe area.
             let screenHeight = proxy.size.height
-            let photoHeight = DetailLayout.photoHeight(screenHeight: screenHeight, isExtended: isExtended)
 
-            VStack(spacing: 0) {
-                DetailPhotoPager(slots: photoURLs.map { Optional($0) }, pageIndex: $pageIndex, width: proxy.size.width, height: photoHeight, coordinate: pod.coordinate)
+            let stackPhotoHeight = DetailLayout.podPhotoHeight(screenHeight: screenHeight)
 
-                // Everything between the photo and the buttons is one tap
-                // target: a tap anywhere here extends or collapses.
-                VStack(spacing: 0) {
-                    titleBlock
+            ZStack(alignment: .topLeading) {
+                ZStack(alignment: .bottom) {
+                    VStack(spacing: 0) {
+                        if isExtended {
+                            // The sections take the screen under a header that
+                            // leaves room for the thumbnail. Tap it to go back.
+                            extendedHeader
+                                .transition(Self.fadeIn)
+                            // Lenny walks you down the page, from the top.
+                            LennyHutGuide(
+                                pod: pod,
+                                liveBedsAvailable: liveBedsAvailable,
+                                section: activeSection,
+                                available: PodDetailSection.available(for: pod, photoCredit: currentPhotoCredit),
+                                onGo: { section in withAnimation(.smooth(duration: 0.5)) { activeSection = section } },
+                                onContact: { showHutContact = true }
+                            )
+                            .padding(.horizontal, 24)
+                            .padding(.top, 16)
+                            .transition(Self.fadeIn)
+                            PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit, active: $activeSection)
+                                .transition(Self.fadeIn)
+                        } else {
+                            // Room for the photo, which is drawn on top of the
+                            // content so it can shrink into the thumbnail.
+                            Color.clear.frame(height: stackPhotoHeight)
 
-                    if isExtended {
-                        details
-                            .transition(.opacity)
-                    } else {
-                        teaser
-                            .transition(.opacity)
-                        Spacer(minLength: 0)
+                            // Everything between the photo and the buttons is one
+                            // tap target: a tap anywhere here opens the sections.
+                            VStack(spacing: 0) {
+                                titleBlock
+                                keyFacts
+                                stackChips
+                                stackLenny
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .onTapGesture { toggleExtended() }
+                            .transition(Self.fadeIn)
+
+                            // The buttons float over the page: keep their room.
+                            Color.clear.frame(height: 83 + 24 + DetailLayout.controlStackGap + ScreenInsets.bottom)
+                        }
                     }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .onTapGesture { toggleExtended() }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
 
-                actionRow
-                    .controlStackPadding()
+                    // The sections scroll behind the buttons, into the ground.
+                    if isExtended {
+                        BottomFade()
+                            .transition(.opacity)
+                    }
+
+                    actionRow
+                        .controlStackPadding()
+                }
+                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                // One photo that is both: the big one with the rounded bottom
+                // and Lenny's badge, and the small rounded one beside the name.
+                // Its size, corners and place animate between the two.
+                // The pager keeps its full size and is *scaled* down, so its
+                // pages never re-layout mid-animation (that made the other
+                // photos flash past).
+                let thumbScale = Self.thumbnailSize / proxy.size.width
+                let scale = isExtended ? thumbScale : 1
+                DetailPhotoPager(
+                    slots: photoURLs.map { Optional($0) },
+                    pageIndex: $pageIndex,
+                    width: proxy.size.width,
+                    height: stackPhotoHeight,
+                    coordinate: pod.coordinate,
+                    topRadius: isExtended ? Self.thumbnailRadius / thumbScale : 0,
+                    bottomRadius: isExtended ? Self.thumbnailRadius / thumbScale : 75,
+                    showsBadge: !isExtended
+                )
+                .scrollDisabled(isExtended)
+                .scaleEffect(scale, anchor: .topLeading)
+                .frame(width: proxy.size.width * scale, height: stackPhotoHeight * scale, alignment: .topLeading)
+                .padding(.leading, isExtended ? 24 : 0)
+                .padding(.top, isExtended ? Self.thumbnailTop : 0)
+                .onTapGesture { if isExtended { toggleExtended() } }
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .ignoresSafeArea()
         .background(Color.homeBackground.ignoresSafeArea())
@@ -166,92 +227,90 @@ struct MinimalPodDetailView: View {
         detailTitle(pod.name, detail: pod.altitudeM.map { "\($0)m" })
     }
 
-    private var teaser: some View {
-        Text(summary)
-            .font(AppFont.regularLabel(16))
-            .lineSpacing(5)
-            .foregroundColor(.homeBodyText)
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
-            .frame(maxWidth: 329)
-            .padding(.top, 23)
-            .padding(.horizontal, 32)
-    }
-
-    /// The description if the pod has one, else where it is.
-    private var summary: String {
-        let description = pod.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return description.isEmpty ? [pod.region, pod.country].compactMap { $0 }.joined(separator: ", ") : description
-    }
-
-    private var details: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Text(summary)
-                    .font(AppFont.regularLabel(16))
-                    .lineSpacing(5)
-                    .foregroundColor(.homeBodyText)
-                    .multilineTextAlignment(.center)
-
-                onSite
-
-                VStack(spacing: 6) {
-                    ForEach(facts, id: \.self) { fact in
-                        Text(fact)
-                            .font(AppFont.regularLabel(14))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                }
-            }
-            .frame(maxWidth: 329)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 28)
-            .frame(maxWidth: .infinity)
-        }
-        .frame(maxHeight: .infinity)
-    }
-
-    /// What the hut has on site. A listed hut with nothing known says so and
-    /// sends the traveler to the hut, rather than leaving a gap.
-    @ViewBuilder
-    private var onSite: some View {
-        if let facilities = pod.facilities, !facilities.isEmpty {
-            VStack(spacing: 12) {
-                Text("On site")
-                    .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeSubtitle)
-                FacilityChips(facilities: facilities)
-            }
-        } else if !pod.isBookable {
-            Text("Facilities aren't listed. Ask the hut before you go.")
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    private var facts: [String] {
-        var lines = [[pod.region, pod.country].compactMap { $0 }.joined(separator: " · ")]
-        if !pod.podType.isEmpty { lines.append(pod.podType.capitalized) }
+    /// "120 beds · 18 free now · Open Jun – Sep": the two facts a traveler
+    /// looks for first, under the name.
+    private var keyFacts: some View {
+        var parts: [String] = []
         if let total = pod.bedsTotal {
             var beds = "\(total) \(total == 1 ? "bed" : "beds")"
             if pod.isBookable, let live = liveBedsAvailable { beds += " · \(live) free now" }
-            lines.append(beds)
+            parts.append(beds)
         }
-        if let altitude = pod.altitudeM { lines.append("\(altitude) m altitude") }
-        if let address = pod.address, !address.isEmpty { lines.append(address) }
-        // The photo's credit, when it comes from Wikimedia Commons.
-        if let url = photoURLs.indices.contains(pageIndex ?? 0) ? photoURLs[pageIndex ?? 0] : nil, let credit = photoCredits[url] {
-            lines.append("Photo: \(credit)")
-        }
-        if !pod.isBookable {
-            if let hours = pod.openingHours, !hours.isEmpty { lines.append("Open: \(hours)") }
-            lines.append("Listed hut: book through the hut")
-            if pod.source == "osm" {
-                lines.append("Information © OpenStreetMap contributors, not checked by Podz")
+        if let hours = hutClean(pod.openingHours) { parts.append("Open \(hours)") }
+        return Group {
+            if !parts.isEmpty {
+                Text(parts.joined(separator: "  ·  "))
+                    .font(AppFont.regularLabel(14))
+                    .foregroundColor(.homeText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .padding(.top, 14)
+                    .padding(.horizontal, 24)
             }
         }
-        return lines.filter { !$0.isEmpty }
+    }
+
+    /// Up to three facilities; the rest are in the sections.
+    @ViewBuilder
+    private var stackChips: some View {
+        if let facilities = pod.facilities, !facilities.isEmpty {
+            FacilityChips(facilities: Array(facilities.prefix(3)))
+                .padding(.top, 14)
+                .padding(.horizontal, 24)
+        }
+    }
+
+    /// Lenny's word on the hut, speaking from the badge on the photo.
+    private var stackLenny: some View {
+        LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, section: nil, available: [], inStack: true)
+            .padding(.top, 26)
+            .padding(.horizontal, 24)
+    }
+
+    // MARK: - Extended header
+
+    private var currentPhotoURL: String? {
+        photoURLs.indices.contains(pageIndex ?? 0) ? photoURLs[pageIndex ?? 0] : photoURLs.first
+    }
+
+    private var currentPhotoCredit: String? { currentPhotoURL.flatMap { photoCredits[$0] } }
+
+    /// A small photo, the name and altitude and, for a listed hut, the badge.
+    private static let thumbnailSize: CGFloat = 92
+    private static let thumbnailRadius: CGFloat = 28
+    private static let thumbnailTop: CGFloat = 64
+
+    /// The old content leaves quickly, the new arrives a beat later, so the
+    /// photo's move is the thing you see.
+    private static let fadeIn = AnyTransition.asymmetric(
+        insertion: .opacity.animation(.easeOut(duration: 0.3).delay(0.18)),
+        removal: .opacity.animation(.easeOut(duration: 0.15))
+    )
+
+    /// The name and altitude and, for a listed hut, the badge, beside the
+    /// thumbnail (which is the photo above, in place).
+    private var extendedHeader: some View {
+        HStack(spacing: 18) {
+            Color.clear.frame(width: Self.thumbnailSize, height: Self.thumbnailSize)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(pod.name)
+                    .font(AppFont.semiBoldLabel(20))
+                    .foregroundColor(.homeText)
+                    .lineLimit(2)
+                if let altitude = pod.altitudeM {
+                    Text("\(altitude) m")
+                        .font(AppFont.regularLabel(14))
+                        .foregroundColor(.homeSubtitle)
+                }
+                if !pod.isBookable { UnverifiedBadge() }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, Self.thumbnailTop)
+        .contentShape(Rectangle())
+        .onTapGesture { toggleExtended() }
     }
 
     // MARK: - Actions

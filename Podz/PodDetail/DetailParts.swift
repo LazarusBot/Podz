@@ -13,6 +13,12 @@ enum DetailLayout {
     static let stackedPhotoShare: CGFloat = 524 / 852
     static let extendedPhotoShare: CGFloat = 250 / 852
 
+    /// The pod detail's photo is a little shorter than the others, to leave room
+    /// for the key facts under the name.
+    static let podPhotoShare: CGFloat = 380 / 852
+
+    static func podPhotoHeight(screenHeight: CGFloat) -> CGFloat { screenHeight * podPhotoShare }
+
     static func photoHeight(screenHeight: CGFloat, isExtended: Bool) -> CGFloat {
         screenHeight * (isExtended ? extendedPhotoShare : stackedPhotoShare)
     }
@@ -44,6 +50,12 @@ struct DetailPhotoPager: View {
     let height: CGFloat
     /// The pod's spot: with no photo at all the picture is its satellite view.
     var coordinate: CLLocationCoordinate2D?
+    /// The corners: rounded along the bottom only (the big photo), or all four
+    /// when it has shrunk to a thumbnail. Animatable, so it can morph.
+    var topRadius: CGFloat = 0
+    var bottomRadius: CGFloat = 75
+    /// Lenny's badge and the pager dots; hidden when the photo is a thumbnail.
+    var showsBadge = true
 
     /// One empty slot when there is nothing yet, so the placeholder shows.
     private var pages: [String?] { slots.isEmpty ? [nil] : slots }
@@ -63,10 +75,15 @@ struct DetailPhotoPager: View {
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $pageIndex)
         .frame(width: width, height: height)
-        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 75, bottomTrailingRadius: 75, style: .continuous))
+        .clipShape(UnevenRoundedRectangle(
+            topLeadingRadius: topRadius, bottomLeadingRadius: bottomRadius,
+            bottomTrailingRadius: bottomRadius, topTrailingRadius: topRadius, style: .continuous
+        ))
         .overlay(alignment: .bottom) {
             PodDetailBadge(photoCount: slots.count, currentIndex: pageIndex ?? 0)
                 .offset(y: 28)
+                .opacity(showsBadge ? 1 : 0)
+                .scaleEffect(showsBadge ? 1 : 0.3)
         }
         .zIndex(1)
     }
