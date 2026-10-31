@@ -86,7 +86,6 @@ struct MinimalPodDetailView: View {
                                     keyFacts
                                     stackChips
                                 }
-                                stackLenny
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -104,6 +103,15 @@ struct MinimalPodDetailView: View {
                     if isExtended {
                         BottomFade()
                             .transition(.opacity)
+                    }
+
+                    // Lenny's bubble sits where it does in Lenny's search and
+                    // booking: just above the control stack.
+                    if !isExtended {
+                        stackLenny
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 83 + 20 + DetailLayout.controlStackGap + ScreenInsets.bottom)
+                            .transition(Self.fadeIn)
                     }
 
                     actionRow
@@ -254,11 +262,12 @@ struct MinimalPodDetailView: View {
         }
     }
 
-    /// Lenny's word on the hut, or, while booking, the question; and under it
-    /// the small caption that says the page opens.
+    /// Lenny's word on the hut, or, while booking, the question: the same
+    /// bubble as in Lenny's search, and under it the small caption that says
+    /// the page opens.
     @ViewBuilder
     private var stackLenny: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
             if isBooking {
                 LennyReply(message: booking.replyMessage, mood: booking.mood)
             } else {
@@ -274,16 +283,14 @@ struct MinimalPodDetailView: View {
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundColor(.homeSubtitle)
                     }
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 4)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 // Lined up with the bubble's text, past the avatar.
-                .padding(.leading, 38)
+                .padding(.leading, 38 + 18)
             }
         }
-        .padding(.top, 22)
-        .padding(.horizontal, 24)
     }
 
     // MARK: - Extended header
