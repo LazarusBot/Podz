@@ -73,11 +73,18 @@ struct MinimalPodDetailView: View {
         .interactiveDismissDisabled()
         .hutContactDialog(for: pod, isPresented: $showHutContact)
         .sheet(isPresented: $showBooking) {
-            ReservationSheet(pod: pod, liveBedsAvailable: liveBedsAvailable) { showBooking = false }
-                .background(Color.appHomeBackground)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.hidden)
-                .preferredColorScheme(.light)
+            ReservationSheet(
+                pod: pod,
+                liveBedsAvailable: liveBedsAvailable,
+                onDismiss: { showBooking = false },
+                onViewReservations: {
+                    TabRouter.shared.showsReservationsRequested = true
+                    showBooking = false
+                    onBack()
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.hidden)
         }
         .task {
             async let photos = PodsStore.shared.photoRows(forPodId: pod.id)
