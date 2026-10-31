@@ -11,27 +11,40 @@ struct PodDetailSections: View {
     var liveBedsAvailable: Int?
     /// Author and licence of the photo on screen, when it has one.
     var photoCredit: String?
+    /// The section at the top of the page, which Lenny talks about; setting
+    /// it scrolls there.
+    @Binding var active: PodDetailSection?
 
     @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                LennyHutNote(tips: LennyHutTips.tips(for: pod, liveBedsAvailable: liveBedsAvailable))
-                about
-                onSite
-                goodToKnow
-                gettingThere
-                contact
-                source
+                ForEach(PodDetailSection.available(for: pod, photoCredit: photoCredit), id: \.self) { section in
+                    view(for: section).id(section)
+                }
             }
+            .scrollTargetLayout()
             .padding(.horizontal, 24)
             .padding(.top, 28)
-            // Room to scroll the last section above the buttons.
-            .padding(.bottom, 190)
+            // Room to scroll the last section above Lenny and the buttons.
+            .padding(.bottom, 330)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .scrollPosition(id: $active, anchor: .top)
         .scrollIndicators(.hidden)
+    }
+
+    @ViewBuilder
+    private func view(for section: PodDetailSection) -> some View {
+        switch section {
+        case .about: about
+        case .onSite: onSite
+        case .goodToKnow: goodToKnow
+        case .gettingThere: gettingThere
+        case .contact: contact
+        case .source: source
+        }
     }
 
     // MARK: - Sections
@@ -103,7 +116,7 @@ struct PodDetailSections: View {
 
     @ViewBuilder
     private var contact: some View {
-        let links = contactLinks
+        let links = pod.contactLinks
         if !links.isEmpty {
             DetailSection("Contact") {
                 VStack(spacing: 0) {
@@ -139,26 +152,6 @@ struct PodDetailSections: View {
         var text = "\(total)"
         if pod.isBookable, let live = liveBedsAvailable { text += " · \(live) free now" }
         return text
-    }
-
-    private struct ContactLink {
-        let label: String
-        let value: String
-        let url: URL
-    }
-
-    private var contactLinks: [ContactLink] {
-        var links: [ContactLink] = []
-        if let phone = hutClean(pod.phone), let url = URL(string: "tel:\(phone.filter { !$0.isWhitespace })") {
-            links.append(ContactLink(label: "Phone", value: phone, url: url))
-        }
-        if let email = hutClean(pod.email), let url = URL(string: "mailto:\(email)") {
-            links.append(ContactLink(label: "Email", value: email, url: url))
-        }
-        if let site = hutClean(pod.bookingURL) ?? hutClean(pod.website), let url = hutWebURL(site) {
-            links.append(ContactLink(label: "Website", value: site.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: ""), url: url))
-        }
-        return links
     }
 
     /// A label and its value with a hairline above; a row with no value is

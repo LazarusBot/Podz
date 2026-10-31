@@ -18,6 +18,8 @@ struct MinimalPodDetailView: View {
     @State private var photoCredits: [String: String] = [:]
     /// Optional — `.scrollPosition(id:)` needs it.
     @State private var pageIndex: Int? = 0
+    /// The section at the top of the extended page: what Lenny talks about.
+    @State private var activeSection: PodDetailSection?
     @State private var liveBedsAvailable: Int?
     @State private var isExtended = false
     @State private var showBooking = false
@@ -49,7 +51,7 @@ struct MinimalPodDetailView: View {
                             // leaves room for the thumbnail. Tap it to go back.
                             extendedHeader
                                 .transition(Self.fadeIn)
-                            PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit)
+                            PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit, active: $activeSection)
                                 .transition(Self.fadeIn)
                         } else {
                             // Room for the photo, which is drawn on top of the
@@ -82,6 +84,21 @@ struct MinimalPodDetailView: View {
                             .transition(.opacity)
                     }
 
+                    // Lenny walks you down the page, just above the buttons.
+                    if isExtended {
+                        LennyHutGuide(
+                            pod: pod,
+                            liveBedsAvailable: liveBedsAvailable,
+                            section: activeSection,
+                            available: PodDetailSection.available(for: pod, photoCredit: currentPhotoCredit),
+                            onGo: { section in withAnimation(.smooth(duration: 0.5)) { activeSection = section } },
+                            onWriteMessage: { showHutContact = true }
+                        )
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 83 + 14 + DetailLayout.controlStackGap + ScreenInsets.bottom)
+                        .transition(Self.fadeIn)
+                    }
+
                     actionRow
                         .controlStackPadding()
                 }
@@ -90,17 +107,24 @@ struct MinimalPodDetailView: View {
                 // One photo that is both: the big one with the rounded bottom
                 // and Lenny's badge, and the small rounded one beside the name.
                 // Its size, corners and place animate between the two.
+                // The pager keeps its full size and is *scaled* down, so its
+                // pages never re-layout mid-animation (that made the other
+                // photos flash past).
+                let thumbScale = Self.thumbnailSize / proxy.size.width
+                let scale = isExtended ? thumbScale : 1
                 DetailPhotoPager(
                     slots: photoURLs.map { Optional($0) },
                     pageIndex: $pageIndex,
-                    width: isExtended ? Self.thumbnailSize : proxy.size.width,
-                    height: isExtended ? Self.thumbnailSize : stackPhotoHeight,
+                    width: proxy.size.width,
+                    height: stackPhotoHeight,
                     coordinate: pod.coordinate,
-                    topRadius: isExtended ? Self.thumbnailRadius : 0,
-                    bottomRadius: isExtended ? Self.thumbnailRadius : 75,
+                    topRadius: isExtended ? Self.thumbnailRadius / thumbScale : 0,
+                    bottomRadius: isExtended ? Self.thumbnailRadius / thumbScale : 75,
                     showsBadge: !isExtended
                 )
                 .scrollDisabled(isExtended)
+                .scaleEffect(scale, anchor: .topLeading)
+                .frame(width: proxy.size.width * scale, height: stackPhotoHeight * scale, alignment: .topLeading)
                 .padding(.leading, isExtended ? 24 : 0)
                 .padding(.top, isExtended ? Self.thumbnailTop : 0)
                 .onTapGesture { if isExtended { toggleExtended() } }
