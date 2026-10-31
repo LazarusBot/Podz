@@ -6,9 +6,16 @@ struct HomePodCard: View {
     let pod: Pod
     let photoURL: String?
     let zoomNamespace: Namespace.ID
+    /// Tells apart this card from the same pod's card on another shelf, so the
+    /// zoom opens from the one that was tapped. The pod's id by default.
+    var zoomID: AnyHashable?
+    /// Replaces the default "region · beds" line (the highest shelf says the
+    /// altitude, for example).
+    var subtitleOverride: String?
     var onTap: () -> Void
 
     private var subtitle: String {
+        if let subtitleOverride { return subtitleOverride }
         var parts = [pod.region ?? pod.country]
         if let beds = pod.bedsTotal {
             parts.append("\(beds) \(beds == 1 ? "bed" : "beds")")
@@ -23,7 +30,7 @@ struct HomePodCard: View {
                     .aspectRatio(296.0 / 340.0, contentMode: .fit)
                     .overlay { PodPhoto(url: photoURL) }
                     .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
-                    .podZoomSource(id: pod.id, in: zoomNamespace, cornerRadius: 36)
+                    .podZoomSource(id: zoomID ?? AnyHashable(pod.id), in: zoomNamespace, cornerRadius: 36)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(pod.name)
