@@ -17,6 +17,7 @@ struct PodDetailSections: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
+                LennyHutNote(tips: LennyHutTips.tips(for: pod, liveBedsAvailable: liveBedsAvailable))
                 about
                 onSite
                 goodToKnow
