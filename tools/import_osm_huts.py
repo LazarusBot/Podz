@@ -58,7 +58,9 @@ def fetch(q: str) -> list:
 def sql(value):
     if value is None or value == "":
         return "null"
-    return "'" + str(value).replace("'", "''") + "'"
+    # One statement, one line: descriptions in OpenStreetMap often hold line breaks.
+    text = re.sub(r"\s+", " ", str(value)).strip()
+    return "'" + text.replace("'", "''") + "'"
 
 
 def number(value):
