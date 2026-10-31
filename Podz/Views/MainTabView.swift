@@ -15,7 +15,7 @@ struct MainTabView: View {
     // visit) happens to run first.
     @StateObject private var postsStore = PostsStore.shared
     @State private var selectedTab: HomeTab = .feed
-    @StateObject private var profileRouter = ProfileRouter.shared
+    @StateObject private var tabRouter = TabRouter.shared
 
     /// Distance from the bar's bottom edge to the true screen edge —
     /// not from the system's own ~34pt home-indicator safe area.
@@ -81,8 +81,12 @@ struct MainTabView: View {
         // no dark palette yet, so they (and the tab bar over them) stay
         // light — except a screen that has opted in (Profile's main one).
         // Something (Lenny's plan) asked Profile to open a page.
-        .onChange(of: profileRouter.showsReservationsRequested) { _, requested in
+        .onChange(of: tabRouter.showsReservationsRequested) { _, requested in
             if requested { selectedTab = .profile }
+        }
+        // The empty Reservations page asked for Lenny: Home, search open.
+        .onChange(of: tabRouter.lennyRequested) { _, requested in
+            if requested { selectedTab = .feed }
         }
         .preferredColorScheme(selectedTab == .feed || selectedTab == .likes || appearance.followsSystem ? nil : .light)
         .task {

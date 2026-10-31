@@ -13,6 +13,7 @@ struct MinimalHomeView: View {
     /// What's typed while the pill is in Lenny mode — kept apart from
     /// `query` so a route sentence never filters the cards.
     @State private var lennyQuery = ""
+    @StateObject private var router = TabRouter.shared
     @State private var isLennyMode = false
     @FocusState private var searchFocused: Bool
     @State private var selectedPod: Pod?
@@ -87,7 +88,11 @@ struct MinimalHomeView: View {
         // what resolves it there.
         .onChange(of: deepLinkRouter.pendingPodId) { _, _ in resolveDeepLink() }
         .onChange(of: podsStore.pods) { _, _ in resolveDeepLink() }
+        .onChange(of: router.lennyRequested) { _, requested in
+            if requested { openLenny() }
+        }
         .onAppear {
+            if router.lennyRequested { openLenny() }
             resolveDeepLink()
             // ScrollTrackingState is shared by every scrollable tab —
             // without this a stale offset from another tab could flash the
@@ -187,6 +192,18 @@ struct MinimalHomeView: View {
         guard isLennyMode, !route.isEmpty else { return }
         LennySearchViewModel.shared.start(route)
         showLenny = true
+    }
+
+    /// Something asked for Lenny (the empty Reservations page): the pill rolls
+    /// to Lenny mode and the keyboard opens.
+    private func openLenny() {
+        router.lennyRequested = false
+        isLennyMode = true
+        Task {
+            // Let the tab finish appearing before asking for the keyboard.
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            searchFocused = true
+        }
     }
 
     private func closeLenny() {

@@ -36,7 +36,7 @@ struct LennySearchScreen: View {
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
                     onOpenPod: { selectedPod = $0 },
                     onFinish: {
-                        ProfileRouter.shared.showsReservationsRequested = true
+                        TabRouter.shared.showsReservationsRequested = true
                         onClose()
                     }
                 )

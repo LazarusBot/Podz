@@ -7,132 +7,225 @@
 
 import SwiftUI
 
-/// Your own reservations — reached from ProfileView's "Reservations" row.
-/// Pushed, not a sheet (same manual @State push/pop as FriendsView/
-/// MyPostsView) — this is a real destination, not a lightweight overlay.
+/// Your own reservations — reached from ProfileView's "Reservations" row, and
+/// from Lenny's plan once it's booked.
+///
+/// A trip is a run of stays booked one after the other: those Lenny planned
+/// show together on the same numbered line as its summary, under "Planned with
+/// Lenny", and are cancelled as one. A stay booked alone is just a row. The
+/// page's action is Lenny: "Plan with Lenny" (highlighted while there's
+/// nothing here yet). Tap a stay to look at its pod.
 struct MyReservationsView: View {
     var onBack: () -> Void
 
     @StateObject private var reservationsStore = ReservationsStore.shared
     @StateObject private var podsStore = PodsStore.shared
-    @State private var pendingCancellation: Reservation?
+    @State private var pendingCancellation: [Reservation] = []
+    @State private var selectedPod: Pod?
 
-    private var upcoming: [Reservation] {
-        reservationsStore.reservations.filter { $0.isUpcoming }
+    private var upcoming: [ReservationTrip] {
+        ReservationTrip.group(reservationsStore.reservations.filter { $0.isUpcoming })
     }
 
     private var past: [Reservation] {
-        reservationsStore.reservations.filter { !$0.isUpcoming }
+        reservationsStore.reservations
+            .filter { !$0.isUpcoming }
+            .sorted { $0.checkIn > $1.checkIn }
     }
 
+    private var isEmpty: Bool { reservationsStore.reservations.isEmpty }
+
     var body: some View {
-        SectionPage(title: "Reservations", onBack: onBack) {
-            if reservationsStore.reservations.isEmpty {
-                Text("No reservations yet.")
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(.homeSubtitle)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 8)
-            } else {
-                if !upcoming.isEmpty {
-                    SectionHeading(title: "Upcoming")
-                    VStack(spacing: 0) {
-                        ForEach(upcoming) { reservation in
-                            ReservationRow(
-                                reservation: reservation,
-                                pod: podsStore.pods.first { $0.id == reservation.podId },
-                                photoURL: podsStore.primaryPhotoByPodId[reservation.podId],
-                                onCancel: { pendingCancellation = reservation }
-                            )
+        SectionPage(
+            title: "Reservations",
+            onBack: onBack,
+            trailing: {
+                DetailTextButton(title: "Plan with Lenny", isHighlighted: isEmpty) {
+                    TabRouter.shared.lennyRequested = true
+                }
+            },
+            content: {
+                if isEmpty {
+                    emptyState
+                } else {
+                    if !upcoming.isEmpty {
+                        SectionHeading(title: "Upcoming")
+                        ForEach(upcoming) { trip in
+                            tripBlock(trip)
                         }
                     }
-                }
 
-                if !past.isEmpty {
-                    SectionHeading(title: "Past")
-                    VStack(spacing: 0) {
+                    if !past.isEmpty {
+                        SectionHeading(title: "Past")
                         ForEach(past) { reservation in
-                            ReservationRow(
-                                reservation: reservation,
-                                pod: podsStore.pods.first { $0.id == reservation.podId },
-                                photoURL: podsStore.primaryPhotoByPodId[reservation.podId],
-                                onCancel: nil
-                            )
+                            stayRow(reservation, number: nil, isLast: true)
+                                .opacity(0.6)
+                                .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
                         }
                     }
                 }
             }
-        }
+        )
         .task { await reservationsStore.fetchMine() }
-        .alert("Cancel this reservation?", isPresented: Binding(
-            get: { pendingCancellation != nil },
-            set: { if !$0 { pendingCancellation = nil } }
-        )) {
+        .fullScreenCover(item: $selectedPod) { pod in
+            MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
+        }
+        .alert(
+            pendingCancellation.count > 1 ? "Cancel this trip?" : "Cancel this reservation?",
+            isPresented: Binding(
+                get: { !pendingCancellation.isEmpty },
+                set: { if !$0 { pendingCancellation = [] } }
+            )
+        ) {
             Button("Keep it", role: .cancel) {}
-            Button("Cancel reservation", role: .destructive) {
-                if let pendingCancellation {
-                    Task { await reservationsStore.cancel(pendingCancellation) }
-                }
+            Button(pendingCancellation.count > 1 ? "Cancel trip" : "Cancel reservation", role: .destructive) {
+                let stays = pendingCancellation
+                Task { for stay in stays { await reservationsStore.cancel(stay) } }
             }
         } message: {
-            Text("This can't be undone — you'll need to reserve again if you change your mind.")
+            Text(pendingCancellation.count > 1
+                 ? "This cancels all \(pendingCancellation.count) stays and can't be undone."
+                 : "This can't be undone — you'll need to reserve again if you change your mind.")
         }
+    }
+
+    // MARK: - Nothing yet
+
+    /// Lenny's invitation, in place of a bare "No reservations yet".
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LennyAvatar(size: 40)
+            Text("No trips yet")
+                .font(AppFont.semiBoldLabel(20))
+                .foregroundColor(.homeText)
+            Text("Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you.")
+                .font(AppFont.regularLabel(14))
+                .foregroundColor(.homeSubtitle)
+                .lineSpacing(3)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+    }
+
+    // MARK: - A trip
+
+    private func tripBlock(_ trip: ReservationTrip) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if trip.isPlannedWithLenny {
+                HStack(spacing: 8) {
+                    LennyAvatar(size: 22)
+                    Text("Planned with Lenny")
+                        .font(AppFont.semiBoldLabel(13))
+                        .foregroundColor(.homeText)
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+
+                Text("\(Reservation.rangeText(trip.checkIn, trip.checkOut))  ·  \(trip.nights) \(trip.nights == 1 ? "night" : "nights")  ·  \(trip.guests) \(trip.guests == 1 ? "guest" : "guests")")
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 6)
+                    .padding(.bottom, 14)
+            }
+
+            ForEach(Array(trip.stays.enumerated()), id: \.element.id) { index, stay in
+                stayRow(stay, number: trip.isPlannedWithLenny ? index + 1 : nil, isLast: index == trip.stays.count - 1)
+            }
+
+            cancelCaption(trip.isPlannedWithLenny ? "Cancel trip" : "Cancel")
+                .padding(.horizontal, 24)
+                .padding(.leading, trip.isPlannedWithLenny ? 38 : 0)
+                .onTapGesture { pendingCancellation = trip.stays }
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
+    }
+
+    private func cancelCaption(_ title: String) -> some View {
+        Text(title)
+            .font(AppFont.regularLabel(13))
+            .foregroundColor(.appBadgeRed)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .accessibilityAddTraits(.isButton)
+    }
+
+    // MARK: - A stay
+
+    /// A pod's photo, its name and the nights. With a number it sits on the
+    /// trip's numbered dotted line, like Lenny's summary.
+    private func stayRow(_ reservation: Reservation, number: Int?, isLast: Bool) -> some View {
+        let pod = podsStore.pods.first { $0.id == reservation.podId }
+        return Button {
+            if let pod { selectedPod = pod }
+        } label: {
+            HStack(alignment: .top, spacing: 14) {
+                if let number {
+                    VStack(spacing: 0) {
+                        Text("\(number)")
+                            .font(AppFont.semiBoldLabel(12))
+                            .foregroundColor(.homeBackground)
+                            .frame(width: 24, height: 24)
+                            .background(Color.homeText, in: Circle())
+                        if !isLast {
+                            Rectangle()
+                                .fill(Color.homeText.opacity(0.25))
+                                .frame(width: 1)
+                                .mask {
+                                    VStack(spacing: 3) {
+                                        ForEach(0..<40, id: \.self) { _ in Rectangle().frame(height: 2) }
+                                    }
+                                }
+                                .frame(maxHeight: .infinity)
+                                .padding(.top, 6)
+                        }
+                    }
+                    .frame(width: 24)
+                }
+
+                HStack(spacing: 14) {
+                    Color.clear
+                        .frame(width: 64, height: 64)
+                        .overlay { PodPhoto(url: podsStore.primaryPhotoByPodId[reservation.podId]) }
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(pod?.name ?? "Pod")
+                            .font(AppFont.semiBoldLabel(16))
+                            .foregroundColor(.homeText)
+                            .lineLimit(1)
+                        Text("\(Reservation.rangeText(reservation.checkIn, reservation.checkOut))  ·  \(reservation.nights) \(reservation.nights == 1 ? "night" : "nights")")
+                            .font(AppFont.regularLabel(13))
+                            .foregroundColor(.homeSubtitle)
+                            .lineLimit(1)
+                        if number == nil || reservation.status == "cancelled" {
+                            Text("\(reservation.guests) \(reservation.guests == 1 ? "guest" : "guests")" + (reservation.status == "cancelled" ? "  ·  Cancelled" : ""))
+                                .font(AppFont.regularLabel(12))
+                                .foregroundColor(reservation.status == "cancelled" ? .appBadgeRed : .homeSubtitle)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.bottom, isLast ? 0 : 20)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, number == nil ? 12 : 0)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
-private struct ReservationRow: View {
-    let reservation: Reservation
-    let pod: Pod?
-    let photoURL: String?
-    /// nil hides the Cancel button entirely — past/cancelled reservations
-    /// aren't actionable.
-    var onCancel: (() -> Void)?
-
-    private var dateRange: String {
-        guard let checkIn = Reservation.date(from: reservation.checkIn),
-              let checkOut = Reservation.date(from: reservation.checkOut) else {
-            return "\(reservation.checkIn) – \(reservation.checkOut)"
-        }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM"
-        return "\(formatter.string(from: checkIn)) – \(formatter.string(from: checkOut))"
-    }
+/// Lenny's mark on a flat disc, the way it sits in the chat bubble.
+struct LennyAvatar: View {
+    var size: CGFloat = 30
 
     var body: some View {
-        HStack(spacing: 12) {
-            PodPhoto(url: photoURL)
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.r12, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(pod?.name ?? "Pod")
-                    .font(AppFont.semiBoldLabel(16))
-                    .foregroundColor(.homeText)
-                Text(dateRange)
-                    .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeSubtitle)
-                Text("\(reservation.guests) guest\(reservation.guests == 1 ? "" : "s")" + (reservation.status == "cancelled" ? " · Cancelled" : ""))
-                    .font(AppFont.regularLabel(12))
-                    .foregroundColor(reservation.status == "cancelled" ? .appBadgeRed : .homeSubtitle)
-            }
-
-            Spacer()
-
-            if let onCancel {
-                Button(action: onCancel) {
-                    Text("Cancel")
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.appBadgeRed)
-                        .padding(.horizontal, 16)
-                        .frame(height: 38)
-                        .background(Capsule().fill(Color.homePill.opacity(0.95)))
-                        .overlay(Capsule().strokeBorder(Color.homeBackground, lineWidth: 1))
-                }
-                .buttonStyle(TapScaleButtonStyle())
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 12)
-        .overlay(alignment: .bottom) { Hairline() }
+        LennyMark(mood: .idle)
+            .frame(width: size / 2, height: size / 2)
+            .foregroundColor(.homeBackground)
+            .frame(width: size, height: size)
+            .background(Color.homeText, in: Circle())
     }
 }
