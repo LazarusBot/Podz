@@ -51,7 +51,6 @@ struct MyReservationsView: View {
                     emptyState
                 } else {
                     if !upcoming.isEmpty {
-                        lennyTips
                         SectionHeading(title: "Upcoming")
                         ForEach(upcoming) { trip in
                             tripBlock(trip)
@@ -66,9 +65,17 @@ struct MyReservationsView: View {
                                 .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
                         }
                     }
+
+                    // Room for Lenny's bubble above the pills.
+                    if !tips.isEmpty { Color.clear.frame(height: 120) }
                 }
             }
         )
+        // Lenny talks at the bottom, just above the pill row.
+        .overlay(alignment: .bottom) {
+            lennyTips
+                .padding(.bottom, DetailLayout.controlStackGap + ScreenInsets.bottom + 83 + 10)
+        }
         .task { await reservationsStore.fetchMine() }
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
@@ -99,8 +106,8 @@ struct MyReservationsView: View {
         return LennyTripTips.tips(for: next, pods: podsStore.pods)
     }
 
-    /// Lenny talking about the next trip: one tip in its bubble (typing, then
-    /// the text), and a caption to hear another.
+    /// Lenny talking about the next trip, at the bottom above the pills: one
+    /// tip in its bubble (typing, then the text), and a caption to hear another.
     @ViewBuilder
     private var lennyTips: some View {
         if !tips.isEmpty {
@@ -130,8 +137,6 @@ struct MyReservationsView: View {
                     .padding(.leading, 24 + 38 + 18)
                 }
             }
-            .padding(.top, 4)
-            .padding(.bottom, 8)
         }
     }
 
