@@ -23,7 +23,9 @@ struct HomeTallCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 Color.clear
                     .frame(width: Self.width, height: Self.photoHeight)
-                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate) }
+                    // The photo is drawn bigger than its frame: it must not take
+                    // taps, or it steals them from the next card.
+                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate).allowsHitTesting(false) }
                     .overlay(alignment: .bottom) {
                         LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom)
                             .frame(height: 100)
@@ -43,6 +45,7 @@ struct HomeTallCard: View {
                         }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
                     .podZoomSource(id: zoomID, in: zoomNamespace, cornerRadius: 32)
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -58,6 +61,7 @@ struct HomeTallCard: View {
                 .padding(.horizontal, 4)
                 .frame(width: Self.width, alignment: .leading)
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -107,7 +111,9 @@ struct HomeMosaic: View {
         return Button { onTap(pod, zoomID) } label: {
             Color.clear
                 .frame(width: width, height: height)
-                .overlay { PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate) }
+                // The photo is drawn bigger than its tile: it must not take
+                // taps, or it steals them from the tile next to it.
+                .overlay { PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate).allowsHitTesting(false) }
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                         .frame(height: large ? 110 : 70)
@@ -128,6 +134,7 @@ struct HomeMosaic: View {
                     .padding(.bottom, large ? 18 : 12)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
                 .podZoomSource(id: zoomID, in: zoomNamespace, cornerRadius: radius)
         }
         .buttonStyle(.plain)
