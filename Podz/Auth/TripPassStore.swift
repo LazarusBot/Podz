@@ -9,14 +9,14 @@ import Foundation
 import Combine
 
 /// Keeps upcoming trips' pass data on disk, not just in memory — so
-/// `PodsView`'s hero card and `TripPassView` still have something real to
-/// show on a cold launch with no signal, which `ReservationsStore`/
+/// `TripPassView` and Reservations still have something real to show on a
+/// cold launch with no signal, which `ReservationsStore`/
 /// `PodsStore` alone can't promise (both start empty and refetch from
 /// Supabase every session).
 ///
-/// `refresh` is the only writer, and it's the caller's job (see
-/// `PodsView`'s own `.task`) to only call it once `fetchMine()`/
-/// `fetchPods()` have both actually *succeeded* — passing in reservations
+/// `refresh` is the only writer, and it's the caller's job (`refreshFromServer`
+/// does it) to only call it once `fetchMine()`/`fetchPods()` have both
+/// actually *succeeded* — passing in reservations
 /// that are merely empty because a fetch just failed offline would wipe
 /// a perfectly good disk cache with nothing, defeating the entire point.
 @MainActor
@@ -44,6 +44,19 @@ final class TripPassStore: ObservableObject {
             return []
         }
         return decoded
+    }
+
+    /// Fetches your reservations and the pods and, only when both worked, saves
+    /// the passes: a failed fetch (no signal) must never wipe what's saved.
+    func refreshFromServer() async {
+        let reservationsOK = await ReservationsStore.shared.fetchMine()
+        let podsOK = await PodsStore.shared.fetchPods()
+        guard reservationsOK, podsOK else { return }
+        refresh(
+            reservations: ReservationsStore.shared.reservations,
+            pods: PodsStore.shared.pods,
+            photosByPodId: PodsStore.shared.primaryPhotoByPodId
+        )
     }
 
     /// Rebuilds `passes` from reservations/pods the caller already fetched
