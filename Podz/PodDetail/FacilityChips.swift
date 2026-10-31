@@ -4,9 +4,11 @@ import SwiftUI
 /// centered lines as they need ("Meals", "Showers", "Drinking water").
 struct FacilityChips: View {
     let facilities: [String]
+    /// Lines centered (the stack) or flush left (the sections).
+    var isCentered = true
 
     var body: some View {
-        FlowLayout(spacing: 8, lineSpacing: 8) {
+        FlowLayout(spacing: 8, lineSpacing: 8, isCentered: isCentered) {
             ForEach(facilities, id: \.self) { facility in
                 Text(facility)
                     .font(AppFont.regularLabel(14))
@@ -37,6 +39,7 @@ struct UnverifiedBadge: View {
 private struct FlowLayout: Layout {
     var spacing: CGFloat
     var lineSpacing: CGFloat
+    var isCentered = true
 
     /// The indices of each line, given the width there is.
     private func lines(sizes: [CGSize], width: CGFloat) -> [[Int]] {
@@ -81,7 +84,7 @@ private struct FlowLayout: Layout {
         let sizes: [CGSize] = subviews.map { $0.sizeThatFits(.unspecified) }
         var y = bounds.minY
         for row in lines(sizes: sizes, width: bounds.width) {
-            var x = bounds.minX + (bounds.width - lineWidth(row, sizes: sizes)) / 2
+            var x = bounds.minX + (isCentered ? (bounds.width - lineWidth(row, sizes: sizes)) / 2 : 0)
             for index in row {
                 subviews[index].place(at: CGPoint(x: x, y: y), proposal: .unspecified)
                 x += sizes[index].width + spacing

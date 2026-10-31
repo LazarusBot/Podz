@@ -38,28 +38,32 @@ struct MinimalPodDetailView: View {
         GeometryReader { proxy in
             // The whole screen: this view ignores every safe area.
             let screenHeight = proxy.size.height
-            let photoHeight = DetailLayout.photoHeight(screenHeight: screenHeight, isExtended: isExtended)
 
             VStack(spacing: 0) {
-                DetailPhotoPager(slots: photoURLs.map { Optional($0) }, pageIndex: $pageIndex, width: proxy.size.width, height: photoHeight, coordinate: pod.coordinate)
+                if isExtended {
+                    // The photo steps back to a small one beside the name, and
+                    // the sections take the screen. Tap the header to go back.
+                    extendedHeader
+                        .transition(.opacity)
+                    PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit)
+                        .transition(.opacity)
+                } else {
+                    DetailPhotoPager(slots: photoURLs.map { Optional($0) }, pageIndex: $pageIndex, width: proxy.size.width, height: DetailLayout.podPhotoHeight(screenHeight: screenHeight), coordinate: pod.coordinate)
 
-                // Everything between the photo and the buttons is one tap
-                // target: a tap anywhere here extends or collapses.
-                VStack(spacing: 0) {
-                    titleBlock
-
-                    if isExtended {
-                        details
-                            .transition(.opacity)
-                    } else {
+                    // Everything between the photo and the buttons is one tap
+                    // target: a tap anywhere here opens the sections.
+                    VStack(spacing: 0) {
+                        titleBlock
+                        keyFacts
+                        stackChips
                         teaser
-                            .transition(.opacity)
                         Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture { toggleExtended() }
+                    .transition(.opacity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .onTapGesture { toggleExtended() }
 
                 actionRow
                     .controlStackPadding()
@@ -142,15 +146,48 @@ struct MinimalPodDetailView: View {
         detailTitle(pod.name, detail: pod.altitudeM.map { "\($0)m" })
     }
 
+    /// "120 beds · 18 free now · Open Jun – Sep": the two facts a traveler
+    /// looks for first, under the name.
+    private var keyFacts: some View {
+        var parts: [String] = []
+        if let total = pod.bedsTotal {
+            var beds = "\(total) \(total == 1 ? "bed" : "beds")"
+            if pod.isBookable, let live = liveBedsAvailable { beds += " · \(live) free now" }
+            parts.append(beds)
+        }
+        if let hours = hutClean(pod.openingHours) { parts.append("Open \(hours)") }
+        return Group {
+            if !parts.isEmpty {
+                Text(parts.joined(separator: "  ·  "))
+                    .font(AppFont.regularLabel(14))
+                    .foregroundColor(.homeText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .padding(.top, 14)
+                    .padding(.horizontal, 24)
+            }
+        }
+    }
+
+    /// Up to three facilities; the rest are in the sections.
+    @ViewBuilder
+    private var stackChips: some View {
+        if let facilities = pod.facilities, !facilities.isEmpty {
+            FacilityChips(facilities: Array(facilities.prefix(3)))
+                .padding(.top, 14)
+                .padding(.horizontal, 24)
+        }
+    }
+
     private var teaser: some View {
         Text(summary)
-            .font(AppFont.regularLabel(16))
-            .lineSpacing(5)
+            .font(AppFont.regularLabel(15))
+            .lineSpacing(4)
             .foregroundColor(.homeBodyText)
             .multilineTextAlignment(.center)
             .lineLimit(2)
             .frame(maxWidth: 329)
-            .padding(.top, 23)
+            .padding(.top, 18)
             .padding(.horizontal, 32)
     }
 
@@ -160,74 +197,39 @@ struct MinimalPodDetailView: View {
         return description.isEmpty ? [pod.region, pod.country].compactMap { $0 }.joined(separator: ", ") : description
     }
 
-    private var details: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Text(summary)
-                    .font(AppFont.regularLabel(16))
-                    .lineSpacing(5)
-                    .foregroundColor(.homeBodyText)
-                    .multilineTextAlignment(.center)
+    // MARK: - Extended header
 
-                onSite
+    private var currentPhotoURL: String? {
+        photoURLs.indices.contains(pageIndex ?? 0) ? photoURLs[pageIndex ?? 0] : photoURLs.first
+    }
 
-                VStack(spacing: 6) {
-                    ForEach(facts, id: \.self) { fact in
-                        Text(fact)
-                            .font(AppFont.regularLabel(14))
-                            .foregroundColor(.homeSubtitle)
-                    }
+    private var currentPhotoCredit: String? { currentPhotoURL.flatMap { photoCredits[$0] } }
+
+    /// A small photo, the name and altitude and, for a listed hut, the badge.
+    private var extendedHeader: some View {
+        HStack(spacing: 18) {
+            PodPhoto(url: currentPhotoURL, coordinate: pod.coordinate)
+                .frame(width: 92, height: 92)
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(pod.name)
+                    .font(AppFont.semiBoldLabel(20))
+                    .foregroundColor(.homeText)
+                    .lineLimit(2)
+                if let altitude = pod.altitudeM {
+                    Text("\(altitude) m")
+                        .font(AppFont.regularLabel(14))
+                        .foregroundColor(.homeSubtitle)
                 }
+                if !pod.isBookable { UnverifiedBadge() }
             }
-            .frame(maxWidth: 329)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 28)
-            .frame(maxWidth: .infinity)
+            Spacer(minLength: 0)
         }
-        .frame(maxHeight: .infinity)
-    }
-
-    /// What the hut has on site. A listed hut with nothing known says so and
-    /// sends the traveler to the hut, rather than leaving a gap.
-    @ViewBuilder
-    private var onSite: some View {
-        if let facilities = pod.facilities, !facilities.isEmpty {
-            VStack(spacing: 12) {
-                Text("On site")
-                    .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeSubtitle)
-                FacilityChips(facilities: facilities)
-            }
-        } else if !pod.isBookable {
-            Text("Facilities aren't listed. Ask the hut before you go.")
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    private var facts: [String] {
-        var lines = [[pod.region, pod.country].compactMap { $0 }.joined(separator: " · ")]
-        if !pod.podType.isEmpty { lines.append(pod.podType.capitalized) }
-        if let total = pod.bedsTotal {
-            var beds = "\(total) \(total == 1 ? "bed" : "beds")"
-            if pod.isBookable, let live = liveBedsAvailable { beds += " · \(live) free now" }
-            lines.append(beds)
-        }
-        if let altitude = pod.altitudeM { lines.append("\(altitude) m altitude") }
-        if let address = pod.address, !address.isEmpty { lines.append(address) }
-        // The photo's credit, when it comes from Wikimedia Commons.
-        if let url = photoURLs.indices.contains(pageIndex ?? 0) ? photoURLs[pageIndex ?? 0] : nil, let credit = photoCredits[url] {
-            lines.append("Photo: \(credit)")
-        }
-        if !pod.isBookable {
-            if let hours = pod.openingHours, !hours.isEmpty { lines.append("Open: \(hours)") }
-            lines.append("Listed hut: book through the hut")
-            if pod.source == "osm" {
-                lines.append("Information © OpenStreetMap contributors, not checked by Podz")
-            }
-        }
-        return lines.filter { !$0.isEmpty }
+        .padding(.horizontal, 24)
+        .padding(.top, 64)
+        .contentShape(Rectangle())
+        .onTapGesture { toggleExtended() }
     }
 
     // MARK: - Actions

@@ -24,15 +24,19 @@ struct HutContactDialog: ViewModifier {
         }
     }
 
-    private func clean(_ value: String?) -> String? {
-        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? nil : trimmed
-    }
+    private func clean(_ value: String?) -> String? { hutClean(value) }
 
-    /// A website without its scheme ("refuge.com") still opens.
-    private static func webURL(_ link: String) -> URL? {
-        URL(string: link.hasPrefix("http") ? link : "https://\(link)")
-    }
+    private static func webURL(_ link: String) -> URL? { hutWebURL(link) }
+}
+
+func hutClean(_ value: String?) -> String? {
+    let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isEmpty ? nil : trimmed
+}
+
+/// A website without its scheme ("refuge.com") still opens.
+func hutWebURL(_ link: String) -> URL? {
+    URL(string: link.hasPrefix("http") ? link : "https://\(link)")
 }
 
 extension View {
