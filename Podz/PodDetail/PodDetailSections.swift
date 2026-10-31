@@ -27,12 +27,19 @@ struct PodDetailSections: View {
             .scrollTargetLayout()
             .padding(.horizontal, 24)
             .padding(.top, 28)
-            // Room to scroll the last section above Lenny and the buttons.
-            .padding(.bottom, 330)
+            // Room to scroll the last section above the buttons.
+            .padding(.bottom, 190)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollPosition(id: $active, anchor: .top)
         .scrollIndicators(.hidden)
+        // Sections slip under Lenny, above, with a soft edge.
+        .mask(alignment: .top) {
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 22)
+                Color.black
+            }
+        }
     }
 
     @ViewBuilder

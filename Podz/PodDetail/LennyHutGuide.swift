@@ -40,8 +40,11 @@ struct LennyHutGuide: View {
     /// The section at the top of the page; `nil` before the first scroll.
     let section: PodDetailSection?
     let available: [PodDetailSection]
-    var onGo: (PodDetailSection) -> Void
-    var onWriteMessage: () -> Void
+    var onGo: (PodDetailSection) -> Void = { _ in }
+    var onWriteMessage: () -> Void = {}
+    /// On the stack (over the photo): just the overview and a nudge to open
+    /// the page, no next step.
+    var inStack = false
 
     /// Where the page is: before any scroll it's the first section, and Lenny
     /// opens with the overview.
@@ -54,7 +57,7 @@ struct LennyHutGuide: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            LennyReply(message: Self.message(for: section, pod: pod, liveBedsAvailable: liveBedsAvailable, first: available.first), mood: .idle)
+            LennyReply(message: message, mood: .idle)
 
             if let action {
                 Button(action: action.run) {
@@ -81,12 +84,18 @@ struct LennyHutGuide: View {
     /// One thing to do from here: write to the hut where that's the way to
     /// book, else on to the next section.
     private var action: (title: String, run: () -> Void)? {
+        if inStack { return nil }
         if !pod.isBookable, pod.hasContact, current == .contact || next == nil {
             return ("Write the message", onWriteMessage)
         }
         if let next { return ("Next: \(next.title)", { onGo(next) }) }
         if let first = available.first, first != current { return ("Back to top", { onGo(first) }) }
         return nil
+    }
+
+    private var message: String {
+        if inStack { return Self.trust(pod, liveBedsAvailable) + " Tap for the details." }
+        return Self.message(for: section, pod: pod, liveBedsAvailable: liveBedsAvailable, first: available.first)
     }
 
     // MARK: - What Lenny says
@@ -109,16 +118,16 @@ struct LennyHutGuide: View {
     }
 
     /// Can you trust it, and what to do about it.
-    private static func trust(_ pod: Pod, _ liveBedsAvailable: Int?) -> String {
+    static func trust(_ pod: Pod, _ liveBedsAvailable: Int?) -> String {
         if pod.isBookable {
-            guard let live = liveBedsAvailable else { return "This hut takes bookings right here in Podz. Scroll down and I'll walk you through it." }
+            guard let live = liveBedsAvailable else { return "This hut takes bookings right here in Podz." }
             return live > 0
-                ? "This hut takes bookings right here, and it has \(live) \(live == 1 ? "bed" : "beds") free tonight. Scroll down and I'll walk you through it."
+                ? "This hut takes bookings right here, and it has \(live) \(live == 1 ? "bed" : "beds") free tonight."
                 : "This hut takes bookings right here, but it's full tonight. Another date may work."
         }
         return pod.hasContact
-            ? "I found this hut on OpenStreetMap and nobody at Podz has checked it, so I'd contact the hut before you go. I'll walk you through what we know."
-            : "I found this hut on OpenStreetMap, but I have no way to reach it and nobody at Podz has checked it. I'll walk you through what we know."
+            ? "I found this hut on OpenStreetMap and nobody at Podz has checked it, so I'd contact the hut before you go."
+            : "I found this hut on OpenStreetMap, but I have no way to reach it and nobody at Podz has checked it."
     }
 
     private static func onSite(_ pod: Pod) -> String {

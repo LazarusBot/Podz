@@ -51,6 +51,18 @@ struct MinimalPodDetailView: View {
                             // leaves room for the thumbnail. Tap it to go back.
                             extendedHeader
                                 .transition(Self.fadeIn)
+                            // Lenny walks you down the page, from the top.
+                            LennyHutGuide(
+                                pod: pod,
+                                liveBedsAvailable: liveBedsAvailable,
+                                section: activeSection,
+                                available: PodDetailSection.available(for: pod, photoCredit: currentPhotoCredit),
+                                onGo: { section in withAnimation(.smooth(duration: 0.5)) { activeSection = section } },
+                                onWriteMessage: { showHutContact = true }
+                            )
+                            .padding(.horizontal, 24)
+                            .padding(.top, 16)
+                            .transition(Self.fadeIn)
                             PodDetailSections(pod: pod, liveBedsAvailable: liveBedsAvailable, photoCredit: currentPhotoCredit, active: $activeSection)
                                 .transition(Self.fadeIn)
                         } else {
@@ -84,21 +96,6 @@ struct MinimalPodDetailView: View {
                             .transition(.opacity)
                     }
 
-                    // Lenny walks you down the page, just above the buttons.
-                    if isExtended {
-                        LennyHutGuide(
-                            pod: pod,
-                            liveBedsAvailable: liveBedsAvailable,
-                            section: activeSection,
-                            available: PodDetailSection.available(for: pod, photoCredit: currentPhotoCredit),
-                            onGo: { section in withAnimation(.smooth(duration: 0.5)) { activeSection = section } },
-                            onWriteMessage: { showHutContact = true }
-                        )
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 83 + 14 + DetailLayout.controlStackGap + ScreenInsets.bottom)
-                        .transition(Self.fadeIn)
-                    }
-
                     actionRow
                         .controlStackPadding()
                 }
@@ -128,6 +125,23 @@ struct MinimalPodDetailView: View {
                 .padding(.leading, isExtended ? 24 : 0)
                 .padding(.top, isExtended ? Self.thumbnailTop : 0)
                 .onTapGesture { if isExtended { toggleExtended() } }
+
+                // The same Lenny, over the top of the photo on the stack.
+                if !isExtended {
+                    LennyHutGuide(
+                        pod: pod,
+                        liveBedsAvailable: liveBedsAvailable,
+                        section: nil,
+                        available: [],
+                        inStack: true
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.top, Self.thumbnailTop)
+                    // Only the bubble takes the tap, so the photo still swipes
+                    // around it.
+                    .onTapGesture { toggleExtended() }
+                    .transition(.opacity.animation(.easeOut(duration: 0.15)))
+                }
             }
         }
         .ignoresSafeArea()
