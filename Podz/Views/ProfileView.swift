@@ -19,6 +19,7 @@ struct ProfileView: View {
     @StateObject private var appMode = AppModeStore.shared
     @StateObject private var router = TabRouter.shared
     @State private var showEditProfile = false
+    @State private var showsAvatarEditor = false
     @State private var showFriends = false
     @State private var showMyPosts = false
     @State private var showReservations = false
@@ -142,6 +143,15 @@ struct ProfileView: View {
     private var identity: some View {
         HStack(spacing: 18) {
             AvatarView(imageName: auth.profile?.avatarURL, size: 76)
+                // Press and hold to adjust the current photo (zoom, move, turn).
+                .onLongPressGesture(minimumDuration: 0.4) {
+                    guard auth.profile?.avatarURL != nil else { return }
+                    showsAvatarEditor = true
+                }
+                .sensoryFeedback(.impact(weight: .medium), trigger: showsAvatarEditor) { _, shown in shown }
+                .fullScreenCover(isPresented: $showsAvatarEditor) {
+                    AvatarEditorView(imageURL: auth.profile?.avatarURL) { showsAvatarEditor = false }
+                }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(auth.profile?.displayName ?? "Guest")
