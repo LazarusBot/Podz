@@ -116,7 +116,7 @@ final class LennySearchViewModel: ObservableObject {
     func start(_ text: String) {
         searchTask?.cancel()
         itineraryText = text
-        // A fresh start: nothing left over from before.
+        // A fresh start (also a retry after an error): nothing left over.
         errorMessage = nil
         journeyStops = []
         request = nil

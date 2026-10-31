@@ -13,6 +13,12 @@ struct LennySearchScreen: View {
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var podsStore = PodsStore.shared
     @State private var showsPlan = false
+    /// What's typed in the route pill when it's open again after an error.
+    @State private var draft = ""
+    @FocusState private var fieldFocused: Bool
+    /// The user tapped the route to change it: the old route and Lenny's error
+    /// are gone until a new search starts.
+    @State private var isEditingRoute = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedPod: Pod?
     @Namespace private var zoomNamespace
@@ -47,10 +53,13 @@ struct LennySearchScreen: View {
                     .transition(.opacity)
 
                 // Lenny's answer to the route: typing, then the result.
-                LennyReply(message: replyMessage, mood: mood)
-                    .padding(.horizontal, 24)
-                    // Just above the pill row (83 high, 40 + safe area up).
-                    .padding(.bottom, 40 + 83 + 20)
+                if !isEditingRoute {
+                    LennyReply(message: replyMessage, mood: mood)
+                        .padding(.horizontal, 24)
+                        // Just above the pill row (83 high, 40 + safe area up).
+                        .padding(.bottom, 40 + 83 + 20)
+                        .transition(.opacity)
+                }
 
                 HStack(spacing: 13) {
                     DetailBackButton(action: onClose)
@@ -70,6 +79,7 @@ struct LennySearchScreen: View {
             }
         }
         .background(Color.homeBackground.ignoresSafeArea())
+        .animation(.smooth(duration: 0.3), value: isEditingRoute)
         .interactiveDismissDisabled()
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
@@ -140,6 +150,7 @@ struct LennySearchScreen: View {
 
     private var mood: LennyMood {
         guard lenny.phase == .results else { return .working }
+        if isEditingRoute { return .idle }
         return failed ? .sorry : .happy
     }
 
@@ -169,16 +180,65 @@ struct LennySearchScreen: View {
                 .foregroundColor(.homeBackground)
                 .frame(width: 40, height: 40)
 
-            Text(lenny.itineraryText)
+            if failed {
+                // After an error the route is yours to change: tap, edit,
+                // Search.
+                TextField(
+                    "",
+                    text: $draft,
+                    prompt: Text("Chamonix to Zermatt in 5 days").foregroundColor(.homeSubtitleOnInverse)
+                )
                 .font(AppFont.regularLabel(16))
                 .foregroundColor(.homeBackground)
-                .lineLimit(1)
+                .tint(.homeBackground)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .focused($fieldFocused)
+                .onSubmit(retry)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(lenny.itineraryText)
+                    .font(AppFont.regularLabel(16))
+                    .foregroundColor(.homeBackground)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.leading, 9)
         .padding(.trailing, 28)
         .frame(height: 60)
         .background(Color.homeText, in: Capsule())
+        .contentShape(Capsule())
+        .onTapGesture {
+            guard failed else { return }
+            fieldFocused = true
+        }
+        // The field takes the tap itself, so this is what starts editing:
+        // getting focus clears the old route and Lenny's error, leaving a
+        // clean field to type in.
+        .onChange(of: fieldFocused) { _, focused in
+            guard focused, failed, !isEditingRoute else { return }
+            isEditingRoute = true
+            draft = ""
+        }
+        // The route is in the field when a search fails.
+        .onChange(of: failed) { _, isFailed in
+            if isFailed {
+                draft = lenny.itineraryText
+                isEditingRoute = false
+            }
+        }
+    }
+
+    /// Searches again with the edited route.
+    private func retry() {
+        let route = draft.trimmingCharacters(in: .whitespaces)
+        guard !route.isEmpty else { return }
+        fieldFocused = false
+        showsPlan = false
+        isEditingRoute = false
+        lenny.start(route)
     }
 
     // MARK: - The plan
