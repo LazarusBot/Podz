@@ -12,13 +12,15 @@ struct LennyReply: View {
     let message: String?
     /// The face on the avatar.
     var mood: LennyMood = .working
+    /// Off when Lenny's mark is already on screen and the bubble speaks from it.
+    var showsAvatar = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var typed = ""
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            avatar
+            if showsAvatar { avatar }
             bubble
         }
         .frame(maxWidth: .infinity, alignment: .leading)

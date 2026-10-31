@@ -126,7 +126,7 @@ struct MinimalPodDetailView: View {
                 .padding(.top, isExtended ? Self.thumbnailTop : 0)
                 .onTapGesture { if isExtended { toggleExtended() } }
 
-                // The same Lenny, over the top of the photo on the stack.
+                // The same Lenny, over the photo on the stack, speaking from its badge.
                 if !isExtended {
                     LennyHutGuide(
                         pod: pod,
@@ -136,7 +136,9 @@ struct MinimalPodDetailView: View {
                         inStack: true
                     )
                     .padding(.horizontal, 24)
-                    .padding(.top, Self.thumbnailTop)
+                    // Above the pager dots and the Lenny badge, which it speaks
+                    // from.
+                    .frame(width: proxy.size.width, height: stackPhotoHeight - 62, alignment: .bottom)
                     // Only the bubble takes the tap, so the photo still swipes
                     // around it.
                     .onTapGesture { toggleExtended() }

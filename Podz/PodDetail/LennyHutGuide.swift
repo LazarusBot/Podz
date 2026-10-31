@@ -30,6 +30,18 @@ enum PodDetailSection: String, CaseIterable, Hashable {
     }
 }
 
+/// A small triangle pointing down, under a bubble.
+private struct BubbleTail: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
 /// What Lenny says as you read down the page: a word on the section that's
 /// on screen, from what the data says (rules on the device, like
 /// `LennyTripTips`), and the one thing to do next. It never states what it
@@ -57,7 +69,17 @@ struct LennyHutGuide: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            LennyReply(message: message, mood: .idle)
+            LennyReply(message: message, mood: .idle, showsAvatar: !inStack)
+                // On the stack the bubble speaks from the Lenny badge on the
+                // photo below it: a small tail points down to it.
+                .overlay(alignment: .bottom) {
+                    if inStack {
+                        BubbleTail()
+                            .fill(Color.homePill)
+                            .frame(width: 18, height: 9)
+                            .offset(y: 8)
+                    }
+                }
 
             if let action {
                 Button(action: action.run) {
