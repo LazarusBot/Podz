@@ -5,8 +5,8 @@
 
 alter table pods add column if not exists is_active boolean not null default true;
 
--- For now: France only.
-update pods set is_active = (country = 'France');
+-- For now: France, plus every partner hut (bookable in the app), wherever it is.
+update pods set is_active = (country = 'France' or listing_status = 'partner');
 
 -- Later, to open another country (or everything):
 --   update pods set is_active = true where country = 'Italy';
