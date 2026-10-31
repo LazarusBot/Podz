@@ -69,7 +69,8 @@ struct HomeTallCard: View {
 /// One lead photo and two smaller ones, a single block: a region reads as a
 /// place. Names sit on the photos on the same flat scrim as every photo tile.
 struct HomeMosaic: View {
-    /// The lead first, then the two smaller; fewer than three isn't a mosaic.
+    /// The lead first, then one or two smaller (a single one takes the whole
+    /// side); fewer than two isn't a mosaic.
     let pods: [Pod]
     let photoURLs: [UUID: String]
     let zoomNamespace: Namespace.ID
@@ -87,9 +88,13 @@ struct HomeMosaic: View {
 
             HStack(spacing: gap) {
                 tile(pods[0], width: lead, height: proxy.size.height, radius: 32, large: true)
-                VStack(spacing: gap) {
-                    tile(pods[1], width: side, height: smallHeight, radius: 26, large: false)
-                    tile(pods[2], width: side, height: smallHeight, radius: 26, large: false)
+                if pods.count >= 3 {
+                    VStack(spacing: gap) {
+                        tile(pods[1], width: side, height: smallHeight, radius: 26, large: false)
+                        tile(pods[2], width: side, height: smallHeight, radius: 26, large: false)
+                    }
+                } else {
+                    tile(pods[1], width: side, height: proxy.size.height, radius: 32, large: false)
                 }
             }
         }

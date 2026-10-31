@@ -10,7 +10,7 @@ struct HomeSection: Identifiable {
         case hero
         /// Tall cards with the altitude on the photo (`HomeTallCard`).
         case tall
-        /// One lead photo and two small ones (`HomeMosaic`): needs three pods.
+        /// One lead photo and one or two small ones (`HomeMosaic`): needs two pods.
         case mosaic
     }
 
@@ -30,7 +30,8 @@ struct HomeSection: Identifiable {
         var mosaics: [HomeSection] = []
         var heroes: [HomeSection] = []
 
-        let highest = pods.filter { ($0.altitudeM ?? 0) > 0 }
+        // A hut above 6,000 m is a typo, not a hut.
+        let highest = pods.filter { (1...6_000).contains($0.altitudeM ?? 0) }
             .sorted { ($0.altitudeM ?? 0) > ($1.altitudeM ?? 0) }
         if highest.count >= 3 {
             tall.append(HomeSection(id: "highest", title: "Highest", pods: Array(highest.prefix(8)), layout: .tall))
@@ -44,16 +45,15 @@ struct HomeSection: Identifiable {
             })
         }
 
-        // The three busiest regions: a mosaic when there are three pods to
-        // make one, a carousel otherwise.
+        // The three busiest regions, each a mosaic.
         let regions = Dictionary(grouping: pods.filter { !($0.region ?? "").isEmpty }, by: { $0.region ?? "" })
             .filter { $0.value.count >= 2 }
             .sorted { ($0.value.count, $1.key) > ($1.value.count, $0.key) }
             .prefix(3)
         for (region, group) in regions {
             let ordered = group.sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }
-            let section = HomeSection(id: "region-\(region)", title: "In \(region)", pods: ordered, layout: ordered.count >= 3 ? .mosaic : .hero)
-            if section.layout == .mosaic { mosaics.append(section) } else { heroes.append(section) }
+            let section = HomeSection(id: "region-\(region)", title: "In \(region)", pods: ordered, layout: .mosaic)
+            mosaics.append(section)
         }
 
         // The two most common kinds of pod ("Refuges", "Cabins").
