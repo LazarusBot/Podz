@@ -110,6 +110,23 @@ struct MinimalPodDetailView: View {
                             .transition(.opacity)
                     }
 
+                    // Back from the hut: everything between the photo and Lenny
+                    // recedes into the ground, so only the pod's photo and the
+                    // bubble with the question stand out.
+                    if asksIfBooked {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .homeBackground.opacity(0), location: 0.42),
+                                .init(color: .homeBackground.opacity(0.94), location: 0.52),
+                                .init(color: .homeBackground.opacity(0.94), location: 1)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                    }
+
                     // Lenny's bubble sits where it does in Lenny's search and
                     // booking: just above the control stack.
                     if !isExtended {
