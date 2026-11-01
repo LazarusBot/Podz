@@ -82,8 +82,12 @@ struct MinimalPodDetailView: View {
                             // Everything between the photo and the buttons is one
                             // tap target: a tap anywhere here opens the sections.
                             VStack(spacing: 0) {
-                                titleBlock
-                                if isBooking {
+                                // Back from the hut, the page empties: only the
+                                // pod's photo and Lenny's question remain.
+                                if !asksIfBooked { titleBlock }
+                                if asksIfBooked {
+                                    EmptyView()
+                                } else if isBooking {
                                     // What's been decided so far, to change on its own.
                                     BookingChips(flow: activeBooking)
                                         .padding(.top, 14)
@@ -95,7 +99,7 @@ struct MinimalPodDetailView: View {
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .contentShape(Rectangle())
-                            .onTapGesture { if !isBooking { toggleExtended() } }
+                            .onTapGesture { if !isBooking && !asksIfBooked { toggleExtended() } }
                             .transition(Self.fadeIn)
 
                             // The buttons float over the page: keep their room.
@@ -108,23 +112,6 @@ struct MinimalPodDetailView: View {
                     if isExtended {
                         BottomFade()
                             .transition(.opacity)
-                    }
-
-                    // Back from the hut: everything between the photo and Lenny
-                    // recedes into the ground, so only the pod's photo and the
-                    // bubble with the question stand out.
-                    if asksIfBooked {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .homeBackground.opacity(0), location: 0.42),
-                                .init(color: .homeBackground.opacity(0.94), location: 0.52),
-                                .init(color: .homeBackground.opacity(0.94), location: 1)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
                     }
 
                     // Lenny's bubble sits where it does in Lenny's search and
@@ -141,29 +128,42 @@ struct MinimalPodDetailView: View {
                 }
                 .frame(width: proxy.size.width, height: proxy.size.height)
 
-                // One photo that is both: the big one with the rounded bottom
-                // and Lenny's badge, and the small rounded one beside the name.
-                // Its size, corners and place animate between the two.
-                // The pager keeps its full size and is *scaled* down, so its
-                // pages never re-layout mid-animation (that made the other
-                // photos flash past).
-                let thumbScale = Self.thumbnailSize / proxy.size.width
-                let scale = isExtended ? thumbScale : 1
+                // One photo, three places: the big one with the rounded bottom
+                // (the stack), a small rounded one beside the name (the page),
+                // and an inset rounded card (back from the hut: only the pod
+                // and Lenny's question). Its size, corners and place animate
+                // between them. The pager keeps its full size and is *scaled*
+                // inside a box that clips it, so its pages never re-layout
+                // mid-animation (that made the other photos flash past).
+                let width = proxy.size.width
+                let thumbScale = Self.thumbnailSize / width
+                let cardWidth = width - 2 * Self.cardMargin
+                let cardHeight = proxy.size.height * Self.cardHeightShare
+                let cardScale = cardHeight / stackPhotoHeight
+                let scale: CGFloat = isExtended ? thumbScale : (showsCard ? cardScale : 1)
+                let boxWidth: CGFloat = isExtended ? width * thumbScale : (showsCard ? cardWidth : width)
+                let boxHeight: CGFloat = isExtended ? stackPhotoHeight * thumbScale : (showsCard ? cardHeight : stackPhotoHeight)
+                let topRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 0)
+                let bottomRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 75)
                 DetailPhotoPager(
                     slots: photoURLs.map { Optional($0) },
                     pageIndex: $pageIndex,
-                    width: proxy.size.width,
+                    width: width,
                     height: stackPhotoHeight,
                     coordinate: pod.coordinate,
-                    topRadius: isExtended ? Self.thumbnailRadius / thumbScale : 0,
-                    bottomRadius: isExtended ? Self.thumbnailRadius / thumbScale : 75,
-                    showsBadge: !isExtended
+                    topRadius: 0,
+                    bottomRadius: 0,
+                    showsBadge: !isExtended && !showsCard
                 )
-                .scrollDisabled(isExtended)
-                .scaleEffect(scale, anchor: .topLeading)
-                .frame(width: proxy.size.width * scale, height: stackPhotoHeight * scale, alignment: .topLeading)
-                .padding(.leading, isExtended ? 24 : 0)
-                .padding(.top, isExtended ? Self.thumbnailTop : 0)
+                .scrollDisabled(isExtended || showsCard)
+                .scaleEffect(scale, anchor: .center)
+                .frame(width: boxWidth, height: boxHeight)
+                .clipShape(UnevenRoundedRectangle(
+                    topLeadingRadius: topRadius, bottomLeadingRadius: bottomRadius,
+                    bottomTrailingRadius: bottomRadius, topTrailingRadius: topRadius, style: .continuous
+                ))
+                .padding(.leading, isExtended ? 24 : (showsCard ? Self.cardMargin : 0))
+                .padding(.top, isExtended ? Self.thumbnailTop : (showsCard ? Self.thumbnailTop : 0))
                 .onTapGesture { if isExtended { toggleExtended() } }
             }
         }
@@ -186,7 +186,7 @@ struct MinimalPodDetailView: View {
         }
         // Back from the hut, something changed: the bubble and the pills
         // spring in, with a tap.
-        .animation(.spring(response: 0.5, dampingFraction: 0.72), value: asksIfBooked)
+        .animation(.smooth(duration: 0.6), value: asksIfBooked)
         .sensoryFeedback(.impact(weight: .medium), trigger: asksIfBooked) { _, asks in asks }
         // Back from the hut: the prompt is on the stack, so the page closes.
         .onChange(of: asksIfBooked) { _, asks in
@@ -301,12 +301,32 @@ struct MinimalPodDetailView: View {
             if isBooking {
                 LennyReply(message: activeBooking.replyMessage, mood: activeBooking.mood)
             } else if asksIfBooked {
-                // Back from the hut: the bubble pops up from its corner.
-                LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity),
-                        removal: .opacity
-                    ))
+                // Back from the hut: the question rises into place a beat after
+                // the photo has settled into its card.
+                VStack(alignment: .leading, spacing: 8) {
+                    LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
+                    Button { contactTracker.clear() } label: {
+                        HStack(spacing: 5) {
+                            Text("Not yet")
+                                .font(AppFont.regularLabel(13))
+                                .foregroundColor(.homeSubtitle)
+                                .underline(color: Color.homeSubtitle.opacity(0.5))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.homeSubtitle)
+                        }
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    // Lined up with the bubble's text, past the avatar.
+                    .padding(.leading, 38 + 18)
+                }
+                .transition(.asymmetric(
+                    insertion: AnyTransition.move(edge: .bottom).combined(with: .opacity)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.82).delay(0.3)),
+                    removal: .opacity
+                ))
             } else {
                 LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true)
 
@@ -342,6 +362,13 @@ struct MinimalPodDetailView: View {
     private static let thumbnailSize: CGFloat = 92
     private static let thumbnailRadius: CGFloat = 28
     private static let thumbnailTop: CGFloat = 64
+    /// Back from the hut: the photo is an inset card, 46 from the sides.
+    private static let cardMargin: CGFloat = 46
+    private static let cardRadius: CGFloat = 40
+    private static let cardHeightShare: CGFloat = 335 / 852
+
+    /// The prompt's layout: the photo as a card, nothing else but Lenny.
+    private var showsCard: Bool { asksIfBooked && !isExtended }
 
     /// The old content leaves quickly, the new arrives a beat later, so the
     /// photo's move is the thing you see.
@@ -394,24 +421,20 @@ struct MinimalPodDetailView: View {
             .padding(.horizontal, 40)
             .padding(.top, 24)
         } else if asksIfBooked {
-            // Back from the hut: did you book? Yes adds it to your list.
+            // Back from the hut: one answer to give. (Not yet is a caption under
+            // Lenny's question.)
             HStack(spacing: 13) {
                 // Leaving without answering counts as "not yet": no stale prompt later.
                 DetailBackButton { contactTracker.clear(); onBack() }
-                DetailTextButton(title: "Not yet") { contactTracker.clear() }
-                DetailTextButton(title: "Yes, add it", isHighlighted: true, action: startExternalBooking)
-                    // A beat after the bubble, the pill that answers it pulses once.
-                    .keyframeAnimator(initialValue: 1.0, trigger: asksIfBooked) { content, scale in
-                        content.scaleEffect(scale)
-                    } keyframes: { _ in
-                        LinearKeyframe(1.0, duration: 0.45)
-                        SpringKeyframe(1.07, duration: 0.18)
-                        SpringKeyframe(1.0, spring: .bouncy)
-                    }
+                DetailTextButton(title: "Yes, I booked it", isHighlighted: true, action: startExternalBooking)
             }
             .padding(.horizontal, 40)
             .padding(.top, 24)
-            .transition(.scale(scale: 0.94).combined(with: .opacity))
+            .transition(.asymmetric(
+                insertion: AnyTransition.move(edge: .bottom).combined(with: .opacity)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.82).delay(0.45)),
+                removal: .opacity
+            ))
         } else {
             HStack(spacing: 13) {
                 DetailBackButton(action: onBack)
