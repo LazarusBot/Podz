@@ -25,7 +25,7 @@ struct HomeTallCard: View {
                     .frame(width: Self.width, height: Self.photoHeight)
                     // The photo is drawn bigger than its frame: it must not take
                     // taps, or it steals them from the next card.
-                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate).allowsHitTesting(false) }
+                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate, pixelWidth: 480).allowsHitTesting(false) }
                     .overlay(alignment: .bottom) {
                         LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom)
                             .frame(height: 100)
@@ -113,7 +113,7 @@ struct HomeMosaic: View {
                 .frame(width: width, height: height)
                 // The photo is drawn bigger than its tile: it must not take
                 // taps, or it steals them from the tile next to it.
-                .overlay { PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate).allowsHitTesting(false) }
+                .overlay { PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate, pixelWidth: large ? 640 : 480).allowsHitTesting(false) }
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                         .frame(height: large ? 110 : 70)

@@ -50,6 +50,11 @@ actor MapSnapshotCache {
     func image(for coordinate: CLLocationCoordinate2D) async -> UIImage? {
         let key = String(format: "%.4f,%.4f", coordinate.latitude, coordinate.longitude)
         if let hit = cache[key] { return hit }
+        // Made on an earlier launch: no need to ask Maps again.
+        if let saved = Self.loadFromDisk(key) {
+            remember(saved, for: key)
+            return saved
+        }
 
         await acquire()
         defer { release() }
@@ -67,12 +72,34 @@ actor MapSnapshotCache {
             do {
                 let snapshot = try await MKMapSnapshotter(options: options).start()
                 remember(snapshot.image, for: key)
+                Self.saveToDisk(snapshot.image, key)
                 return snapshot.image
             } catch {
                 if attempt == 0 { try? await Task.sleep(nanoseconds: 600_000_000) }
             }
         }
         return nil
+    }
+
+    private static let directory: URL = {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let directory = caches.appendingPathComponent("PodzMapSnapshots", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }()
+
+    private static func file(_ key: String) -> URL {
+        directory.appendingPathComponent(key.replacingOccurrences(of: ",", with: "_") + ".jpg")
+    }
+
+    private static func loadFromDisk(_ key: String) -> UIImage? {
+        (try? Data(contentsOf: file(key))).flatMap(UIImage.init(data:))
+    }
+
+    private static func saveToDisk(_ image: UIImage, _ key: String) {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
+        let path = file(key)
+        Task.detached(priority: .utility) { try? data.write(to: path) }
     }
 
     private func remember(_ image: UIImage, for key: String) {
