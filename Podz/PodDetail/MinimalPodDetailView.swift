@@ -158,6 +158,9 @@ struct MinimalPodDetailView: View {
                 .scrollDisabled(isExtended || showsCard)
                 .scaleEffect(scale, anchor: .center)
                 .frame(width: boxWidth, height: boxHeight)
+                // In the card the pod keeps its name and altitude, on the flat
+                // scrim every photo tile uses.
+                .overlay(alignment: .bottomLeading) { cardCaption.opacity(showsCard ? 1 : 0) }
                 .clipShape(UnevenRoundedRectangle(
                     topLeadingRadius: topRadius, bottomLeadingRadius: bottomRadius,
                     bottomTrailingRadius: bottomRadius, topTrailingRadius: topRadius, style: .continuous
@@ -366,6 +369,26 @@ struct MinimalPodDetailView: View {
     private static let cardMargin: CGFloat = 46
     private static let cardRadius: CGFloat = 40
     private static let cardHeightShare: CGFloat = 335 / 852
+
+    /// The name and altitude on the card's photo, over a scrim at the bottom.
+    private var cardCaption: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(pod.name)
+                .font(AppFont.semiBoldLabel(20))
+                .lineLimit(2)
+            Text([pod.altitudeM.map { "\($0) m" }, pod.region ?? pod.country].compactMap { $0 }.joined(separator: " \u{00B7} "))
+                .font(AppFont.regularLabel(13))
+                .opacity(0.85)
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 22)
+        .padding(.bottom, 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .bottom) {
+            LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 130)
+        }
+    }
 
     /// The prompt's layout: the photo as a card, nothing else but Lenny.
     private var showsCard: Bool { asksIfBooked && !isExtended }
