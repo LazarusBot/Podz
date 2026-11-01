@@ -27,19 +27,75 @@ final class PodsStore: ObservableObject {
         Array(Set(pods.map { $0.country })).sorted()
     }
     
-    private init() {}
-    
+    /// The last good fetch on disk, so Home has pods to show the moment the app
+    /// opens while the real fetch runs.
+    nonisolated private static let cacheDirectory: URL = {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let directory = caches.appendingPathComponent("PodzCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }()
+    nonisolated private static var podsFile: URL { cacheDirectory.appendingPathComponent("pods.json") }
+    nonisolated private static var photosFile: URL { cacheDirectory.appendingPathComponent("primary-photos.json") }
+
+    /// A fetch already running is shared, and a recent good one is reused.
+    private var inFlight: Task<Bool, Never>?
+    private var lastFetch: Date?
+    private let freshFor: TimeInterval = 90
+
+    private init() {
+        Task { await loadDiskCache() }
+    }
+
+    private func loadDiskCache() async {
+        let cached = await Task.detached(priority: .userInitiated) { () -> ([Pod], [UUID: String])? in
+            guard let podsData = try? Data(contentsOf: Self.podsFile),
+                  let pods = try? JSONDecoder().decode([Pod].self, from: podsData) else { return nil }
+            let photos = (try? Data(contentsOf: Self.photosFile))
+                .flatMap { try? JSONDecoder().decode([UUID: String].self, from: $0) } ?? [:]
+            return (pods, photos)
+        }.value
+        // The real fetch may have won the race: never replace fresher data.
+        guard let cached, pods.isEmpty else { return }
+        pods = cached.0
+        primaryPhotoByPodId = cached.1
+    }
+
+    private func saveDiskCache(pods: [Pod], photos: [UUID: String]) {
+        Task.detached(priority: .utility) {
+            if let data = try? JSONEncoder().encode(pods) { try? data.write(to: Self.podsFile) }
+            if let data = try? JSONEncoder().encode(photos) { try? data.write(to: Self.photosFile) }
+        }
+    }
+
     /// Returns whether it succeeded — same reasoning as
     /// `ReservationsStore.fetchMine`'s own boolean return: `TripPassStore`
     /// needs to tell a real fetch failure apart from a genuinely empty
     /// result before it overwrites its own disk cache.
+    ///
+    /// Called from several places at launch (Home, the trip passes,
+    /// reservations): they now share one fetch, and a good one from the last
+    /// minute and a half is reused (`force` skips that).
     @discardableResult
-    func fetchPods() async -> Bool {
+    func fetchPods(force: Bool = false) async -> Bool {
+        if let inFlight { return await inFlight.value }
+        if !force, let lastFetch, Date().timeIntervalSince(lastFetch) < freshFor, !pods.isEmpty { return true }
+        let task = Task { await self.loadFromServer() }
+        inFlight = task
+        let ok = await task.value
+        inFlight = nil
+        if ok { lastFetch = Date() }
+        return ok
+    }
+
+    private func loadFromServer() async -> Bool {
         isLoading = true
         defer { isLoading = false }
         do {
+            // The photos are fetched alongside the pods, not after them.
+            async let photos = fetchPrimaryPhotos()
             // PostgREST returns at most 1,000 rows a request: read them page by
-            // page (the listed huts of Europe are many more than that).
+            // page.
             var all: [Pod] = []
             let pageSize = 1000
             while true {
@@ -55,29 +111,34 @@ final class PodsStore: ObservableObject {
                 all += page
                 if page.count < pageSize { break }
             }
+            let fetchedPhotos = await photos
             pods = all
-            await fetchPrimaryPhotos()
+            // A failed photo fetch keeps what's there (cards just show the
+            // placeholder or the satellite view).
+            if let fetchedPhotos { primaryPhotoByPodId = fetchedPhotos }
+            saveDiskCache(pods: all, photos: primaryPhotoByPodId)
             return true
         } catch {
             lastError = error.localizedDescription
             return false
         }
     }
-    
-    /// Loads just the first photo (position 0) per pod — enough for the
-    /// Home cards. The full carousel is fetched separately on the detail
-    /// screen, not needed for the list view.
-    private func fetchPrimaryPhotos() async {
+
+    /// Loads just the first photo (position 0) of each *active* pod (the join
+    /// leaves out the countries that are switched off) — enough for the Home
+    /// cards. The full carousel is fetched separately on the detail screen.
+    /// `nil` when it failed.
+    private func fetchPrimaryPhotos() async -> [UUID: String]? {
         do {
-            // Page by page: PostgREST returns at most 1,000 rows a request and
-            // there are more photos than that.
+            // Page by page: PostgREST returns at most 1,000 rows a request.
             var all: [PodPhotoRow] = []
             let pageSize = 1000
             while true {
                 let page: [PodPhotoRow] = try await supabase
                     .from("pod_photos")
-                    .select("pod_id, url, position")
+                    .select("pod_id, url, position, pods!inner(is_active)")
                     .eq("position", value: 0)
+                    .eq("pods.is_active", value: true)
                     .order("pod_id")
                     .range(from: all.count, to: all.count + pageSize - 1)
                     .execute()
@@ -85,14 +146,14 @@ final class PodsStore: ObservableObject {
                 all += page
                 if page.count < pageSize { break }
             }
-            primaryPhotoByPodId = all.reduce(into: [:]) { result, photo in
+            return all.reduce(into: [:]) { result, photo in
                 result[photo.podId] = photo.url  // last one wins, never crashes on duplicates
             }
         } catch {
-            // Non-fatal — cards just show the placeholder if this fails.
+            return nil
         }
     }
-    
+
     func pods(inCountry country: String) -> [Pod] {
         pods.filter { $0.country == country }
     }

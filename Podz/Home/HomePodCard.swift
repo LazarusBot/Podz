@@ -32,7 +32,7 @@ struct HomePodCard: View {
                     .aspectRatio(296.0 / 340.0, contentMode: .fit)
                     // The photo is drawn bigger than its frame (it fills it): it
                     // must not take taps, or it steals them from the next card.
-                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate).allowsHitTesting(false) }
+                    .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate, pixelWidth: 900).allowsHitTesting(false) }
                     .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
                     .contentShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
                     .podZoomSource(id: zoomID ?? AnyHashable(pod.id), in: zoomNamespace, cornerRadius: 36)
