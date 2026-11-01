@@ -7,6 +7,8 @@ struct MainTabView: View {
     @StateObject private var appearance = AppearanceState.shared
     @State private var selectedTab: TravelerTab = .feed
     @StateObject private var tabRouter = TabRouter.shared
+    @StateObject private var contactTracker = HutContactTracker.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Distance from the bar's bottom edge to the true screen edge —
     /// not from the system's own ~34pt home-indicator safe area.
@@ -67,6 +69,22 @@ struct MainTabView: View {
         // Home and Likes follow the system appearance; the other tabs have
         // no dark palette yet, so they (and the tab bar over them) stay
         // light — except a screen that has opted in (Profile's main one).
+        // Leaving the app to call or write to a hut, and coming back.
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background: contactTracker.appWentToBackground()
+            case .active: contactTracker.appBecameActive()
+            default: break
+            }
+        }
+        .onAppear { contactTracker.appBecameActive() }
+        // Back from a hut: Lenny asks on that hut's own page, so open it (Home,
+        // the pod's detail) if it isn't already. Nothing floats over the tabs.
+        .onChange(of: contactTracker.askNow) { _, asks in
+            guard asks, let podId = contactTracker.pendingPodId else { return }
+            selectedTab = .feed
+            DeepLinkRouter.shared.pendingPodId = podId
+        }
         // Keep the passes on the phone fresh, so they open with no signal.
         .task { await TripPassStore.shared.refreshFromServer() }
         // Something (Lenny's plan) asked Profile to open a page.

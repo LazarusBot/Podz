@@ -27,6 +27,9 @@ struct Reservation: Codable, Identifiable, Equatable {
     var guests: Int
     var status: String
     let createdAt: Date
+    /// "external" for a stay the traveler booked through the hut and added to
+    /// their list; nil or "podz" for a booking made in the app.
+    var source: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -37,7 +40,10 @@ struct Reservation: Codable, Identifiable, Equatable {
         case guests
         case status
         case createdAt = "created_at"
+        case source
     }
+
+    var isExternal: Bool { source == "external" }
 
     var isUpcoming: Bool {
         status == "confirmed" && (Self.date(from: checkOut) ?? .distantPast) >= Calendar.current.startOfDay(for: Date())
@@ -68,6 +74,9 @@ struct ReservationInsert: Codable {
     let checkIn: String
     let checkOut: String
     let guests: Int
+    /// Only sent for an external stay, so a plain booking works before
+    /// SQL/external_reservations.sql has been run.
+    var source: String?
 
     enum CodingKeys: String, CodingKey {
         case podId = "pod_id"
@@ -75,5 +84,6 @@ struct ReservationInsert: Codable {
         case checkIn = "check_in"
         case checkOut = "check_out"
         case guests
+        case source
     }
 }

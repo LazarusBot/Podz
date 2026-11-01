@@ -10,13 +10,13 @@ struct HutContactDialog: ViewModifier {
     func body(content: Content) -> some View {
         content.confirmationDialog("Book through \(pod.name)", isPresented: $isPresented, titleVisibility: .visible) {
             if let phone = clean(pod.phone), let url = URL(string: "tel:\(phone.filter { !$0.isWhitespace })") {
-                Button("Call \(phone)") { openURL(url) }
+                Button("Call \(phone)") { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
             if let email = clean(pod.email), let url = URL(string: "mailto:\(email)?subject=Booking%20request") {
-                Button("Email \(email)") { openURL(url) }
+                Button("Email \(email)") { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
             if let link = clean(pod.bookingURL) ?? clean(pod.website), let url = Self.webURL(link) {
-                Button(clean(pod.bookingURL) != nil ? "Open the booking page" : "Open the website") { openURL(url) }
+                Button(clean(pod.bookingURL) != nil ? "Open the booking page" : "Open the website") { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
             Button("Cancel", role: .cancel) {}
         } message: {

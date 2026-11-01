@@ -23,6 +23,12 @@ final class BookingFlow: ObservableObject {
         case failed(String)
     }
 
+    /// A booking made in the app, or a stay the traveler booked through the hut
+    /// and is adding to their list.
+    enum Mode {
+        case reserve, external
+    }
+
     struct QuickReply {
         let title: String
         let action: () -> Void
@@ -32,6 +38,7 @@ final class BookingFlow: ObservableObject {
 
     let entries: [LennySummaryView.Entry]
     let request: LennyRequest?
+    let mode: Mode
     /// The pod's live free beds when it's a single pod, so the guest picker's
     /// ceiling is what the server will accept.
     @Published var liveBedsAvailable: Int?
@@ -60,9 +67,10 @@ final class BookingFlow: ObservableObject {
     private var bookedPodIDs: Set<UUID> = []
     private let reservationsStore = ReservationsStore.shared
 
-    init(entries: [LennySummaryView.Entry], request: LennyRequest? = nil) {
+    init(entries: [LennySummaryView.Entry], request: LennyRequest? = nil, mode: Mode = .reserve) {
         self.entries = entries
         self.request = request
+        self.mode = mode
         applyRequest()
     }
 
@@ -136,7 +144,7 @@ final class BookingFlow: ObservableObject {
 
     /// Only partner huts are booked in the app; a listed one is booked through
     /// the hut itself.
-    var bookableCount: Int { entries.filter(\.pod.isBookable).count }
+    var bookableCount: Int { mode == .external ? entries.count : entries.filter(\.pod.isBookable).count }
 
     private var listedNote: String? {
         let listed = entries.filter { !$0.pod.isBookable }.map(\.pod.name)
@@ -298,6 +306,8 @@ final class BookingFlow: ObservableObject {
         }
         return switch status {
         case .booking: nil
+        case .booked where mode == .external:
+            "Added! It's in your reservations, as booked with the hut. Have a great stay."
         case .booked:
             "Booked! \(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), all set.\(listedNote.map { " " + $0 } ?? "")"
         case .failed(let message): message
@@ -315,7 +325,10 @@ final class BookingFlow: ObservableObject {
                 } else {
                     "How many nights per stop?"
                 }
-            case .review: "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?\(listedNote.map { " " + $0 } ?? "")"
+            case .review:
+                mode == .external
+                    ? "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I add it to your reservations?"
+                    : "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?\(listedNote.map { " " + $0 } ?? "")"
             }
         }
     }
@@ -329,10 +342,10 @@ final class BookingFlow: ObservableObject {
         Task {
             // A beat of typing dots, so it reads as Lenny doing it.
             try? await Task.sleep(nanoseconds: 700_000_000)
-            for (index, entry) in entries.enumerated() where entry.pod.isBookable && !bookedPodIDs.contains(entry.pod.id) {
+            for (index, entry) in entries.enumerated() where (mode == .external || entry.pod.isBookable) && !bookedPodIDs.contains(entry.pod.id) {
                 let checkIn = date(forStop: index)
                 let checkOut = shifted(checkIn, by: nightsFor(index))
-                let success = await reservationsStore.create(podId: entry.pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests)
+                let success = await reservationsStore.create(podId: entry.pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests, source: mode == .external ? "external" : nil)
                 guard success else {
                     let booked = bookedPodIDs.count
                     let started = booked == 0 ? "" : "I booked \(booked) of \(bookableCount). "
