@@ -42,7 +42,7 @@ struct BookingControlStack: View {
         case (.booked, _):
             DetailTextButton(title: "View reservations", isHighlighted: true, action: onViewReservations)
         case (.booking, _):
-            DetailTextButton(title: "Reserving…", action: {})
+            DetailTextButton(title: flow.mode == .external ? "Adding…" : "Reserving…", action: {})
                 .disabled(true)
                 .opacity(0.45)
         case (_, .guests):
@@ -52,7 +52,7 @@ struct BookingControlStack: View {
         case (_, .nights):
             DetailTextButton(title: flow.nightsConfirmed ? flow.nightsText : "Add nights") { flow.isPicking = true }
         case (_, .review):
-            DetailTextButton(title: "Reserve", isHighlighted: true, action: flow.reserve)
+            DetailTextButton(title: flow.mode == .external ? "Add to my list" : "Reserve", isHighlighted: true, action: flow.reserve)
         }
     }
 

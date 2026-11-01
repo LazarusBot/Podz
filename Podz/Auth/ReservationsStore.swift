@@ -112,7 +112,7 @@ final class ReservationsStore: ObservableObject {
     /// Returns whether it succeeded — the caller (ReservationSheet) uses
     /// this to decide whether to show its confirmation state, same
     /// boolean-return shape as `AuthManager.resetPassword`.
-    func create(podId: UUID, checkIn: Date, checkOut: Date, guests: Int) async -> Bool {
+    func create(podId: UUID, checkIn: Date, checkOut: Date, guests: Int, source: String? = nil) async -> Bool {
         guard let userId = AuthManager.shared.session?.user.id else { return false }
         lastError = nil
 
@@ -125,7 +125,8 @@ final class ReservationsStore: ObservableObject {
                         userId: userId,
                         checkIn: Reservation.string(from: checkIn),
                         checkOut: Reservation.string(from: checkOut),
-                        guests: guests
+                        guests: guests,
+                        source: source
                     )
                 )
                 .select()

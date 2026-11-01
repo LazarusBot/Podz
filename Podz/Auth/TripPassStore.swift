@@ -68,7 +68,8 @@ final class TripPassStore: ObservableObject {
     func refresh(reservations: [Reservation], pods: [Pod], photosByPodId: [UUID: String]) {
         let podsById = Dictionary(uniqueKeysWithValues: pods.map { ($0.id, $0) })
         passes = reservations
-            .filter { $0.isUpcoming }
+            // A stay booked through the hut has no Podz pass to scan.
+            .filter { $0.isUpcoming && !$0.isExternal }
             .compactMap { reservation -> TripPass? in
                 guard let pod = podsById[reservation.podId] else { return nil }
                 return TripPass(

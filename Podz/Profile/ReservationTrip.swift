@@ -24,6 +24,7 @@ struct ReservationTrip: Identifiable {
         var groups: [[Reservation]] = []
         for reservation in reservations.sorted(by: { ($0.checkIn, $0.createdAt) < ($1.checkIn, $1.createdAt) }) {
             if let last = groups.last?.last,
+               !last.isExternal, !reservation.isExternal,
                last.checkOut == reservation.checkIn,
                last.guests == reservation.guests,
                abs(reservation.createdAt.timeIntervalSince(last.createdAt)) < 120 {

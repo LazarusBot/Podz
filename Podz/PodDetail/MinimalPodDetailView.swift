@@ -26,6 +26,10 @@ struct MinimalPodDetailView: View {
     /// bubble turn into its questions (`BookingFlow`).
     @State private var isBooking = false
     @StateObject private var booking: BookingFlow
+    /// The same questions, to add a stay booked through the hut to the list.
+    @StateObject private var externalBooking: BookingFlow
+    @State private var isExternalFlow = false
+    @ObservedObject private var contactTracker = HutContactTracker.shared
     @State private var showHutContact = false
     @State private var showFolderPicker = false
     @ObservedObject private var likesStore = LikesStore.shared
@@ -38,6 +42,7 @@ struct MinimalPodDetailView: View {
         let seed = PodsStore.shared.primaryPhotoByPodId[pod.id]
         _photoURLs = State(initialValue: seed.map { [$0] } ?? [])
         _booking = StateObject(wrappedValue: BookingFlow(entries: [Self.bookingEntry(for: pod)]))
+        _externalBooking = StateObject(wrappedValue: BookingFlow(entries: [Self.bookingEntry(for: pod)], mode: .external))
     }
 
     var body: some View {
@@ -80,7 +85,7 @@ struct MinimalPodDetailView: View {
                                 titleBlock
                                 if isBooking {
                                     // What's been decided so far, to change on its own.
-                                    BookingChips(flow: booking)
+                                    BookingChips(flow: activeBooking)
                                         .padding(.top, 14)
                                 } else {
                                     keyFacts
@@ -161,6 +166,14 @@ struct MinimalPodDetailView: View {
             }
             liveBedsAvailable = fetchedBeds
             booking.liveBedsAvailable = fetchedBeds
+        }
+        // Back from the hut: the prompt is on the stack, so the page closes.
+        .onChange(of: asksIfBooked) { _, asks in
+            if asks { withAnimation(.smooth(duration: 0.45)) { isExtended = false } }
+        }
+        // "Yes" was answered on Home: go straight to the dates.
+        .onAppear {
+            if contactTracker.accepted, contactTracker.pendingPodId == pod.id, !pod.isBookable { startExternalBooking() }
         }
     }
 
@@ -269,7 +282,9 @@ struct MinimalPodDetailView: View {
     private var stackLenny: some View {
         VStack(alignment: .leading, spacing: 8) {
             if isBooking {
-                LennyReply(message: booking.replyMessage, mood: booking.mood)
+                LennyReply(message: activeBooking.replyMessage, mood: activeBooking.mood)
+            } else if asksIfBooked {
+                LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
             } else {
                 LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true)
 
@@ -347,13 +362,22 @@ struct MinimalPodDetailView: View {
             // Lenny's booking controls take the whole row (like and Book step
             // aside until it's done).
             BookingControlStack(
-                flow: booking,
+                flow: activeBooking,
                 onLeave: leaveBooking,
                 onViewReservations: {
                     TabRouter.shared.showsReservationsRequested = true
                     onBack()
                 }
             )
+            .padding(.horizontal, 40)
+            .padding(.top, 24)
+        } else if asksIfBooked {
+            // Back from the hut: did you book? Yes adds it to your list.
+            HStack(spacing: 13) {
+                DetailBackButton(action: onBack)
+                DetailTextButton(title: "Not yet") { contactTracker.clear() }
+                DetailTextButton(title: "Yes, add it", isHighlighted: true, action: startExternalBooking)
+            }
             .padding(.horizontal, 40)
             .padding(.top, 24)
         } else {
@@ -376,8 +400,27 @@ struct MinimalPodDetailView: View {
 
     // MARK: - Booking
 
+    private var activeBooking: BookingFlow { isExternalFlow ? externalBooking : booking }
+
+    /// Back from contacting this listed hut, and Lenny hasn't been answered yet.
+    private var asksIfBooked: Bool {
+        !pod.isBookable && !isBooking && contactTracker.askNow && contactTracker.pendingPodId == pod.id
+    }
+
+    /// "Yes, I booked it": the same questions, then the stay goes on the list.
+    private func startExternalBooking() {
+        contactTracker.clear()
+        externalBooking.restart()
+        isExternalFlow = true
+        withAnimation(.smooth(duration: 0.45)) {
+            isExtended = false
+            isBooking = true
+        }
+    }
+
     /// Book: the page steps back to the stack and Lenny starts asking.
     private func startBooking() {
+        isExternalFlow = false
         booking.restart()
         withAnimation(.smooth(duration: 0.45)) {
             isExtended = false
@@ -388,6 +431,8 @@ struct MinimalPodDetailView: View {
     private func leaveBooking() {
         withAnimation(.smooth(duration: 0.35)) { isBooking = false }
         booking.restart()
+        externalBooking.restart()
+        isExternalFlow = false
     }
 
     // MARK: - Expand / collapse

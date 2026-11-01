@@ -7,6 +7,8 @@ struct MainTabView: View {
     @StateObject private var appearance = AppearanceState.shared
     @State private var selectedTab: TravelerTab = .feed
     @StateObject private var tabRouter = TabRouter.shared
+    @StateObject private var contactTracker = HutContactTracker.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Distance from the bar's bottom edge to the true screen edge —
     /// not from the system's own ~34pt home-indicator safe area.
@@ -26,6 +28,14 @@ struct MainTabView: View {
                     }
                 }
                 .ignoresSafeArea(edges: .bottom)
+
+                // Back from contacting a listed hut: did you book it?
+                if contactTracker.askNow, let pod = PodsStore.shared.pods.first(where: { $0.id == contactTracker.pendingPodId }) {
+                    bookedPrompt(for: pod)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 130)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
 
                 if !tabBarVisibility.isHidden {
                     MinimalTabBar(selected: $selectedTab)
@@ -61,12 +71,22 @@ struct MainTabView: View {
                 }
             }
         }
+        .animation(.smooth(duration: 0.35), value: contactTracker.askNow)
         .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)
         .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())
         // Home and Likes follow the system appearance; the other tabs have
         // no dark palette yet, so they (and the tab bar over them) stay
         // light — except a screen that has opted in (Profile's main one).
+        // Leaving the app to call or write to a hut, and coming back.
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background: contactTracker.appWentToBackground()
+            case .active: contactTracker.appBecameActive()
+            default: break
+            }
+        }
+        .onAppear { contactTracker.appBecameActive() }
         // Keep the passes on the phone fresh, so they open with no signal.
         .task { await TripPassStore.shared.refreshFromServer() }
         // Something (Lenny's plan) asked Profile to open a page.
@@ -78,6 +98,40 @@ struct MainTabView: View {
             if requested { selectedTab = .feed }
         }
         .preferredColorScheme(selectedTab == .feed || selectedTab == .likes || appearance.followsSystem ? nil : .light)
+    }
+}
+
+extension MainTabView {
+    /// Lenny, above the tab bar, asking whether the hut was booked.
+    private func bookedPrompt(for pod: Pod) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
+            HStack(spacing: 22) {
+                promptCaption("Yes, add it") {
+                    contactTracker.accept()
+                    DeepLinkRouter.shared.pendingPodId = pod.id
+                    selectedTab = .feed
+                }
+                promptCaption("Not yet") { contactTracker.clear() }
+            }
+            // Lined up with the bubble's text, past the avatar.
+            .padding(.leading, 38 + 18)
+        }
+    }
+
+    private func promptCaption(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Text(title)
+                    .underline(color: Color.homeSubtitle.opacity(0.5))
+                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+            }
+            .font(AppFont.regularLabel(13))
+            .foregroundColor(.homeSubtitle)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

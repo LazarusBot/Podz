@@ -185,7 +185,10 @@ struct PodDetailSections: View {
             .overlay(alignment: .top) { Rectangle().fill(Color.homeText.opacity(0.08)).frame(height: 1) }
 
             if let url {
-                Button { openURL(url) } label: { content }.buttonStyle(.plain)
+                Button {
+                    HutContactTracker.shared.didContact(pod)
+                    openURL(url)
+                } label: { content }.buttonStyle(.plain)
             } else {
                 content
             }
