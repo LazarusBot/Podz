@@ -29,17 +29,6 @@ struct MainTabView: View {
                 }
                 .ignoresSafeArea(edges: .bottom)
 
-                // Back from contacting a listed hut: did you book it?
-                if contactTracker.askNow, let pod = PodsStore.shared.pods.first(where: { $0.id == contactTracker.pendingPodId }) {
-                    bookedPrompt(for: pod)
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 130)
-                        .transition(.asymmetric(
-                            insertion: .scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity).combined(with: .move(edge: .bottom)),
-                            removal: .opacity
-                        ))
-                }
-
                 if !tabBarVisibility.isHidden {
                     MinimalTabBar(selected: $selectedTab)
                         // 24, not 18 — matches this app's actual spacing
@@ -74,8 +63,6 @@ struct MainTabView: View {
                 }
             }
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.72), value: contactTracker.askNow)
-        .sensoryFeedback(.impact(weight: .medium), trigger: contactTracker.askNow) { _, asks in asks }
         .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)
         .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())
@@ -91,6 +78,13 @@ struct MainTabView: View {
             }
         }
         .onAppear { contactTracker.appBecameActive() }
+        // Back from a hut: Lenny asks on that hut's own page, so open it (Home,
+        // the pod's detail) if it isn't already. Nothing floats over the tabs.
+        .onChange(of: contactTracker.askNow) { _, asks in
+            guard asks, let podId = contactTracker.pendingPodId else { return }
+            selectedTab = .feed
+            DeepLinkRouter.shared.pendingPodId = podId
+        }
         // Keep the passes on the phone fresh, so they open with no signal.
         .task { await TripPassStore.shared.refreshFromServer() }
         // Something (Lenny's plan) asked Profile to open a page.
@@ -102,40 +96,6 @@ struct MainTabView: View {
             if requested { selectedTab = .feed }
         }
         .preferredColorScheme(selectedTab == .feed || selectedTab == .likes || appearance.followsSystem ? nil : .light)
-    }
-}
-
-extension MainTabView {
-    /// Lenny, above the tab bar, asking whether the hut was booked.
-    private func bookedPrompt(for pod: Pod) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
-            HStack(spacing: 22) {
-                promptCaption("Yes, add it") {
-                    contactTracker.accept()
-                    DeepLinkRouter.shared.pendingPodId = pod.id
-                    selectedTab = .feed
-                }
-                promptCaption("Not yet") { contactTracker.clear() }
-            }
-            // Lined up with the bubble's text, past the avatar.
-            .padding(.leading, 38 + 18)
-        }
-    }
-
-    private func promptCaption(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Text(title)
-                    .underline(color: Color.homeSubtitle.opacity(0.5))
-                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-            }
-            .font(AppFont.regularLabel(13))
-            .foregroundColor(.homeSubtitle)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 

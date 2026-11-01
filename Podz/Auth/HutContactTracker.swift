@@ -16,9 +16,6 @@ final class HutContactTracker: ObservableObject {
     @Published private(set) var pendingPodId: UUID?
     /// Lenny should ask now: the traveler is back.
     @Published private(set) var askNow = false
-    /// The traveler said yes from Home's prompt: the pod opens and the dates
-    /// are asked straight away.
-    @Published private(set) var accepted = false
 
     private var leftTheApp = false
     private let defaults = UserDefaults.standard
@@ -48,9 +45,6 @@ final class HutContactTracker: ObservableObject {
         defaults.set(Date(), forKey: dateKey)
     }
 
-    /// "Yes, I booked it", answered away from the hut's own page.
-    func accept() { accepted = true }
-
     func appWentToBackground() {
         if pendingPodId != nil { leftTheApp = true }
     }
@@ -65,7 +59,6 @@ final class HutContactTracker: ObservableObject {
     func clear() {
         pendingPodId = nil
         askNow = false
-        accepted = false
         leftTheApp = false
         defaults.removeObject(forKey: podKey)
         defaults.removeObject(forKey: dateKey)

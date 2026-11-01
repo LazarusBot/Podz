@@ -192,10 +192,6 @@ struct MinimalPodDetailView: View {
         .onChange(of: asksIfBooked) { _, asks in
             if asks { withAnimation(.smooth(duration: 0.45)) { isExtended = false } }
         }
-        // "Yes" was answered on Home: go straight to the dates.
-        .onAppear {
-            if contactTracker.accepted, contactTracker.pendingPodId == pod.id, !pod.isBookable { startExternalBooking() }
-        }
     }
 
     /// This pod as the one stop of a Lenny booking.
@@ -400,7 +396,8 @@ struct MinimalPodDetailView: View {
         } else if asksIfBooked {
             // Back from the hut: did you book? Yes adds it to your list.
             HStack(spacing: 13) {
-                DetailBackButton(action: onBack)
+                // Leaving without answering counts as "not yet": no stale prompt later.
+                DetailBackButton { contactTracker.clear(); onBack() }
                 DetailTextButton(title: "Not yet") { contactTracker.clear() }
                 DetailTextButton(title: "Yes, add it", isHighlighted: true, action: startExternalBooking)
                     // A beat after the bubble, the pill that answers it pulses once.
