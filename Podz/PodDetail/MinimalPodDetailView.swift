@@ -167,6 +167,10 @@ struct MinimalPodDetailView: View {
             liveBedsAvailable = fetchedBeds
             booking.liveBedsAvailable = fetchedBeds
         }
+        // Back from the hut, something changed: the bubble and the pills
+        // spring in, with a tap.
+        .animation(.spring(response: 0.5, dampingFraction: 0.72), value: asksIfBooked)
+        .sensoryFeedback(.impact(weight: .medium), trigger: asksIfBooked) { _, asks in asks }
         // Back from the hut: the prompt is on the stack, so the page closes.
         .onChange(of: asksIfBooked) { _, asks in
             if asks { withAnimation(.smooth(duration: 0.45)) { isExtended = false } }
@@ -284,7 +288,12 @@ struct MinimalPodDetailView: View {
             if isBooking {
                 LennyReply(message: activeBooking.replyMessage, mood: activeBooking.mood)
             } else if asksIfBooked {
+                // Back from the hut: the bubble pops up from its corner.
                 LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity),
+                        removal: .opacity
+                    ))
             } else {
                 LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true)
 
@@ -377,9 +386,18 @@ struct MinimalPodDetailView: View {
                 DetailBackButton(action: onBack)
                 DetailTextButton(title: "Not yet") { contactTracker.clear() }
                 DetailTextButton(title: "Yes, add it", isHighlighted: true, action: startExternalBooking)
+                    // A beat after the bubble, the pill that answers it pulses once.
+                    .keyframeAnimator(initialValue: 1.0, trigger: asksIfBooked) { content, scale in
+                        content.scaleEffect(scale)
+                    } keyframes: { _ in
+                        LinearKeyframe(1.0, duration: 0.45)
+                        SpringKeyframe(1.07, duration: 0.18)
+                        SpringKeyframe(1.0, spring: .bouncy)
+                    }
             }
             .padding(.horizontal, 40)
             .padding(.top, 24)
+            .transition(.scale(scale: 0.94).combined(with: .opacity))
         } else {
             HStack(spacing: 13) {
                 DetailBackButton(action: onBack)

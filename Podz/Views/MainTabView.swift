@@ -34,7 +34,10 @@ struct MainTabView: View {
                     bookedPrompt(for: pod)
                         .padding(.horizontal, 24)
                         .padding(.bottom, 130)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity).combined(with: .move(edge: .bottom)),
+                            removal: .opacity
+                        ))
                 }
 
                 if !tabBarVisibility.isHidden {
@@ -71,7 +74,8 @@ struct MainTabView: View {
                 }
             }
         }
-        .animation(.smooth(duration: 0.35), value: contactTracker.askNow)
+        .animation(.spring(response: 0.5, dampingFraction: 0.72), value: contactTracker.askNow)
+        .sensoryFeedback(.impact(weight: .medium), trigger: contactTracker.askNow) { _, asks in asks }
         .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)
         .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
         .background(Color.appHomeBackground.ignoresSafeArea())
