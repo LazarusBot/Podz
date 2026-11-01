@@ -76,21 +76,22 @@ struct MinimalPodDetailView: View {
                                 .transition(Self.fadeIn)
                         } else {
                             // Room for the photo, which is drawn on top of the
-                            // content so it can shrink into the thumbnail.
-                            Color.clear.frame(height: stackPhotoHeight)
+                            // content so it can shrink into the thumbnail (or
+                            // sit as a card, which leaves a little less).
+                            Color.clear.frame(height: showsCard ? Self.thumbnailTop + proxy.size.height * Self.cardHeightShare + 20 : stackPhotoHeight)
 
                             // Everything between the photo and the buttons is one
                             // tap target: a tap anywhere here opens the sections.
                             VStack(spacing: 0) {
                                 // Back from the hut, the page empties: only the
                                 // pod's photo and Lenny's question remain.
-                                if !asksIfBooked { titleBlock }
+                                if !asksIfBooked && !isBookingExternal { titleBlock }
                                 if asksIfBooked {
                                     EmptyView()
                                 } else if isBooking {
                                     // What's been decided so far, to change on its own.
                                     BookingChips(flow: activeBooking)
-                                        .padding(.top, 14)
+                                        .padding(.top, isBookingExternal ? 0 : 14)
                                 } else {
                                     keyFacts
                                     stackChips
@@ -391,7 +392,12 @@ struct MinimalPodDetailView: View {
     }
 
     /// The prompt's layout: the photo as a card, nothing else but Lenny.
-    private var showsCard: Bool { asksIfBooked && !isExtended }
+    private var showsCard: Bool { (asksIfBooked || isBookingExternal) && !isExtended }
+
+    /// Adding a stay booked through the hut: the questions keep the card's
+    /// layout, so the whole moment looks the same from "Did you book it?" to
+    /// "Added!".
+    private var isBookingExternal: Bool { isBooking && isExternalFlow }
 
     /// The old content leaves quickly, the new arrives a beat later, so the
     /// photo's move is the thing you see.
