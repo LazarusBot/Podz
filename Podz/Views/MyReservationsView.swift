@@ -27,6 +27,8 @@ struct MyReservationsView: View {
     @State private var selectedPass: TripPass?
     /// Which of Lenny's tips is showing.
     @State private var tipIndex = 0
+    /// The stay that was just added: it pops and glows for a moment.
+    @State private var highlightedId: UUID?
 
     private var upcoming: [ReservationTrip] {
         ReservationTrip.group(reservationsStore.reservations.filter { $0.isUpcoming })
@@ -86,6 +88,7 @@ struct MyReservationsView: View {
                 .padding(.bottom, DetailLayout.controlStackGap + ScreenInsets.bottom + 83 + 10)
         }
         .task { await tripPassStore.refreshFromServer() }
+        .onAppear { highlightNewStay() }
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
         }
@@ -111,6 +114,22 @@ struct MyReservationsView: View {
                  : (pendingCancellation.first?.isExternal == true
                     ? "This only removes it from your list. To cancel the stay itself, tell the hut."
                     : "This can't be undone — you'll need to reserve again if you change your mind."))
+        }
+    }
+
+    // MARK: - A new stay
+
+    /// Coming here after adding or booking a stay: it pops in with a tap and a
+    /// soft glow, then settles back (about a second).
+    private func highlightNewStay() {
+        guard let id = reservationsStore.lastAddedId else { return }
+        reservationsStore.lastAddedId = nil
+        Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) { highlightedId = id }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            try? await Task.sleep(nanoseconds: 1_100_000_000)
+            withAnimation(.easeOut(duration: 0.7)) { highlightedId = nil }
         }
     }
 
@@ -226,6 +245,13 @@ struct MyReservationsView: View {
 
             ForEach(Array(trip.stays.enumerated()), id: \.element.id) { index, stay in
                 stayRow(stay, number: trip.isPlannedWithLenny ? index + 1 : nil, isLast: index == trip.stays.count - 1)
+                    // A stay that was just added pops and glows, then settles.
+                    .background(
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            .fill(Color.homeText.opacity(highlightedId == stay.id ? 0.08 : 0))
+                            .padding(.horizontal, 12)
+                    )
+                    .scaleEffect(highlightedId == stay.id ? 1.03 : 1)
             }
 
             cancelCaption(trip.isPlannedWithLenny ? "Cancel trip" : (trip.stays[0].isExternal ? "Remove" : "Cancel"))

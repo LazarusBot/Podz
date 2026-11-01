@@ -31,6 +31,8 @@ final class ReservationsStore: ObservableObject {
     /// batch-fetch-only-what's-missing pattern as `PostsStore.profilesById`.
     @Published private(set) var profilesById: [UUID: Profile] = [:]
     @Published var lastError: String?
+    /// The stay just added, so the Reservations page can show that it's new.
+    @Published var lastAddedId: UUID?
     /// Transient "+1" badge on the Pods tab — a self-clearing
     /// confirmation, not a persistent unread-style count, since there's nothing ongoing to
     /// track here (just "a reservation was made, go look").
@@ -134,6 +136,7 @@ final class ReservationsStore: ObservableObject {
                 .execute()
                 .value
             reservations.append(inserted)
+            lastAddedId = inserted.id
             return true
         } catch {
             lastError = error.localizedDescription
