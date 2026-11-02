@@ -45,11 +45,25 @@ struct MinimalHomeView: View {
     /// are found by searching, the shelves and Lenny.
     private func rebuildShelves() {
         tonightPods = podsStore.pods.filter(\.isBookable)
-        discovery = HomeSection.discovery(from: podsStore.pods)
+        // The shelves lead with the huts that are well documented, and the
+        // hand-picked ones get a shelf of their own.
+        let photoIDs = photoIDs
+        let worthy = podsStore.pods.filter { PodQuality.isShelfWorthy($0, hasPhoto: photoIDs.contains($0.id)) }
+        var sections = HomeSection.discovery(from: worthy)
+        let picked = PodQuality.ranked(podsStore.pods.filter { $0.featured == true }, photoIDs: photoIDs)
+        if picked.count >= 3 {
+            sections.insert(HomeSection(id: "featured", title: "Hand-picked", pods: Array(picked.prefix(10))), at: 0)
+        }
+        discovery = sections
         updateSearch()
     }
 
-    /// Partner huts first, then the listed ones, each by name.
+    /// The pods that have a photo.
+    private var photoIDs: Set<UUID> {
+        Set(podsStore.primaryPhotoByPodId.filter { !$0.value.isEmpty }.keys)
+    }
+
+    /// Partner huts first, then the best documented, then by name.
     private func updateSearch() {
         let text = query.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else {
@@ -61,7 +75,7 @@ struct MinimalHomeView: View {
                 || pod.country.localizedCaseInsensitiveContains(text)
                 || (pod.region?.localizedCaseInsensitiveContains(text) ?? false)
         }
-        searchResults = found.filter(\.isBookable) + found.filter { !$0.isBookable }
+        searchResults = PodQuality.ranked(found, photoIDs: photoIDs)
     }
 
     var body: some View {
@@ -129,6 +143,7 @@ struct MinimalHomeView: View {
             rebuildShelves()
             resolveDeepLink()
         }
+        .onChange(of: podsStore.primaryPhotoByPodId) { _, _ in rebuildShelves() }
         .onChange(of: query) { _, _ in updateSearch() }
         .onChange(of: router.lennyRequested) { _, requested in
             if requested { openLenny() }
