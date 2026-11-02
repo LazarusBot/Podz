@@ -364,8 +364,8 @@ private func altitude(atScreenY y: CGFloat, reading: LadderReading, low: Int, hi
     return Int(altitude.rounded())
 }
 
-/// The ruler: thin ticks down the right edge, a longer one every 100 m and the
-/// longest every 500 m. They slide with the page, and swell where the reading
+/// The ruler: thin ticks down the right edge, one every 10 m, a longer one every
+/// 50 and 100 m and the longest every 500 m. They slide with the page, and swell where the reading
 /// is, like a dial.
 private struct LadderRuler: View {
     @ObservedObject var reading: LadderReading
@@ -382,23 +382,24 @@ private struct LadderRuler: View {
                 let offset = reading.offset
                 let span = CGFloat(max(high - low, 1))
                 let usable = railHeight - railMargin * 2
-                var level = (low / 50 + 1) * 50
+                var level = (low / 10 + 1) * 10
                 while level < high {
                     let y = headerHeight + railMargin + (1 - (CGFloat(level) - CGFloat(low)) / span) * usable - offset
                     if y > -10 && y < size.height + 10 {
                         let major = level % 500 == 0
                         let medium = level % 100 == 0
-                        let base: CGFloat = major ? 16 : (medium ? 10 : 5)
+                        let half = level % 50 == 0
+                        let base: CGFloat = major ? 18 : (medium ? 12 : (half ? 7 : 3.5))
                         // Swells within 110 pt of the reading.
                         let near = max(0, 1 - abs(y - readingY) / 110)
                         let length = base + near * near * 14
-                        let opacity = (major ? 0.34 : (medium ? 0.22 : 0.13)) + Double(near) * 0.3
+                        let opacity = (major ? 0.36 : (medium ? 0.25 : (half ? 0.16 : 0.1))) + Double(near) * 0.3
                         var path = Path()
                         path.move(to: CGPoint(x: size.width - 14 - length, y: y))
                         path.addLine(to: CGPoint(x: size.width - 14, y: y))
                         context.stroke(path, with: .color(Color.homeText.opacity(min(opacity, 0.9))), lineWidth: 1)
                     }
-                    level += 50
+                    level += 10
                 }
         }
         .allowsHitTesting(false)
