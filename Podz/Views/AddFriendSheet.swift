@@ -45,7 +45,7 @@ struct AddFriendSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.homeSubtitle)
-                TextField("Search by username", text: $query)
+                TextField(tr("Search by username"), text: $query)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
             }

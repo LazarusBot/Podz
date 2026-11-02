@@ -118,13 +118,13 @@ struct LennySearchScreen: View {
     @ViewBuilder
     private var title: some View {
         if lenny.phase == .results {
-            Text(foundTitle)
+            T(foundTitle)
                 .transition(.blurReplace)
         } else {
             TimelineView(.periodic(from: .now, by: 0.45)) { context in
                 let shownDots = reduceMotion ? 3 : Int(context.date.timeIntervalSinceReferenceDate / 0.45) % 4
-                (0..<3).reduce(Text("Lenny is searching")) { text, index in
-                    text + Text(".").foregroundColor(index < shownDots ? .homeText : .clear)
+                (0..<3).reduce(T("Lenny is searching")) { text, index in
+                    text + T(".").foregroundColor(index < shownDots ? .homeText : .clear)
                 }
             }
             .transition(.blurReplace)
@@ -186,7 +186,7 @@ struct LennySearchScreen: View {
                 TextField(
                     "",
                     text: $draft,
-                    prompt: Text("Chamonix to Zermatt in 5 days").foregroundColor(.homeSubtitleOnInverse)
+                    prompt: T("Chamonix to Zermatt in 5 days").foregroundColor(.homeSubtitleOnInverse)
                 )
                 .font(AppFont.regularLabel(16))
                 .foregroundColor(.homeBackground)

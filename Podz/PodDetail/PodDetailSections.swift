@@ -76,7 +76,7 @@ struct PodDetailSections: View {
             DetailSection("On site") { FacilityChips(facilities: facilities, isCentered: false) }
         } else if !pod.isBookable {
             DetailSection("On site") {
-                Text("Facilities aren't listed. Ask the hut before you go.")
+                T("Facilities aren't listed. Ask the hut before you go.")
                     .font(AppFont.regularLabel(15))
                     .foregroundColor(.homeSubtitle)
             }
@@ -88,7 +88,7 @@ struct PodDetailSections: View {
             VStack(spacing: 0) {
                 row("Beds", bedsText)
                 row("Price", pod.priceText ?? (pod.isBookable ? nil : "Set by the hut"))
-                row("Open", hutClean(pod.openingHours) ?? (pod.isBookable ? nil : "Ask the hut"))
+                row("Opening", hutClean(pod.openingHours) ?? (pod.isBookable ? nil : "Ask the hut"))
                 row("Booking", pod.isBookable ? "In Podz" : "Through the hut")
                 row("Offline", OfflinePackStore.shared.isSaved(pod.id) ? "Saved on this phone" : nil)
             }
@@ -107,7 +107,7 @@ struct PodDetailSections: View {
                             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Directions to \(pod.name)")
+                    .accessibilityLabel(tr("Directions to \(pod.name)"))
 
                     if let address = hutClean(pod.address) {
                         Text(address)
@@ -166,11 +166,11 @@ struct PodDetailSections: View {
     private func row(_ label: String, _ value: String?, opens url: URL? = nil) -> some View {
         if let value, !value.isEmpty {
             let content = HStack(spacing: 12) {
-                Text(label)
+                T(label)
                     .font(AppFont.regularLabel(16))
                     .foregroundColor(.homeText)
                 Spacer(minLength: 12)
-                Text(value)
+                T(value)
                     .font(AppFont.regularLabel(16))
                     .foregroundColor(.homeSubtitle)
                     .lineLimit(1)
@@ -197,7 +197,7 @@ struct PodDetailSections: View {
     }
 
     private func note(_ text: String) -> some View {
-        Text(text)
+        T(text)
             .font(AppFont.regularLabel(13))
             .foregroundColor(.homeSubtitle)
     }
@@ -207,7 +207,7 @@ struct PodDetailSections: View {
     private func caption(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                Text(title).underline()
+                T(title).underline()
                 Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
             }
             .font(AppFont.regularLabel(13))
@@ -235,7 +235,7 @@ private struct DetailSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title)
+            T(title)
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
             content()

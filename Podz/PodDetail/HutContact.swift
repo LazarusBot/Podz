@@ -8,19 +8,19 @@ struct HutContactDialog: ViewModifier {
     @Environment(\.openURL) private var openURL
 
     func body(content: Content) -> some View {
-        content.confirmationDialog("Book through \(pod.name)", isPresented: $isPresented, titleVisibility: .visible) {
+        content.confirmationDialog(tr("Book through \(pod.name)"), isPresented: $isPresented, titleVisibility: .visible) {
             if let phone = clean(pod.phone), let url = URL(string: "tel:\(phone.filter { !$0.isWhitespace })") {
-                Button("Call \(phone)") { HutContactTracker.shared.didContact(pod); openURL(url) }
+                Button(tr("Call \(phone)")) { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
             if let email = clean(pod.email), let url = URL(string: "mailto:\(email)?subject=Booking%20request") {
-                Button("Email \(email)") { HutContactTracker.shared.didContact(pod); openURL(url) }
+                Button(tr("Email \(email)")) { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
             if let link = clean(pod.bookingURL) ?? clean(pod.website), let url = Self.webURL(link) {
                 Button(clean(pod.bookingURL) != nil ? "Open the booking page" : "Open the website") { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(tr("Cancel"), role: .cancel) {}
         } message: {
-            Text("This hut takes bookings itself. Mention the dates and how many of you there are.")
+            T("This hut takes bookings itself. Mention the dates and how many of you there are.")
         }
     }
 

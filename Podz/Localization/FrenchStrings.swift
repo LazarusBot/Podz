@@ -1,0 +1,281 @@
+import SwiftUI
+
+/// The app in French. Every sentence the app writes is English in the code; when
+/// the app's language is French (the phone's language, or Podz's own in
+/// Settings), `tr` swaps it for its French twin. The sentences Lenny builds
+/// (with numbers and names inside) are matched by *templates*: `{}` stands for
+/// whatever is there ("{} beds" -> "{1} lits"), translated in turn, so "2 nights
+/// for 3 guests, from Sat 7 Nov" is found piece by piece.
+///
+/// Tone: "tu" (hikers talk like that), Lenny too.
+enum FrenchStrings {
+    /// The app is showing French.
+    static let isActive: Bool = Bundle.main.preferredLocalizations.first == "fr"
+
+    /// The French for `text`, or `text` itself (another language, or nothing to
+    /// say for it).
+    static func translate(_ text: String) -> String {
+        guard isActive, !text.isEmpty else { return text }
+        if let hit = exact[text] { return hit }
+        for template in templates {
+            guard let captures = template.match(text) else { continue }
+            return template.fill(captures.map { translate($0) })
+        }
+        return text
+    }
+
+    // MARK: - Templates
+
+    private struct Template {
+        let regex: NSRegularExpression
+        let french: String
+
+        init?(_ english: String, _ french: String) {
+            var pattern = "^"
+            var rest = Substring(english)
+            while let open = rest.range(of: "{}") {
+                pattern += NSRegularExpression.escapedPattern(for: String(rest[..<open.lowerBound])) + "(.+?)"
+                rest = rest[open.upperBound...]
+            }
+            pattern += NSRegularExpression.escapedPattern(for: String(rest)) + "$"
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else { return nil }
+            self.regex = regex
+            self.french = french
+        }
+
+        func match(_ text: String) -> [String]? {
+            let range = NSRange(text.startIndex..., in: text)
+            guard let m = regex.firstMatch(in: text, range: range) else { return nil }
+            return (1..<m.numberOfRanges).compactMap { Range(m.range(at: $0), in: text).map { String(text[$0]) } }
+        }
+
+        /// The French with the captures put in: `{}` in order, or `{2}` by number.
+        func fill(_ captures: [String]) -> String {
+            var result = ""
+            var next = 0
+            var rest = Substring(french)
+            while let open = rest.range(of: "{") , let close = rest[open.upperBound...].firstIndex(of: "}") {
+                result += rest[..<open.lowerBound]
+                let key = rest[open.upperBound..<close]
+                let index = Int(key).map { $0 - 1 } ?? next
+                if key.isEmpty { next += 1 }
+                result += captures.indices.contains(index) ? captures[index] : ""
+                rest = rest[rest.index(after: close)...]
+            }
+            return result + rest
+        }
+    }
+
+    /// Longest (most specific) first.
+    private static let templates: [Template] = pairs
+        .filter { $0.0.contains("{}") }
+        .sorted { $0.0.count > $1.0.count }
+        .compactMap { Template($0.0, $0.1) }
+
+    private static let exact: [String: String] = Dictionary(
+        pairs.filter { !$0.0.contains("{}") }.map { ($0.0, $0.1) },
+        uniquingKeysWith: { first, _ in first }
+    )
+
+    // MARK: - The words
+
+    private static let pairs: [(String, String)] = [
+        // Units
+        ("{} guest", "{1} personne"), ("{} guests", "{1} personnes"),
+        ("{} night", "{1} nuit"), ("{} nights", "{1} nuits"),
+        ("{} bed", "{1} lit"), ("{} beds", "{1} lits"),
+        ("{} stay", "{1} séjour"), ("{} stays", "{1} séjours"),
+        ("{} pod", "{1} refuge"), ("{} pods", "{1} refuges"),
+        ("{} hut", "{1} refuge"), ("{} huts", "{1} refuges"),
+        ("{} friends", "{1} amis"), ("{} likes", "{1} favoris"),
+        ("{} day", "{1} jour"), ("{} days", "{1} jours"), ("from {}", "à partir du {1}"),
+        (" ({})", " ({1})"), ("{} · {}", "{1} · {2}"), ("{} · {} · {}", "{1} · {2} · {3}"),
+        ("{} night per stop", "{1} nuit par étape"), ("{} nights per stop", "{1} nuits par étape"),
+        ("{} per stop", "{1} par étape"),
+        ("{} free now", "{1} libres"),
+        ("{} · {} free now", "{1} · {2} libres"),
+        ("{} m altitude", "{1} m d'altitude"),
+        ("{} / night", "{1} / nuit"),
+        ("guest", "personne"), ("guests", "personnes"), ("night", "nuit"), ("nights", "nuits"),
+        ("night per stop", "nuit par étape"), ("nights per stop", "nuits par étape"),
+
+        // Months (Closed until June)
+        ("January", "janvier"), ("February", "février"), ("March", "mars"), ("April", "avril"),
+        ("May", "mai"), ("June", "juin"), ("July", "juillet"), ("August", "août"),
+        ("September", "septembre"), ("October", "octobre"), ("November", "novembre"), ("December", "décembre"),
+        ("Open now", "Ouvert"), ("Closed until {}", "Fermé jusqu'en {1}"),
+
+        // Tabs, titles
+        ("Home", "Accueil"), ("Likes", "Favoris"), ("Profile", "Profil"),
+        ("Where to tonight?", "Où ce soir ?"), ("Available tonight", "Disponibles ce soir"),
+        ("See all", "Tout voir"), ("Search a region", "Chercher une région"),
+        ("Ask Lenny to find it", "Demande à Lenny de le trouver"),
+        ("Describe your trip and Lenny finds the pods", "Décris ton séjour et Lenny trouve les refuges"),
+        ("Chamonix to Zermatt in 5 days", "De Chamonix à Zermatt en 5 jours"),
+        ("No pods available yet.", "Aucun refuge disponible pour le moment."),
+        ("No pods match “{}”.", "Aucun refuge ne correspond à « {1} »."),
+        ("Hand-picked", "Sélection"), ("Highest", "Les plus hauts"), ("Room for groups", "Pour les groupes"),
+        ("In {}", "En {1}"), ("Refuges", "Refuges"), ("Cabins", "Cabanes"),
+
+        // Pod detail
+        ("Book", "Réserver"), ("Book through the hut", "Réserver auprès du refuge"),
+        ("Book through {}", "Réserver auprès de {1}"),
+        ("Back", "Retour"), ("Add to likes", "Ajouter aux favoris"), ("Remove from likes", "Retirer des favoris"),
+        ("Details", "Détails"), ("Not yet", "Pas encore"), ("Yes, I booked it", "Oui, j'ai réservé"),
+        ("Welcome back! Did you book {} with the hut?", "Te revoilà ! As-tu réservé {1} auprès du refuge ?"),
+        ("Price at the hut", "Prix au refuge"), ("Unverified", "Non vérifié"), ("Unverified listing", "Fiche non vérifiée"),
+        ("About", "À propos"), ("On site", "Sur place"), ("Good to know", "Bon à savoir"),
+        ("Getting there", "Pour y aller"), ("Contact", "Contact"), ("About this listing", "À propos de cette fiche"),
+        ("Beds", "Lits"), ("Price", "Prix"), ("Set by the hut", "Fixé par le refuge"), ("Opening", "Ouverture"),
+        ("Ask the hut", "Demande au refuge"), ("Booking", "Réservation"), ("In Podz", "Dans Podz"),
+        ("Through the hut", "Auprès du refuge"), ("Offline", "Hors ligne"), ("Saved on this phone", "Enregistré sur ce téléphone"),
+        ("Directions", "Itinéraire"), ("Directions to {}", "Itinéraire vers {1}"),
+        ("Facilities aren't listed. Ask the hut before you go.", "Les équipements ne sont pas indiqués. Demande au refuge avant de partir."),
+        ("Information © OpenStreetMap contributors. Not checked by Podz.", "Informations © contributeurs OpenStreetMap. Non vérifiées par Podz."),
+        ("Listed hut. Not checked by Podz.", "Refuge référencé. Non vérifié par Podz."),
+        ("Photo: {}", "Photo : {1}"),
+        ("Phone", "Téléphone"), ("Email", "E-mail"), ("Website", "Site web"),
+        ("Call {}", "Appeler {1}"), ("Email {}", "Écrire à {1}"),
+        ("Open the booking page", "Ouvrir la page de réservation"), ("Open the website", "Ouvrir le site web"),
+        ("Cancel", "Annuler"), ("Done", "Terminé"), ("OK", "OK"),
+        ("This hut takes bookings itself. Mention the dates and how many of you there are.", "Ce refuge prend lui-même ses réservations. Indique les dates et combien vous êtes."),
+        ("Reservation required", "Réservation obligatoire"), ("Meals", "Repas"), ("Showers", "Douches"),
+        ("Drinking water", "Eau potable"), ("Electricity", "Électricité"), ("Wi-Fi", "Wi-Fi"), ("Heating", "Chauffage"),
+        ("Toilets", "Toilettes"), ("Winter room", "Local d'hiver"), ("Self-catering", "Cuisine en autonomie"),
+        ("Dogs welcome", "Chiens acceptés"), ("Wheelchair access", "Accès fauteuil roulant"),
+
+        // Lenny on the pod
+        ("{} free tonight. Tell me your dates and I'll book it.", "{1} libres ce soir. Dis-moi tes dates et je réserve."),
+        ("{} bed", "{1} lit"),
+        ("Full tonight. Another date may work: tell me when and I'll check.", "Complet ce soir. Une autre date peut marcher : dis-moi quand et je regarde."),
+        ("You can book this hut right here. Tell me your dates.", "Tu peux réserver ce refuge ici. Dis-moi tes dates."),
+        ("Open {}. Call ahead, as huts fill up.", "Ouvert {1}. Appelle avant, les refuges se remplissent vite."),
+        ("This hut takes bookings itself. Tap Book through the hut to reach it.", "Ce refuge prend lui-même ses réservations. Touche Réserver auprès du refuge pour le contacter."),
+        ("I have no way to reach this hut from here. Check it's open before you set off.", "Je n'ai aucun moyen de joindre ce refuge d'ici. Vérifie qu'il est ouvert avant de partir."),
+        ("Bookable right here in Podz.", "Réservable ici, dans Podz."),
+        ("Details come from OpenStreetMap: confirm with the hut.", "Les infos viennent d'OpenStreetMap : confirme auprès du refuge."),
+        ("Nothing listed: ask the hut what it offers.", "Rien d'indiqué : demande au refuge ce qu'il propose."),
+        ("Reserve first: it doesn't take walk-ups.", "Réserve d'abord : pas d'arrivée sans réservation."),
+        ("On site: {}.", "Sur place : {1}."),
+        ("At {} m it's cold, even in summer: bring a warm layer.", "À {1} m il fait froid, même l'été : prends une couche chaude."),
+        ("Pick your dates and Book.", "Choisis tes dates et réserve."),
+        ("Opening dates and prices: ask the hut.", "Dates d'ouverture et prix : demande au refuge."),
+        ("Save the map offline: there's often no signal up there.", "Enregistre la carte hors ligne : il n'y a souvent pas de réseau là-haut."),
+        ("Happy with it? Tap Book.", "Ça te va ? Touche Réserver."),
+        ("Contact the hut to book a bed.", "Contacte le refuge pour réserver un lit."),
+        ("No contact listed. Check it's open before you go.", "Aucun contact indiqué. Vérifie qu'il est ouvert avant d'y aller."),
+        ("Volunteers edit OpenStreetMap, so details can be out of date.", "OpenStreetMap est édité par des bénévoles : les infos peuvent être périmées."),
+        ("Next", "Suivant"), ("Top", "Haut"), ("Contact the hut", "Contacter le refuge"),
+
+        // Booking flow
+        ("Add guest", "Ajouter des personnes"), ("Add date", "Ajouter une date"), ("Add nights", "Ajouter des nuits"),
+        ("Add to my list", "Ajouter à ma liste"), ("Adding…", "Ajout…"), ("Reserve", "Réserver"), ("Reserving…", "Réservation…"),
+        ("View reservations", "Voir les réservations"), ("Back to plan", "Retour au plan"), ("Continue", "Continuer"),
+        ("Fewer guests", "Moins de personnes"), ("More guests", "Plus de personnes"),
+        ("Fewer nights", "Moins de nuits"), ("More nights", "Plus de nuits"),
+        ("Day earlier", "Un jour plus tôt"), ("Day later", "Un jour plus tard"),
+        ("{}. Change", "{1}. Modifier"),
+        ("Start date, {}. Opens the calendar", "Date de début, {1}. Ouvre le calendrier"),
+        ("Set each stop", "Choisir pour chaque étape"), ("Same for every stop", "Pareil pour chaque étape"), ("Previous stop", "Étape précédente"),
+        ("How many of you are going?", "Combien êtes-vous ?"),
+        ("And when do you arrive?", "Et quand arrives-tu ?"), ("And when do you start?", "Et quand pars-tu ?"),
+        ("And for how many nights?", "Et pour combien de nuits ?"),
+        ("How many nights per stop?", "Combien de nuits par étape ?"),
+        ("How many nights at {}?", "Combien de nuits à {1} ?"), ("And at {}?", "Et à {1} ?"),
+        ("I'd say {} per stop. Does that work?", "Je dirais {1} par étape. Ça te va ?"),
+        ("{} for {}, from {}. Shall I book it?", "{1} pour {2}, à partir du {3}. Je réserve ?"),
+        ("{} for {}, from {}. Shall I book it? {}", "{1} pour {2}, à partir du {3}. Je réserve ? {4}"),
+        ("{} for {}, from {}. Shall I add it to your reservations?", "{1} pour {2}, à partir du {3}. Je l'ajoute à tes réservations ?"),
+        ("Booked! {} for {}, all set.", "Réservé ! {1} pour {2}, c'est bon."),
+        ("Booked! {} for {}, all set. {}", "Réservé ! {1} pour {2}, c'est bon. {3}"),
+        ("Added! It's in your reservations, as booked with the hut. Have a great stay.", "Ajouté ! C'est dans tes réservations, réservé auprès du refuge. Bon séjour."),
+        ("I booked {} of {}. {}", "J'ai réservé {1} sur {2}. {3}"),
+        ("I couldn't book {} for {}. It may be full, so try other dates.", "Je n'ai pas pu réserver {1} pour le {2}. Il est peut-être complet, essaie d'autres dates."),
+        ("{} is listed only, so book it through the hut.", "{1} est seulement référencé : réserve auprès du refuge."),
+        ("{} of the huts are listed only, so book them through the huts.", "{1} des refuges sont seulement référencés : réserve auprès des refuges."),
+        ("These huts take their bookings themselves. Open one to call, email or visit its site.", "Ces refuges prennent eux-mêmes leurs réservations. Ouvre-en un pour appeler, écrire ou voir son site."),
+        ("{} beds free tonight. Tap for the details.", "{1} lits libres ce soir. Touche pour les détails."),
+
+        // Lenny plan and search
+        ("Your plan", "Ton plan"), ("Check your plan", "Vérifie ton plan"), ("{} stops, one pod each", "{1} étapes, un refuge chacune"),
+        ("1 stop, one pod each", "1 étape, un refuge"), ("See summary", "Voir le résumé"), ("Lenny's pick", "Le choix de Lenny"),
+        ("{} · {} of {}", "{1} · {2} sur {3}"), ("Next stop: {}", "Étape suivante : {1}"), ("{} away", "à {1}"),
+        ("Listed  ·  book through the hut", "Référencé  ·  réserver auprès du refuge"),
+        ("View selected pods", "Voir les refuges choisis"), ("Lenny is searching", "Lenny cherche"),
+        ("No pods found", "Aucun refuge trouvé"), ("1 pod found", "1 refuge trouvé"), ("{} pods found", "{1} refuges trouvés"),
+        ("I couldn't find any pods on that route.", "Je n'ai trouvé aucun refuge sur cet itinéraire."),
+        ("I found 1 pod along your route{}. Want to take a look?", "J'ai trouvé 1 refuge sur ton itinéraire{1}. Tu veux voir ?"),
+        ("I found {} pods along your route{}. Want to take a look?", "J'ai trouvé {1} refuges sur ton itinéraire{2}. Tu veux voir ?"),
+        ("Reading your itinerary…", "Lecture de ton itinéraire…"), ("Spotting peaks and lakes…", "Repérage des sommets et des lacs…"),
+        ("Peeking into the huts…", "Un coup d'œil dans les refuges…"), ("Counting free beds…", "Comptage des lits libres…"),
+        ("Can take up to 2 minutes…", "Peut prendre jusqu'à 2 minutes…"), ("Asking the marmots for tips…", "On demande conseil aux marmottes…"),
+        ("Lacing up the boots…", "On lace les chaussures…"), ("Checking the sunrise views…", "Vérification des levers de soleil…"),
+        ("Packing one very small snack…", "On emballe un tout petit encas…"), ("Following the trail markers…", "On suit le balisage…"),
+
+        // Reservations
+        ("Reservations", "Réservations"), ("Plan with Lenny", "Planifier avec Lenny"), ("Upcoming", "À venir"), ("Past", "Passés"),
+        ("Cancel this trip?", "Annuler ce voyage ?"), ("Remove this stay?", "Retirer ce séjour ?"),
+        ("Cancel this reservation?", "Annuler cette réservation ?"), ("Keep it", "Garder"), ("Cancel trip", "Annuler le voyage"),
+        ("Remove", "Retirer"), ("Cancel reservation", "Annuler la réservation"),
+        ("This cancels all {} stays and can't be undone.", "Cela annule les {1} séjours, sans retour possible."),
+        ("This only removes it from your list. To cancel the stay itself, tell the hut.", "Cela ne fait que le retirer de ta liste. Pour annuler le séjour, préviens le refuge."),
+        ("This can't be undone — you'll need to reserve again if you change your mind.", "Impossible de revenir en arrière : il faudra réserver à nouveau si tu changes d'avis."),
+        ("Another tip", "Un autre conseil"), ("No trips yet", "Pas encore de voyage"),
+        ("Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you.", "Dis à Lenny où tu veux aller et pour combien de temps. Il trouve les refuges et planifie les séjours."),
+        ("Planned with Lenny", "Planifié avec Lenny"), ("Pod", "Refuge"), ("cancelled", "annulé"),
+        ("{}  ·  Booked with the hut", "{1}  ·  Réservé auprès du refuge"), ("{}  ·  Cancelled", "{1}  ·  Annulé"),
+        ("{}  ·  {}", "{1}  ·  {2}"), ("{}  ·  {}  ·  {}", "{1}  ·  {2}  ·  {3}"),
+        ("Booked with the hut", "Réservé auprès du refuge"), ("Cancelled", "Annulé"),
+        ("Starts today", "Commence aujourd'hui"), ("Starts tomorrow", "Commence demain"), ("Starts in {} days", "Commence dans {1} jours"),
+        ("Couldn't add to Wallet", "Impossible d'ajouter à Wallet"),
+        ("Copied", "Copié"), ("Confirmation code", "Code de confirmation"),
+        ("Saved on this phone. It opens without signal.", "Enregistré sur ce téléphone. Il s'ouvre sans réseau."),
+        ("View pod", "Voir le refuge"), ("Wallet isn't available on this device.", "Wallet n'est pas disponible sur cet appareil."),
+        ("Couldn't create your Wallet pass. Check your connection and try again.", "Impossible de créer ton pass Wallet. Vérifie ta connexion et réessaie."),
+
+        // Lenny trip tips
+        ("Your trip starts today. Have a great first night!", "Ton voyage commence aujourd'hui. Belle première nuit !"),
+        ("Your trip starts today. Have a great first night at {}!", "Ton voyage commence aujourd'hui. Belle première nuit à {1} !"),
+        ("Your trip starts tomorrow. Time to pack!", "Ton voyage commence demain. C'est l'heure de faire le sac !"),
+        ("Your trip starts in {} days: {}, {}.", "Ton voyage commence dans {1} jours : {2}, {3}."),
+        ("Your trip starts in {} days: {}, {}, beginning at {}.", "Ton voyage commence dans {1} jours : {2}, {3}, en commençant par {4}."),
+        (", beginning at {}", ", en commençant par {1}"),
+        ("Your highest night is at {} m. It gets cold up there, even in summer, so pack a warm layer, a hat and a headlamp.", "Ta nuit la plus haute est à {1} m. Il y fait froid, même l'été : prends une couche chaude, un bonnet et une frontale."),
+        ("You'll sleep as high as {} m. Evenings cool down fast, so keep a warm layer within reach.", "Tu dormiras jusqu'à {1} m. Les soirées se rafraîchissent vite : garde une couche chaude à portée de main."),
+        ("At {} m the evenings cool down fast. Keep a warm layer within reach.", "À {1} m les soirées se rafraîchissent vite. Garde une couche chaude à portée de main."),
+        ("Snow can linger on the trails at this time of year. Check the conditions before each leg and start early.", "La neige peut rester sur les sentiers à cette période. Vérifie les conditions avant chaque étape et pars tôt."),
+        ("Afternoon storms are common in summer. Aim to reach each hut by early afternoon.", "Les orages de l'après-midi sont fréquents l'été. Vise une arrivée au refuge en début d'après-midi."),
+        ("Mountain huts serve dinner at a set time. If you'll be late, let them know. A sleeping bag liner and earplugs help too.", "Les refuges servent le dîner à heure fixe. Si tu seras en retard, préviens-les. Un sac à viande et des bouchons d'oreilles aident aussi."),
+        ("Between stops, check the weather the evening before and keep a margin in your day.", "Entre les étapes, regarde la météo la veille et garde de la marge dans ta journée."),
+        ("With {} of you, pick one person to confirm arrival times with each hut.", "À {1}, choisissez une personne pour confirmer les heures d'arrivée avec chaque refuge."),
+        ("Tap a stay to see its pod again, and you can cancel the whole trip from here if plans change.", "Touche un séjour pour revoir son refuge, et annule tout le voyage d'ici si les plans changent."),
+
+        // Likes, folders, profile
+        ("Likes", "Favoris"), ("Delete folder?", "Supprimer le dossier ?"), ("Delete", "Supprimer"),
+        ("\"{}\" will be deleted, along with the likes inside it.", "« {1} » sera supprimé, ainsi que les favoris qu'il contient."),
+        ("Shared by {}", "Partagé par {1}"), ("by {}", "par {1}"),
+        ("No likes yet — tap the heart on a pod in your feed.", "Pas encore de favoris : touche le cœur sur un refuge de ton fil."),
+        ("Save to folder", "Enregistrer dans un dossier"), ("New folder", "Nouveau dossier"), ("Folder name", "Nom du dossier"),
+        ("Remove folder", "Retirer le dossier"), ("Share folder", "Partager le dossier"),
+        ("Share \"{}\"", "Partager « {1} »"),
+        ("Friends you turn on can view this folder, read-only.", "Les amis que tu actives peuvent voir ce dossier, en lecture seule."),
+        ("Add some friends first — nobody to share with yet.", "Ajoute d'abord des amis : personne avec qui partager pour l'instant."),
+        ("Couldn't update sharing", "Impossible de mettre à jour le partage"), ("Someone", "Quelqu'un"),
+        ("Edit profile", "Modifier le profil"), ("Friends", "Amis"), ("Login and security", "Connexion et sécurité"),
+        ("Accessibility", "Accessibilité"), ("Log out", "Se déconnecter"), ("Delete account", "Supprimer le compte"),
+        ("Delete your account?", "Supprimer ton compte ?"),
+        ("This permanently deletes your account, profile, and liked pods. This can't be undone.", "Cela supprime définitivement ton compte, ton profil et tes favoris. Impossible de revenir en arrière."),
+        ("Guest", "Invité"), ("{} friends · {} likes", "{1} amis · {2} favoris"),
+        ("Switch to host mode", "Passer en mode hôte"), ("Coming soon", "Bientôt"),
+        ("Switch to traveler mode", "Passer en mode voyageur"), ("Become a host", "Devenir hôte"),
+        ("Open", "Ouvrir"),
+        ("Booking request", "Demande de réservation"),
+        ("Search by username", "Chercher par nom d'utilisateur"),
+    ]
+}
+
+/// The French for an English sentence of the app (see `FrenchStrings`).
+func tr(_ text: String) -> String { FrenchStrings.translate(text) }
+
+/// `Text` that speaks the app's language: the French twin when there is one.
+func T(_ text: String) -> Text { Text(tr(text)) }

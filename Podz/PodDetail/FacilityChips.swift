@@ -10,7 +10,7 @@ struct FacilityChips: View {
     var body: some View {
         FlowLayout(spacing: 8, lineSpacing: 8, isCentered: isCentered) {
             ForEach(facilities, id: \.self) { facility in
-                Text(facility)
+                T(facility)
                     .font(AppFont.regularLabel(14))
                     .foregroundColor(.homeText)
                     .padding(.horizontal, 16)
@@ -25,13 +25,13 @@ struct FacilityChips: View {
 /// OpenStreetMap, nobody at Podz has checked it. A partner has no badge.
 struct UnverifiedBadge: View {
     var body: some View {
-        Text("Unverified")
+        T("Unverified")
             .font(AppFont.regularLabel(13))
             .foregroundColor(.homeSubtitle)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color.homePill, in: Capsule())
-            .accessibilityLabel("Unverified listing")
+            .accessibilityLabel(tr("Unverified listing"))
     }
 }
 
@@ -46,7 +46,7 @@ struct OpenStatusChip: View {
                 .fill(status.isOpen ? Color.homeText : Color.clear)
                 .overlay(Circle().strokeBorder(Color.homeSubtitle, lineWidth: status.isOpen ? 0 : 1.2))
                 .frame(width: 8, height: 8)
-            Text(status.label)
+            T(status.label)
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(status.isOpen ? .homeText : .homeSubtitle)
         }

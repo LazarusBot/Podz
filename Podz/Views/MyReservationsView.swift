@@ -100,19 +100,19 @@ struct MyReservationsView: View {
             TripPassView(pass: pass, onBack: { selectedPass = nil })
         }
         .alert(
-            pendingCancellation.count > 1 ? "Cancel this trip?" : (pendingCancellation.first?.isExternal == true ? "Remove this stay?" : "Cancel this reservation?"),
+            tr(pendingCancellation.count > 1 ? "Cancel this trip?" : (pendingCancellation.first?.isExternal == true ? "Remove this stay?" : "Cancel this reservation?")),
             isPresented: Binding(
                 get: { !pendingCancellation.isEmpty },
                 set: { if !$0 { pendingCancellation = [] } }
             )
         ) {
-            Button("Keep it", role: .cancel) {}
-            Button(pendingCancellation.count > 1 ? "Cancel trip" : (pendingCancellation.first?.isExternal == true ? "Remove" : "Cancel reservation"), role: .destructive) {
+            Button(tr("Keep it"), role: .cancel) {}
+            Button(tr(pendingCancellation.count > 1 ? "Cancel trip" : (pendingCancellation.first?.isExternal == true ? "Remove" : "Cancel reservation")), role: .destructive) {
                 let stays = pendingCancellation
                 Task { for stay in stays { await reservationsStore.cancel(stay) } }
             }
         } message: {
-            Text(pendingCancellation.count > 1
+            T(pendingCancellation.count > 1
                  ? "This cancels all \(pendingCancellation.count) stays and can't be undone."
                  : (pendingCancellation.first?.isExternal == true
                     ? "This only removes it from your list. To cancel the stay itself, tell the hut."
@@ -158,7 +158,7 @@ struct MyReservationsView: View {
                         withAnimation(.smooth(duration: 0.3)) { tipIndex = (tipIndex + 1) % tips.count }
                     } label: {
                         HStack(spacing: 5) {
-                            Text("Another tip")
+                            T("Another tip")
                                 .font(AppFont.regularLabel(13))
                                 .foregroundColor(.homeSubtitle)
                                 .underline(color: Color.homeSubtitle.opacity(0.5))
@@ -183,10 +183,10 @@ struct MyReservationsView: View {
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 14) {
             LennyAvatar(size: 40)
-            Text("No trips yet")
+            T("No trips yet")
                 .font(AppFont.semiBoldLabel(20))
                 .foregroundColor(.homeText)
-            Text("Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you.")
+            T("Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you.")
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(.homeSubtitle)
                 .lineSpacing(3)
@@ -209,7 +209,7 @@ struct MyReservationsView: View {
                         .font(AppFont.semiBoldLabel(16))
                         .foregroundColor(.homeText)
                         .lineLimit(1)
-                    Text("\(pass.rangeText)  ·  \(pass.nights) \(pass.nights == 1 ? "night" : "nights")")
+                    T("\(pass.rangeText)  ·  \(pass.nights) \(pass.nights == 1 ? "night" : "nights")")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)
@@ -231,14 +231,14 @@ struct MyReservationsView: View {
             if trip.isPlannedWithLenny {
                 HStack(spacing: 8) {
                     LennyAvatar(size: 22)
-                    Text("Planned with Lenny")
+                    T("Planned with Lenny")
                         .font(AppFont.semiBoldLabel(13))
                         .foregroundColor(.homeText)
                     Spacer()
                 }
                 .padding(.horizontal, 24)
 
-                Text("\(Reservation.rangeText(trip.checkIn, trip.checkOut))  ·  \(trip.nights) \(trip.nights == 1 ? "night" : "nights")  ·  \(trip.guests) \(trip.guests == 1 ? "guest" : "guests")")
+                T("\(Reservation.rangeText(trip.checkIn, trip.checkOut))  ·  \(trip.nights) \(trip.nights == 1 ? "night" : "nights")  ·  \(trip.guests) \(trip.guests == 1 ? "guest" : "guests")")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .padding(.horizontal, 24)
@@ -267,7 +267,7 @@ struct MyReservationsView: View {
     }
 
     private func cancelCaption(_ title: String) -> some View {
-        Text(title)
+        T(title)
             .font(AppFont.regularLabel(13))
             .foregroundColor(.appBadgeRed)
             .padding(.vertical, 10)
@@ -291,7 +291,7 @@ struct MyReservationsView: View {
             HStack(alignment: .top, spacing: 14) {
                 if let number {
                     VStack(spacing: 0) {
-                        Text("\(number)")
+                        T("\(number)")
                             .font(AppFont.semiBoldLabel(12))
                             .foregroundColor(.homeBackground)
                             .frame(width: 24, height: 24)
@@ -323,12 +323,12 @@ struct MyReservationsView: View {
                             .font(AppFont.semiBoldLabel(16))
                             .foregroundColor(.homeText)
                             .lineLimit(1)
-                        Text("\(Reservation.rangeText(reservation.checkIn, reservation.checkOut))  ·  \(reservation.nights) \(reservation.nights == 1 ? "night" : "nights")")
+                        T("\(Reservation.rangeText(reservation.checkIn, reservation.checkOut))  ·  \(reservation.nights) \(reservation.nights == 1 ? "night" : "nights")")
                             .font(AppFont.regularLabel(13))
                             .foregroundColor(.homeSubtitle)
                             .lineLimit(1)
                         if number == nil || reservation.status == "cancelled" {
-                            Text("\(reservation.guests) \(reservation.guests == 1 ? "guest" : "guests")" + (reservation.isExternal ? "  ·  Booked with the hut" : "") + (reservation.status == "cancelled" ? "  ·  Cancelled" : ""))
+                            T("\(reservation.guests) \(reservation.guests == 1 ? "guest" : "guests")" + (reservation.isExternal ? "  ·  Booked with the hut" : "") + (reservation.status == "cancelled" ? "  ·  Cancelled" : ""))
                                 .font(AppFont.regularLabel(12))
                                 .foregroundColor(reservation.status == "cancelled" ? .appBadgeRed : .homeSubtitle)
                         }

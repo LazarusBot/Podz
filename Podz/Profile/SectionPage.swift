@@ -43,7 +43,7 @@ struct SectionPage<Content: View, Trailing: View>: View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(title)
+                    T(title)
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(-0.6)
                         .foregroundColor(.homeText)
@@ -94,7 +94,7 @@ struct SectionHeading: View {
     let title: String
 
     var body: some View {
-        Text(title)
+        T(title)
             .font(AppFont.regularLabel(13))
             .foregroundColor(.homeSubtitle)
             .frame(maxWidth: .infinity, alignment: .leading)

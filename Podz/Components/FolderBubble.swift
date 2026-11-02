@@ -103,7 +103,7 @@ struct FolderBubble: View {
     @ViewBuilder
     private var label: some View {
         if let editableName {
-            TextField("Folder name", text: editableName)
+            TextField(tr("Folder name"), text: editableName)
                 .font(AppFont.semiBoldLabel(15))
                 .foregroundColor(.homeText)
                 .multilineTextAlignment(.center)
@@ -156,7 +156,7 @@ struct FolderBubble: View {
                     .background(Circle().fill(Color.red))
                     .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
             }
-            .accessibilityLabel("Remove folder")
+            .accessibilityLabel(tr("Remove folder"))
             // On the rim, at about two o'clock.
             .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
             .transition(.scale.combined(with: .opacity))

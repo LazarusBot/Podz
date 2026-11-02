@@ -63,7 +63,7 @@ struct LennyPlanView: View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Check your plan")
+                    T("Check your plan")
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(-0.6)
                         .foregroundColor(.homeText)
@@ -71,7 +71,7 @@ struct LennyPlanView: View {
                         .padding(.top, 25)
 
                     // Which stop these pods are around.
-                    Text("\(stop.name) · \(stopIndex + 1) of \(stops.count)")
+                    T("\(stop.name) · \(stopIndex + 1) of \(stops.count)")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
@@ -133,12 +133,12 @@ struct LennyPlanView: View {
             }
             Group {
                 if isPick, let reason = stop.pickReason {
-                    Text("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.homeText)
-                        + Text("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
+                    T("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.homeText)
+                        + T("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
                 } else if let pod, let distance = stop.distanceCaption(for: pod) {
                     Text(distance).font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
                 } else {
-                    Text(" ").font(AppFont.regularLabel(13))
+                    T(" ").font(AppFont.regularLabel(13))
                 }
             }
             .lineLimit(1)

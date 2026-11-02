@@ -160,7 +160,7 @@ struct MinimalHomeView: View {
     }
 
     private var title: some View {
-        Text("Where to tonight?")
+        T("Where to tonight?")
             .font(AppFont.semiBoldLabel(30))
             .tracking(-0.6)
             .foregroundColor(.homeText)
@@ -182,11 +182,11 @@ struct MinimalHomeView: View {
     /// A shelf's title and its "See all".
     private func sectionHeader(title: String, pods: [Pod], id: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title)
+            T(title)
                 .font(AppFont.semiBoldLabel(16))
                 .foregroundColor(.homeText)
             Spacer()
-            Button("See all") { seeAll = HomeSection(id: id, title: title, pods: pods) }
+            Button(tr("See all")) { seeAll = HomeSection(id: id, title: title, pods: pods) }
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
                 .disabled(pods.isEmpty)
@@ -268,7 +268,7 @@ struct MinimalHomeView: View {
             loading
         } else if visiblePods.isEmpty {
             VStack(spacing: 6) {
-                Text(query.isEmpty ? "No pods available yet." : "No pods match “\(query)”.")
+                T(query.isEmpty ? "No pods available yet." : "No pods match “\(query)”.")
                     .font(AppFont.regularLabel(14))
                     .foregroundColor(.homeSubtitle)
 
@@ -277,7 +277,7 @@ struct MinimalHomeView: View {
                 if !query.isEmpty {
                     Button(action: handToLenny) {
                         HStack(spacing: 5) {
-                            Text("Ask Lenny to find it")
+                            T("Ask Lenny to find it")
                                 .font(AppFont.regularLabel(13))
                                 .foregroundColor(.homeSubtitle)
                                 .underline(color: Color.homeSubtitle.opacity(0.5))
