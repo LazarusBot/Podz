@@ -39,11 +39,11 @@ struct LikesLadderView: View {
     }
 
     private let headerHeight: CGFloat = 80
-    private let photoSize: CGFloat = 60
+    private let photoSize: CGFloat = 48
     /// A point per metre: the rail is thousands of points long.
     private let pointsPerMetre: CGFloat = 1
     /// Closest two photos may sit.
-    private let minGap: CGFloat = 72
+    private let minGap: CGFloat = 60
     /// Under the rail: room for the tab bar.
     private let bottomRoom: CGFloat = 130
     /// Margin above the summit and below the foot of the rail.
@@ -149,6 +149,18 @@ struct LikesLadderView: View {
                 }
                 .allowsHitTesting(false)
 
+                // In front: the hut you've reached, on the card from the booking
+                // question, under the reading.
+                LadderCard(
+                    reading: reading,
+                    huts: placed.map { LadderHut(pod: $0.pod, pageY: headerHeight + $0.y) },
+                    photoURLs: photoURLs,
+                    viewport: proxy.size.height,
+                    readingY: proxy.size.height * readingShare,
+                    maxWidth: railX - photoSize / 2 - 16 - 24,
+                    onOpen: onOpen
+                )
+
                 // In front: the altitude you're at, big like the title.
                 LadderReadingLabel(reading: reading, low: low, high: high, railMargin: railMargin, railHeight: railHeight, headerHeight: headerHeight, viewport: proxy.size.height, readingShare: readingShare)
             }
@@ -200,10 +212,6 @@ struct LikesLadderView: View {
     /// foot, so the scale is always the same.
     private func railLine(height: CGFloat, x: CGFloat, low: Int, high: Int) -> some View {
         ZStack(alignment: .topLeading) {
-            Rectangle()
-                .fill(Color.homeText.opacity(0.12))
-                .frame(width: 1, height: height - railMargin * 2)
-                .offset(x: x, y: railMargin)
             Text(Self.metres(high))
                 .font(AppFont.regularLabel(11))
                 .foregroundColor(.homeSubtitle)
@@ -221,33 +229,17 @@ struct LikesLadderView: View {
         "\(value.formatted(.number.grouping(.automatic))) m"
     }
 
-    /// One hut: its round photo on the rail (at the right), the name and the
-    /// height to the left of it, right-aligned so the reading has the left side.
+    /// One hut: its small round photo at its altitude, on the right beside the
+    /// ruler. Its name and height come up on the card when you reach it.
     private func row(_ rung: Rung, index: Int, railX: CGFloat, width: CGFloat, viewport: CGFloat) -> some View {
         let shown = appeared || reduceMotion
         let delay = 0.05 * Double(min(index, 8))
         return Button { onOpen(rung.pod) } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(rung.pod.name)
-                        .font(AppFont.semiBoldLabel(15))
-                        .foregroundColor(.homeText)
-                        .multilineTextAlignment(.trailing)
-                        .lineLimit(2)
-                    Text(Self.metres(rung.pod.altitudeM ?? 0))
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.homeSubtitle)
-                }
-                .frame(maxWidth: 128, alignment: .trailing)
-                .modifier(LadderFocus(reading: reading, part: .text, pageY: headerHeight + rung.y, readingY: viewport * readingShare))
-                photo(rung.pod)
-                    .modifier(LadderFocus(reading: reading, part: .photo, pageY: headerHeight + rung.y, readingY: viewport * readingShare))
-            }
-            .contentShape(Rectangle())
+            photo(rung.pod).contentShape(Circle())
         }
         .buttonStyle(.plain)
-        // The hut at the reading rises above its neighbours.
-        .modifier(LadderFocus(reading: reading, part: .row, pageY: headerHeight + rung.y, readingY: viewport * readingShare))
+        // A light tap as a hut lands on the reading.
+        .modifier(LadderLanding(reading: reading, pageY: headerHeight + rung.y, readingY: viewport * readingShare))
         .padding(.trailing, width - railX - photoSize / 2)
         .frame(width: width, alignment: .trailing)
         .offset(y: rung.y - photoSize / 2 + (shown ? 0 : 14))
@@ -259,7 +251,7 @@ struct LikesLadderView: View {
                 Rectangle()
                     .fill(Color.homeText.opacity(0.35))
                     .frame(width: 10, height: 1)
-                    .offset(x: railX - 5, y: rung.trueY - (rung.y - photoSize / 2))
+                    .offset(x: railX - photoSize / 2 - 12, y: rung.trueY - (rung.y - photoSize / 2))
             }
         }
     }
@@ -312,40 +304,17 @@ private struct LadderStopBehavior: ScrollTargetBehavior {
 
 // MARK: - Following the scroll
 
-/// A hut at the reading's height grows so you can look at it: its photo to 1.6
-/// times as it passes, the name a little, and it comes in front of its
-/// neighbours, with a light tap when it lands on the reading. Each piece
-/// watches the scroll by itself, so the page isn't redrawn.
-private struct LadderFocus: ViewModifier {
-    enum Part { case row, photo, text }
-
+/// A light tap as a hut lands on the reading. It watches the scroll by itself,
+/// so the page isn't redrawn.
+private struct LadderLanding: ViewModifier {
     @ObservedObject var reading: LadderReading
-    let part: Part
     /// The photo's height on the page (from the top of the content).
     let pageY: CGFloat
     /// The reading's height on the screen.
     let readingY: CGFloat
 
-    /// 0 away from the reading, 1 right on it.
-    private var focus: CGFloat {
-        let distance = abs(pageY - reading.offset - readingY)
-        let t = max(0, 1 - distance / 90)
-        return t * t * (3 - 2 * t)   // smoothstep
-    }
-
     func body(content: Content) -> some View {
-        let t = focus
-        switch part {
-        case .row:
-            content
-                .zIndex(Double(t))
-                .sensoryFeedback(.impact(weight: .light), trigger: t > 0.85) { _, landed in landed }
-        case .photo:
-            content.scaleEffect(1 + 0.6 * t)
-        case .text:
-            // Steps aside as the photo grows (it gains 18 pt each side).
-            content.scaleEffect(1 + 0.12 * t, anchor: .trailing).offset(x: -20 * t)
-        }
+        content.sensoryFeedback(.impact(weight: .light), trigger: abs(pageY - reading.offset - readingY) < 26) { _, landed in landed }
     }
 }
 
@@ -431,5 +400,72 @@ private struct LadderReadingLabel: View {
             .sensoryFeedback(.selection, trigger: value / 100)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - The card
+
+struct LadderHut {
+    let pod: Pod
+    let pageY: CGFloat
+}
+
+/// Reaching a hut shows it under the altitude, as the inset rounded card from
+/// "Did you book it?": its photo, the name and "2,734 m · Region" in white on
+/// the flat scrim. It fades and settles in, and gives way to the next hut.
+private struct LadderCard: View {
+    @ObservedObject var reading: LadderReading
+    let huts: [LadderHut]
+    let photoURLs: [UUID: String]
+    let viewport: CGFloat
+    let readingY: CGFloat
+    let maxWidth: CGFloat
+    var onOpen: (Pod) -> Void
+
+    /// The hut level with the reading, if one is.
+    private var current: LadderHut? {
+        huts.first { abs($0.pageY - reading.offset - readingY) < 26 }
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if let hut = current {
+                card(hut.pod)
+                    .id(hut.pod.id)
+                    .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .topLeading)))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.leading, 24)
+        .padding(.top, readingY + 30)
+        .animation(.smooth(duration: 0.35), value: current?.pod.id)
+    }
+
+    private func card(_ pod: Pod) -> some View {
+        let height = min(maxWidth * 1.12, max(viewport - readingY - 190, 160))
+        // Not a button: a swipe that starts on the card must still scroll the
+        // page. A hut opens from its small round photo.
+        return PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate)
+                .frame(width: maxWidth, height: height)
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(pod.name)
+                            .font(AppFont.semiBoldLabel(20))
+                            .lineLimit(2)
+                        Text([pod.altitudeM.map { LikesLadderView.metres($0) }, pod.region ?? pod.country].compactMap { $0 }.joined(separator: " \u{00B7} "))
+                            .font(AppFont.regularLabel(13))
+                            .opacity(0.85)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(alignment: .bottom) {
+                        LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 120)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 40, style: .continuous))
+            .allowsHitTesting(false)
     }
 }
