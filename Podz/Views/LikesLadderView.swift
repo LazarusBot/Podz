@@ -123,7 +123,7 @@ struct LikesLadderView: View {
                         ZStack(alignment: .topLeading) {
                             railLine(height: railHeight, x: railX, low: low, high: high)
                             ForEach(Array(placed.enumerated()), id: \.element.id) { index, rung in
-                                row(rung, index: index, railX: railX, width: width)
+                                row(rung, index: index, railX: railX, width: width, viewport: proxy.size.height)
                             }
                         }
                         .frame(width: width, height: contentHeight, alignment: .topLeading)
@@ -218,7 +218,7 @@ struct LikesLadderView: View {
 
     /// One hut: its round photo on the rail (at the right), the name and the
     /// height to the left of it, right-aligned so the reading has the left side.
-    private func row(_ rung: Rung, index: Int, railX: CGFloat, width: CGFloat) -> some View {
+    private func row(_ rung: Rung, index: Int, railX: CGFloat, width: CGFloat, viewport: CGFloat) -> some View {
         let shown = appeared || reduceMotion
         let delay = 0.05 * Double(min(index, 8))
         return Button { onOpen(rung.pod) } label: {
@@ -234,11 +234,15 @@ struct LikesLadderView: View {
                         .foregroundColor(.homeSubtitle)
                 }
                 .frame(maxWidth: 128, alignment: .trailing)
+                .modifier(LadderFocus(reading: reading, part: .text, pageY: headerHeight + rung.y, readingY: viewport * readingShare))
                 photo(rung.pod)
+                    .modifier(LadderFocus(reading: reading, part: .photo, pageY: headerHeight + rung.y, readingY: viewport * readingShare))
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The hut at the reading rises above its neighbours.
+        .modifier(LadderFocus(reading: reading, part: .row, pageY: headerHeight + rung.y, readingY: viewport * readingShare))
         .padding(.trailing, width - railX - photoSize / 2)
         .frame(width: width, alignment: .trailing)
         .offset(y: rung.y - photoSize / 2 + (shown ? 0 : 14))
@@ -267,6 +271,43 @@ struct LikesLadderView: View {
 }
 
 // MARK: - Following the scroll
+
+/// A hut at the reading's height grows so you can look at it: its photo to 1.6
+/// times as it passes, the name a little, and it comes in front of its
+/// neighbours, with a light tap when it lands on the reading. Each piece
+/// watches the scroll by itself, so the page isn't redrawn.
+private struct LadderFocus: ViewModifier {
+    enum Part { case row, photo, text }
+
+    @ObservedObject var reading: LadderReading
+    let part: Part
+    /// The photo's height on the page (from the top of the content).
+    let pageY: CGFloat
+    /// The reading's height on the screen.
+    let readingY: CGFloat
+
+    /// 0 away from the reading, 1 right on it.
+    private var focus: CGFloat {
+        let distance = abs(pageY - reading.offset - readingY)
+        let t = max(0, 1 - distance / 90)
+        return t * t * (3 - 2 * t)   // smoothstep
+    }
+
+    func body(content: Content) -> some View {
+        let t = focus
+        switch part {
+        case .row:
+            content
+                .zIndex(Double(t))
+                .sensoryFeedback(.impact(weight: .light), trigger: t > 0.85) { _, landed in landed }
+        case .photo:
+            content.scaleEffect(1 + 0.6 * t)
+        case .text:
+            // Steps aside as the photo grows (it gains 18 pt each side).
+            content.scaleEffect(1 + 0.12 * t, anchor: .trailing).offset(x: -20 * t)
+        }
+    }
+}
 
 /// Where the ladder is scrolled. The ruler and the reading watch it; the page
 /// holds it in `@State` without reading it, so it isn't redrawn on a swipe.
