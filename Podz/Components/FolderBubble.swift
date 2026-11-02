@@ -44,23 +44,6 @@ struct FolderBubble: View {
 
     private var scale: CGFloat { cell.radius / Self.referenceRadius }
 
-    /// The pods whose photos are drawn: all of them, up to a sensible number
-    /// (past that they'd only be a blur).
-    private var shownPods: [Pod] { Array(pods.prefix(Self.maxPhotos)) }
-    static let maxPhotos = 24
-
-    /// Where one photo sits at the full-size bubble: one or two keep their
-    /// place, more spread on a spiral that fills the bubble, each smaller the
-    /// more there are and tilted a little by a stable amount.
-    static func placement(index: Int, count: Int, seed: String) -> (offset: CGSize, scale: CGFloat, rotation: Double) {
-        if count <= 2 { return (photoOffsets[min(index, 1)], 1.08, 0) }
-        let radius = referenceRadius * 0.85 * sqrt((CGFloat(index) + 0.5) / CGFloat(count))
-        let angle = CGFloat(index) * 2.39996   // the golden angle: even spread
-        let scale = max(0.52, min(1.12, 1.95 / sqrt(CGFloat(count))))
-        let tilt = (Double(FoamLayout.jitter(seed, salt: 11)) - 0.5) * 12
-        return (CGSize(width: radius * cos(angle), height: radius * sin(angle)), scale, tilt)
-    }
-
     @FocusState private var nameFocused: Bool
     @State private var isPressed = false
     @State private var wiggleAngle: Double = 0
@@ -69,26 +52,19 @@ struct FolderBubble: View {
         ZStack {
             FoamCellView(cell: cell)
 
-            // Every pod's photo is inside the bubble, overlapping where there are
-            // many (smaller the more there are), cut off at its edges.
-            ZStack {
-                ForEach(Array(shownPods.enumerated()), id: \.element.id) { index, pod in
-                    let place = Self.placement(index: index, count: shownPods.count, seed: pod.id.uuidString)
-                    BubblePhoto(url: photoURLs[pod.id], coordinate: pod.coordinate)
-                        .scaleEffect(scale * place.scale)
-                        .rotationEffect(.degrees(place.rotation))
-                        .opacity(shownPods.count > 2 ? 0.7 : 0.55)
-                        .offset(
-                            x: (mirrored ? -place.offset.width : place.offset.width) * scale,
-                            y: place.offset.height * scale
-                        )
-                        // A newly added pod pops in rather than swapping
-                        // silently.
-                        .transition(.scale(scale: 0.4).combined(with: .opacity))
+            // The folder's first photo covers the whole bubble, cut by its lumpy
+            // outline, with a soft veil so the name and the avatars read on it.
+            if let cover = pods.first {
+                ZStack {
+                    PodPhoto(url: photoURLs[cover.id], coordinate: cover.coordinate)
+                        .frame(width: cell.radius * 2, height: cell.radius * 2)
+                        .clipped()
+                    Color.black.opacity(0.3)
                 }
+                .id(cover.id)
+                .transition(.opacity)
+                .mask(FoamCellView(cell: cell, color: .black))
             }
-            .animation(.smooth(duration: 0.5), value: shownPods.map(\.id))
-            .mask(FoamCellView(cell: cell, color: .black))
 
             label
 
@@ -145,19 +121,19 @@ struct FolderBubble: View {
                 .onAppear { nameFocused = true }
                 .frame(width: min(170, cell.radius * 1.5))
         } else {
-            // The name sits on a solid label, so it reads over the photos, and the
-            // avatars of whoever it's shared with go with it: bigger, each cut out
-            // of the label by a ring of its own color.
+            // The name, and the avatars of whoever the folder is shared with, right
+            // on the bubble: white over a photo, ink over a plain one.
+            let hasCover = !pods.isEmpty
             VStack(spacing: 7) {
                 Text(name)
                     .font(AppFont.semiBoldLabel(15))
-                    .foregroundColor(.homeText)
+                    .foregroundColor(hasCover ? .white : .homeText)
                     .lineLimit(1)
 
                 if let subtitle {
                     T(subtitle)
                         .font(AppFont.regularLabel(12))
-                        .foregroundColor(.homeSubtitle)
+                        .foregroundColor(hasCover ? .white.opacity(0.85) : .homeSubtitle)
                         .lineLimit(1)
                 }
 
@@ -165,10 +141,7 @@ struct FolderBubble: View {
                     SharedAvatars(people: sharedWith, size: 30, maxShown: 3)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 11)
             .frame(maxWidth: cell.radius * 1.5)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.homeBackground))
         }
     }
 
