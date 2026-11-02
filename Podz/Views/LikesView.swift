@@ -135,7 +135,9 @@ struct LikesView: View {
                         items: likesItems,
                         podCount: podCount(of:),
                         width: UIScreen.main.bounds.width,
-                        bottomRoom: 100
+                        bottomRoom: 100,
+                        // Apart on entry; pinch in to bring them closer.
+                        startsLoose: true
                     ) { item, index, cell in
                         switch item {
                         case .own(let folder):
@@ -239,7 +241,9 @@ struct LikesView: View {
             onBack: { selectedFolder = nil },
             onOpenPod: { selectedPod = $0 },
             // Opens ShareFolderSheet's per-friend access toggle list.
-            onShare: { folderPendingShare = folder }
+            onShare: { folderPendingShare = folder },
+            // Press and hold a tile to take a pod out of the folder.
+            onRemovePod: { pod in Task { await likesStore.removeLike(pod) } }
         )
         .sheet(item: $folderPendingShare) { folder in
             ShareFolderSheet(folder: folder)

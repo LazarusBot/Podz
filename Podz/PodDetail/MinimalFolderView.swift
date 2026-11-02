@@ -18,8 +18,12 @@ struct MinimalFolderView: View {
     var onOpenPod: (Pod) -> Void
     /// Nil for a folder that isn't yours — there's nothing to share.
     var onShare: (() -> Void)? = nil
+    /// Nil for a folder that isn't yours: nothing to take out of it.
+    var onRemovePod: ((Pod) -> Void)? = nil
 
     @State private var selectedID: UUID?
+    /// Press and hold a tile: they wiggle and each gets a minus (yours only).
+    @State private var isEditing = false
 
     private let columns = [GridItem(.flexible(), spacing: 13), GridItem(.flexible(), spacing: 13)]
 
@@ -40,10 +44,19 @@ struct MinimalFolderView: View {
                             pod: pod,
                             photoURL: photoURLs[pod.id],
                             isSelected: pod.id == selectedPod?.id,
+                            isEditing: isEditing,
                             onTap: {
                                 withAnimation(.easeInOut(duration: AppMotion.snappy)) { selectedID = pod.id }
+                            },
+                            onRemove: {
+                                withAnimation(.smooth(duration: 0.35)) { onRemovePod?(pod) }
+                            },
+                            onLongPress: {
+                                guard onRemovePod != nil else { return }
+                                withAnimation(.smooth(duration: 0.3)) { isEditing = true }
                             }
                         )
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
                 }
                 .padding(.horizontal, 24)
@@ -132,8 +145,13 @@ struct MinimalFolderView: View {
                 }
             }
 
-            DetailTextButton(title: "Open") {
-                if let selectedPod { onOpenPod(selectedPod) }
+            // While editing, the pill is Done (highlighted); otherwise Open.
+            DetailTextButton(title: isEditing ? "Done" : "Open", isHighlighted: isEditing) {
+                if isEditing {
+                    withAnimation(.smooth(duration: 0.3)) { isEditing = false }
+                } else if let selectedPod {
+                    onOpenPod(selectedPod)
+                }
             }
         }
         .padding(.horizontal, 24)

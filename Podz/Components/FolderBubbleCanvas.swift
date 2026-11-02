@@ -15,6 +15,24 @@ struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
     /// Builds one bubble from the item, its index and its cell.
     @ViewBuilder var content: (Item, Int, FoamCell) -> Content
 
+    /// The Likes page opens with the bubbles apart (plain separate shapes) and
+    /// you pinch in to bring them closer; the save sheet opens packed.
+    init(
+        items: [Item],
+        podCount: @escaping (Item) -> Int,
+        width: CGFloat,
+        bottomRoom: CGFloat = 40,
+        startsLoose: Bool = false,
+        @ViewBuilder content: @escaping (Item, Int, FoamCell) -> Content
+    ) {
+        self.items = items
+        self.podCount = podCount
+        self.width = width
+        self.bottomRoom = bottomRoom
+        self.content = content
+        _looseness = State(initialValue: startsLoose ? 1 : 0)
+    }
+
     private static var topInset: CGFloat { 24 }
 
     /// 0 packed ... 1 unpacked. One value drives everything: it follows the

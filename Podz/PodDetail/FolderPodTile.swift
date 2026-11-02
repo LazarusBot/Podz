@@ -7,7 +7,13 @@ struct FolderPodTile: View {
     let pod: Pod
     let photoURL: String?
     let isSelected: Bool
+    /// Edit mode: the tile wiggles and a minus on its corner removes it.
+    var isEditing = false
     var onTap: () -> Void
+    var onRemove: () -> Void = {}
+    var onLongPress: () -> Void = {}
+
+    @State private var wiggle: Double = 0
 
     var body: some View {
         Button(action: onTap) {
@@ -39,10 +45,42 @@ struct FolderPodTile: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
-                .opacity(isSelected ? 1 : 0.55)
+                .opacity(isEditing || isSelected ? 1 : 0.55)
                 .contentShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
         }
         .buttonStyle(.plain)
+        .rotationEffect(.degrees(isEditing ? wiggle : 0))
+        .overlay(alignment: .topLeading) {
+            if isEditing {
+                Button(action: onRemove) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(Color.red))
+                        .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tr("Remove from folder"))
+                .padding(10)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onLongPress()
+            }
+        )
+        .onChange(of: isEditing) { _, editing in
+            if editing {
+                withAnimation(.easeInOut(duration: 0.13).repeatForever(autoreverses: true)) {
+                    wiggle = Double.random(in: 0.7...1.1)
+                }
+            } else {
+                withAnimation(.linear(duration: 0)) { wiggle = 0 }
+            }
+        }
         .accessibilityLabel(pod.name)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
