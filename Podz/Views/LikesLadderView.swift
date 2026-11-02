@@ -19,6 +19,12 @@ struct LikesLadderView: View {
     /// The huts rise in once; coming back from the folders they're just there.
     private static var hasPlayedEntry = false
     @State private var appeared = Self.hasPlayedEntry
+    @State private var scroll = ScrollSnapshot(offset: 0, viewport: 800)
+
+    private struct ScrollSnapshot: Equatable {
+        var offset: CGFloat
+        var viewport: CGFloat
+    }
 
     private struct Rung: Identifiable {
         let pod: Pod
@@ -116,14 +122,19 @@ struct LikesLadderView: View {
                         DispatchQueue.main.async { reader.scrollTo(first.id, anchor: UnitPoint(x: 0.5, y: 0.3)) }
                     }
                 }
-                .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
-                    scrollState.updateOffset(offset)
+                .onScrollGeometryChange(for: ScrollSnapshot.self) { geometry in
+                    ScrollSnapshot(offset: geometry.contentOffset.y, viewport: geometry.containerSize.height)
+                } action: { _, snapshot in
+                    scroll = snapshot
+                    scrollState.updateOffset(snapshot.offset)
                 }
 
                 // The app's own fade into the ground, under the tab bar.
                 BottomFade()
                     .frame(height: 260)
                     .allowsHitTesting(false)
+
+                marker(railHeight: railHeight, viewport: proxy.size.height)
             }
             .background(Color.homeBackground)
         }
@@ -134,6 +145,46 @@ struct LikesLadderView: View {
                 withAnimation(.smooth(duration: 0.6)) { appeared = true }
             }
         }
+    }
+
+    // MARK: - The reading
+
+    /// Where on the screen the reading sits.
+    private let readingShare: CGFloat = 0.42
+
+    /// The altitude at the reading's height on the rail, as the ladder scrolls.
+    private func currentAltitude(railHeight: CGFloat) -> Int {
+        let (low, high) = scale
+        let top: CGFloat = 26
+        let y = scroll.offset + scroll.viewport * readingShare - headerHeight
+        let t = (y - top) / max(railHeight - top * 2, 1)
+        let altitude = CGFloat(high) - min(max(t, 0), 1) * CGFloat(high - low)
+        return Int(altitude.rounded())
+    }
+
+    /// The altitude you're at, fixed on the screen while the ticks slide past it:
+    /// a small number and a short line to the rail.
+    private func marker(railHeight: CGFloat, viewport: CGFloat) -> some View {
+        let altitude = currentAltitude(railHeight: railHeight)
+        return HStack(spacing: 0) {
+            Text(Self.metres(altitude))
+                .font(AppFont.semiBoldLabel(11))
+                .foregroundColor(.homeBackground)
+                .monospacedDigit()
+                .padding(.horizontal, 9)
+                .frame(height: 22)
+                .background(Capsule().fill(Color.homeText))
+                .contentTransition(.numericText())
+                .animation(.easeOut(duration: 0.12), value: altitude)
+            Rectangle().fill(Color.homeText).frame(width: 8, height: 1)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.leading, 6)
+        .padding(.top, viewport * readingShare - 11)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        // A soft click every 100 m, like the ruler's detents.
+        .sensoryFeedback(.selection, trigger: altitude / 100)
     }
 
     // MARK: - Pieces
@@ -170,16 +221,10 @@ struct LikesLadderView: View {
                 .fill(Color.homeText.opacity(0.14))
                 .frame(width: 1, height: height - 52)
                 .offset(x: railX, y: 26)
-            // A quiet label every 500 m, so you know how high you are.
-            ForEach(Array(stride(from: (scale.low / 500 + 1) * 500, to: scale.high, by: 500)), id: \.self) { level in
-                HStack(spacing: 4) {
-                    Text(level.formatted(.number.grouping(.automatic)))
-                        .font(AppFont.regularLabel(11))
-                        .foregroundColor(.homeSubtitle)
-                        .frame(width: 34, alignment: .trailing)
-                    Rectangle().fill(Color.homeText.opacity(0.14)).frame(width: 6, height: 1)
-                }
-                .offset(x: railX - 44, y: levelY(level, height: height) - 7)
+            // A ruler: a tick every 50 m, a longer one every 100 m and, every
+            // 500 m, the longest one with its altitude.
+            ForEach(Array(stride(from: (scale.low / 50 + 1) * 50, to: scale.high, by: 50)), id: \.self) { level in
+                tick(level, height: height)
             }
             Text(Self.metres(scale.high))
                 .font(AppFont.regularLabel(11))
@@ -189,6 +234,26 @@ struct LikesLadderView: View {
                 .font(AppFont.regularLabel(11))
                 .foregroundColor(.homeSubtitle)
                 .offset(x: railX - 40, y: height - 22)
+        }
+    }
+
+    @ViewBuilder
+    private func tick(_ level: Int, height: CGFloat) -> some View {
+        let isMajor = level % 500 == 0
+        let isMedium = level % 100 == 0
+        let length: CGFloat = isMajor ? 14 : (isMedium ? 9 : 5)
+        let opacity: Double = isMajor ? 0.32 : (isMedium ? 0.2 : 0.12)
+        let y = levelY(level, height: height)
+        Rectangle()
+            .fill(Color.homeText.opacity(opacity))
+            .frame(width: length, height: 1)
+            .offset(x: railX - length, y: y)
+        if isMajor {
+            Text(level.formatted(.number.grouping(.automatic)))
+                .font(AppFont.regularLabel(11))
+                .foregroundColor(.homeSubtitle)
+                .frame(width: 34, alignment: .trailing)
+                .offset(x: railX - length - 38, y: y - 7)
         }
     }
 
