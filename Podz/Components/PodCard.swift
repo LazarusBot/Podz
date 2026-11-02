@@ -12,12 +12,15 @@ struct PodPhoto: View {
     /// fixed frame) — `.fit` is for a caller that wants the photo's own
     /// aspect ratio to drive its size instead, uncropped.
     var contentMode: ContentMode = .fill
+    /// Pixels the photo is shown at, so a Wikimedia photo is fetched at a
+    /// matching size (nil: as stored).
+    var pixelWidth: Int?
 
     var body: some View {
         if (url ?? "").isEmpty, let coordinate {
             MapSnapshotImage(coordinate: coordinate)
         } else {
-            CachedAsyncImage(url: url) { placeholder }
+            CachedAsyncImage(url: pixelWidth.flatMap { ImageSizing.sized(url, toCover: $0) } ?? url) { placeholder }
                 .aspectRatio(contentMode: contentMode)
         }
     }
