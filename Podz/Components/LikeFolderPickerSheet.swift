@@ -48,7 +48,7 @@ struct LikeFolderPickerSheet: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                Text("Save to folder")
+                T("Save to folder")
                     .font(AppFont.semiBoldLabel(30))
                     .tracking(-0.6)
                     .foregroundColor(.homeText)

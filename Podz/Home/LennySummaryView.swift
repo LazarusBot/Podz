@@ -67,14 +67,14 @@ struct LennySummaryView: View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Your plan")
+                    T("Your plan")
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(-0.6)
                         .foregroundColor(.homeText)
                         .padding(.horizontal, 24)
                         .padding(.top, 25)
 
-                    Text(subtitle)
+                    T(subtitle)
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
@@ -150,7 +150,7 @@ struct LennySummaryView: View {
         Button { onOpenPod(entry.pod) } label: {
             HStack(alignment: .top, spacing: 14) {
                 VStack(spacing: 0) {
-                    Text("\(number)")
+                    T("\(number)")
                         .font(AppFont.semiBoldLabel(12))
                         .foregroundColor(.homeBackground)
                         .frame(width: dotSize, height: dotSize)
@@ -172,7 +172,7 @@ struct LennySummaryView: View {
                 .frame(width: dotSize)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(stopCaption(entry, from: date, nights: nights))
+                    T(stopCaption(entry, from: date, nights: nights))
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)
@@ -190,13 +190,13 @@ struct LennySummaryView: View {
                                 .foregroundColor(.homeText)
                                 .lineLimit(2)
                             if !entry.detail.isEmpty {
-                                Text(entry.detail)
+                                T(entry.detail)
                                     .font(AppFont.regularLabel(13))
                                     .foregroundColor(.homeSubtitle)
                                     .lineLimit(1)
                             }
                             if !entry.pod.isBookable {
-                                Text("Listed  ·  book through the hut")
+                                T("Listed  ·  book through the hut")
                                     .font(AppFont.regularLabel(12))
                                     .foregroundColor(.homeSubtitle)
                                     .lineLimit(1)
@@ -211,7 +211,7 @@ struct LennySummaryView: View {
                                         .foregroundColor(.homeBackground)
                                         .frame(width: 18, height: 18)
                                         .background(Color.homeText, in: Circle())
-                                    Text("Lenny's pick")
+                                    T("Lenny's pick")
                                         .font(AppFont.semiBoldLabel(12))
                                         .foregroundColor(.homeText)
                                 }

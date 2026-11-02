@@ -157,7 +157,7 @@ struct DetailTextButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            T(title)
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(isHighlighted ? .homeBackground : .homeText)
                 // A long label ("Book through the hut") takes two centered lines.

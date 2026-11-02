@@ -156,7 +156,7 @@ struct FolderBubble: View {
                     .background(Circle().fill(Color.red))
                     .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
             }
-            .accessibilityLabel("Remove folder")
+            .accessibilityLabel(tr("Remove folder"))
             // On the rim, at about two o'clock.
             .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
             .transition(.scale.combined(with: .opacity))

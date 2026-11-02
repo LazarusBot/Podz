@@ -83,7 +83,7 @@ struct ProfileView: View {
     private var main: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Profile")
+                T("Profile")
                     .font(AppFont.semiBoldLabel(30))
                     .tracking(-0.6)
                     .foregroundColor(.homeText)
@@ -124,13 +124,13 @@ struct ProfileView: View {
         .background(Color.homeBackground)
         .task { await friendsStore.fetchAll() }
         .task { await likesStore.fetchAll() }
-        .alert("Delete your account?", isPresented: $showDeleteAccountConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+        .alert(tr("Delete your account?"), isPresented: $showDeleteAccountConfirmation) {
+            Button(tr("Cancel"), role: .cancel) {}
+            Button(tr("Delete"), role: .destructive) {
                 Task { await AuthManager.shared.deleteAccount() }
             }
         } message: {
-            Text("This permanently deletes your account, profile, and liked pods. This can't be undone.")
+            T("This permanently deletes your account, profile, and liked pods. This can't be undone.")
         }
     }
 
@@ -155,12 +155,12 @@ struct ProfileView: View {
                     .lineLimit(1)
 
                 if let username = auth.profile?.username {
-                    Text("@\(username)")
+                    T("@\(username)")
                         .font(AppFont.regularLabel(14))
                         .foregroundColor(.homeSubtitle)
                 }
 
-                Text("\(friendsStore.friends.count) friends · \(likesStore.likes.count) likes")
+                T("\(friendsStore.friends.count) friends · \(likesStore.likes.count) likes")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .lineLimit(1)

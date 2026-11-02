@@ -83,7 +83,7 @@ struct HomeSearchPill: View {
                     .rotationEffect(.degrees(isLennyMode ? 360 : 0))
 
                 if offersAsk {
-                    Text("Ask Lenny")
+                    T("Ask Lenny")
                         .font(AppFont.semiBoldLabel(13))
                         .lineLimit(1)
                         .fixedSize()
@@ -96,7 +96,7 @@ struct HomeSearchPill: View {
             .clipped()
         }
         .buttonStyle(TapScaleButtonStyle())
-        .accessibilityLabel("Ask Lenny")
+        .accessibilityLabel(tr("Ask Lenny"))
         .accessibilityHint("Describe your trip and Lenny finds the pods")
         .accessibilityAddTraits(isLennyMode ? .isSelected : [])
     }

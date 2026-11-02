@@ -73,7 +73,7 @@ struct LennyHutGuide: View {
                 .frame(width: 26, height: 26)
                 .background(Color.homeText, in: Circle())
 
-            Text(Self.shortMessage(for: section, pod: pod, first: available.first))
+            T(Self.shortMessage(for: section, pod: pod, first: available.first))
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(.homeText)
                 .lineLimit(2)
@@ -85,7 +85,7 @@ struct LennyHutGuide: View {
             if let action {
                 Button(action: action.run) {
                     HStack(spacing: 4) {
-                        Text(action.title)
+                        T(action.title)
                         Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
                     }
                     .font(AppFont.regularLabel(13))

@@ -21,14 +21,14 @@ struct ProfileListRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Text(title)
+                T(title)
                     .font(AppFont.regularLabel(16))
                     .foregroundColor(isDestructive ? .appBadgeRed : .homeText)
 
                 Spacer()
 
                 if let caption {
-                    Text(caption)
+                    T(caption)
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                 }

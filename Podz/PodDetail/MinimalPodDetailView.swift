@@ -275,7 +275,7 @@ struct MinimalPodDetailView: View {
         }
         return Group {
             if !parts.isEmpty {
-                Text(parts.joined(separator: "  ·  "))
+                T(parts.joined(separator: "  ·  "))
                     .font(AppFont.regularLabel(14))
                     .foregroundColor(.homeText)
                     .lineLimit(1)
@@ -311,7 +311,7 @@ struct MinimalPodDetailView: View {
                     LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
                     Button { contactTracker.clear() } label: {
                         HStack(spacing: 5) {
-                            Text("Not yet")
+                            T("Not yet")
                                 .font(AppFont.regularLabel(13))
                                 .foregroundColor(.homeSubtitle)
                                 .underline(color: Color.homeSubtitle.opacity(0.5))
@@ -336,7 +336,7 @@ struct MinimalPodDetailView: View {
 
                 Button(action: toggleExtended) {
                     HStack(spacing: 5) {
-                        Text("Details")
+                        T("Details")
                             .font(AppFont.regularLabel(13))
                             .foregroundColor(.homeSubtitle)
                             .underline(color: Color.homeSubtitle.opacity(0.5))
@@ -415,7 +415,7 @@ struct MinimalPodDetailView: View {
                     .foregroundColor(.homeText)
                     .lineLimit(2)
                 if let altitude = pod.altitudeM {
-                    Text("\(altitude) m")
+                    T("\(altitude) m")
                         .font(AppFont.regularLabel(14))
                         .foregroundColor(.homeSubtitle)
                 }

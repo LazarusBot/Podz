@@ -122,11 +122,11 @@ struct TripPassView: View {
         }
         .ignoresSafeArea()
         .background(Color.homeBackground.ignoresSafeArea())
-        .alert("Couldn't add to Wallet", isPresented: Binding(
+        .alert(tr("Couldn't add to Wallet"), isPresented: Binding(
             get: { passFetchError != nil },
             set: { if !$0 { passFetchError = nil } }
         )) {
-            Button("OK", role: .cancel) {}
+            Button(tr("OK"), role: .cancel) {}
         } message: {
             Text(passFetchError ?? "")
         }
@@ -137,7 +137,7 @@ struct TripPassView: View {
     /// When, for how many, the code, and the barcode.
     private var stay: some View {
         VStack(spacing: 0) {
-            Text("\(pass.rangeText)  ·  \(pass.nights) \(pass.nights == 1 ? "night" : "nights")  ·  \(pass.guests) \(pass.guests == 1 ? "guest" : "guests")")
+            T("\(pass.rangeText)  ·  \(pass.nights) \(pass.nights == 1 ? "night" : "nights")  ·  \(pass.guests) \(pass.guests == 1 ? "guest" : "guests")")
                 .font(AppFont.regularLabel(15))
                 .foregroundColor(.homeBodyText)
                 .multilineTextAlignment(.center)
@@ -145,7 +145,7 @@ struct TripPassView: View {
                 .padding(.horizontal, 32)
 
             if let countdown {
-                Text(countdown)
+                T(countdown)
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .padding(.top, 4)
@@ -165,14 +165,14 @@ struct TripPassView: View {
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(3)
                         .foregroundColor(.homeText)
-                    Text(didCopyCode ? "Copied" : "Confirmation code")
+                    T(didCopyCode ? "Copied" : "Confirmation code")
                         .font(AppFont.regularLabel(12))
                         .foregroundColor(.homeSubtitle)
                 }
             }
             .buttonStyle(.plain)
             .padding(.top, 26)
-            .accessibilityLabel("Confirmation code \(pass.confirmationCode). Double tap to copy")
+            .accessibilityLabel(tr("Confirmation code \(pass.confirmationCode). Double tap to copy"))
 
             // On white in both modes: dark bars on a light ground are what scan.
             BarcodeView(payload: pass.barcodePayload)
@@ -207,14 +207,14 @@ struct TripPassView: View {
                     }
                 }
 
-                Text("Saved on this phone. It opens without signal.")
+                T("Saved on this phone. It opens without signal.")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
 
                 if matchedPod != nil {
                     Button { showsPod = true } label: {
                         HStack(spacing: 5) {
-                            Text("View pod")
+                            T("View pod")
                                 .font(AppFont.regularLabel(13))
                                 .foregroundColor(.homeSubtitle)
                                 .underline(color: Color.homeSubtitle.opacity(0.5))

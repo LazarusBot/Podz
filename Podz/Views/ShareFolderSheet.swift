@@ -30,10 +30,10 @@ struct ShareFolderSheet: View {
             .padding(.top, 16)
 
             VStack(spacing: 4) {
-                Text("Share \"\(folder.name)\"")
+                T("Share \"\(folder.name)\"")
                     .font(AppFont.semiBoldLabel(20))
                     .foregroundColor(.homeText)
-                Text("Friends you turn on can view this folder, read-only.")
+                T("Friends you turn on can view this folder, read-only.")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .multilineTextAlignment(.center)
@@ -43,7 +43,7 @@ struct ShareFolderSheet: View {
             .padding(.bottom, 16)
 
             if friendsStore.friends.isEmpty {
-                Text("Add some friends first — nobody to share with yet.")
+                T("Add some friends first — nobody to share with yet.")
                     .font(AppFont.regularLabel(14))
                     .foregroundColor(.homeSubtitle)
                     .padding(.horizontal, 24)
@@ -63,11 +63,11 @@ struct ShareFolderSheet: View {
         }
         .background(Color.homeBackground)
         .task { await friendsStore.fetchAll() }
-        .alert("Couldn't update sharing", isPresented: Binding(
+        .alert(tr("Couldn't update sharing"), isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) {}
+            Button(tr("OK"), role: .cancel) {}
         } message: {
             Text(errorMessage ?? "")
         }
@@ -84,7 +84,7 @@ struct ShareFolderSheet: View {
                     .font(AppFont.semiBoldLabel(15))
                     .foregroundColor(.homeText)
                 if let username = profile?.username {
-                    Text("@\(username)")
+                    T("@\(username)")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                 }

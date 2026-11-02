@@ -84,7 +84,7 @@ struct BookingControlStack: View {
                             }
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Start date, \(flow.startDate.formatted(.dateTime.weekday(.wide).day().month(.wide))). Opens the calendar")
+                        .accessibilityLabel(tr("Start date, \(flow.startDate.formatted(.dateTime.weekday(.wide).day().month(.wide))). Opens the calendar"))
                     }
                 }
                 .lineLimit(1)
@@ -149,7 +149,7 @@ struct BookingControlStack: View {
             Text(value)
                 .font(AppFont.semiBoldLabel(24))
                 .foregroundColor(.homeText)
-            Text(caption)
+            T(caption)
                 .font(AppFont.regularLabel(12))
                 .foregroundColor(.homeSubtitle)
         }
@@ -168,7 +168,7 @@ struct BookingControlStack: View {
                 .background(Circle().fill(Color.homeText))
         }
         .buttonStyle(TapScaleButtonStyle())
-        .accessibilityLabel("Continue")
+        .accessibilityLabel(tr("Continue"))
     }
 }
 
@@ -193,7 +193,7 @@ struct BookingChips: View {
 
     private func chip(_ title: String, stage target: BookingFlow.Stage) -> some View {
         Button { flow.change(target) } label: {
-            Text(title)
+            T(title)
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(.homeText)
                 .padding(.horizontal, 16)
@@ -203,7 +203,7 @@ struct BookingChips: View {
         .buttonStyle(TapScaleButtonStyle())
         .disabled(flow.status == .booked)
         .transition(.scale(scale: 0.8).combined(with: .opacity))
-        .accessibilityLabel("\(title). Change")
+        .accessibilityLabel(tr("\(title). Change"))
     }
 }
 
@@ -215,7 +215,7 @@ struct BookingQuickReply: View {
     var body: some View {
         Button(action: reply.action) {
             HStack(spacing: 5) {
-                Text(reply.title)
+                T(reply.title)
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .underline(color: Color.homeSubtitle.opacity(0.5))

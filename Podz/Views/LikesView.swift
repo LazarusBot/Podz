@@ -109,13 +109,13 @@ struct LikesView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
                     // Same style as Home's "Where to tonight?".
-                    Text("Likes")
+                    T("Likes")
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(-0.6)
                         .foregroundColor(.homeText)
                     Spacer()
                     if isEditMode && !likesStore.folders.isEmpty {
-                        Button("Done") {
+                        Button(tr("Done")) {
                             withAnimation { isEditMode = false }
                         }
                         .font(.system(size: 15, weight: .semibold))
@@ -194,14 +194,14 @@ struct LikesView: View {
             }
         }
         .alert(
-            "Delete folder?",
+            tr("Delete folder?"),
             isPresented: Binding(
                 get: { folderPendingDeletion != nil },
                 set: { if !$0 { folderPendingDeletion = nil } }
             )
         ) {
-            Button("Cancel", role: .cancel) { folderPendingDeletion = nil }
-            Button("Delete", role: .destructive) {
+            Button(tr("Cancel"), role: .cancel) { folderPendingDeletion = nil }
+            Button(tr("Delete"), role: .destructive) {
                 if let folder = folderPendingDeletion {
                     Task { await likesStore.deleteFolder(folder) }
                 }
@@ -209,7 +209,7 @@ struct LikesView: View {
             }
         } message: {
             if let folder = folderPendingDeletion {
-                Text("\"\(folder.name)\" will be deleted, along with the likes inside it.")
+                T("\"\(folder.name)\" will be deleted, along with the likes inside it.")
             }
         }
     }
@@ -270,7 +270,7 @@ struct LikesView: View {
             // itself, not the whole VStack) — this one had drifted to a
             // bare .system(size:weight:) with the horizontal padding
             // applied to the illustration too, not just the caption.
-            Text("No likes yet — tap the heart on a pod in your feed.")
+            T("No likes yet — tap the heart on a pod in your feed.")
                 .font(AppFont.regularLabel(14))
                 .foregroundColor(.appTextMuted)
                 .multilineTextAlignment(.center)
