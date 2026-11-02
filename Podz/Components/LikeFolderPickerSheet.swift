@@ -20,6 +20,8 @@ struct LikeFolderPickerSheet: View {
     /// the same card).
     @State private var savingIntoFolderId: UUID?
     @State private var dropStage = FolderDropValues.start
+    /// The folder that swells as the photo melts into it (its neighbours give way).
+    @State private var swellingFolderId: UUID?
 
     /// What the canvas draws: each folder, plus the one being named.
     private enum Slot: Identifiable {
@@ -87,15 +89,17 @@ struct LikeFolderPickerSheet: View {
                 pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
                 photoURLs: PodsStore.shared.primaryPhotoByPodId,
                 mirrored: index % 2 == 1,
-                // The photo falls onto the bubble and shrinks into it.
+                // The folder that takes the photo swells, the others give way.
+                swell: swellingFolderId == nil ? 1 : (swellingFolderId == folder.id ? 1.07 : 0.985),
+                // The photo glides onto the bubble and shrinks into it.
                 // Positioned in fractions of the bubble's diameter, from
                 // its center.
                 incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
                     AnyView(
                         BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], coordinate: pod.coordinate)
                             .scaleEffect(dropStage.scale * diameter / (FolderBubble.referenceRadius * 2))
-                            .rotationEffect(.degrees(dropStage.rotationDegrees))
-                            .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)
+                            .opacity(dropStage.opacity)
+                            .offset(y: dropStage.yFraction * diameter)
                             .allowsHitTesting(false)
                     )
                 } : nil,
@@ -171,51 +175,29 @@ struct LikeFolderPickerSheet: View {
         }
     }
 
+    /// The pod's photo glides straight into the folder and melts into it, and the
+    /// bubble answers: it swells a little while its neighbours give way, like foam
+    /// taking a bump, then settles. No arc, no spin: the same calm as the rest of
+    /// the app.
     private func saveLike(into folderId: UUID) {
+        guard savingIntoFolderId == nil else { return }
         savingIntoFolderId = folderId
         dropStage = .start
-        // A separate tick before the first withAnimation — setting both
-        // in the same synchronous block risks SwiftUI coalescing them
-        // into a single render, where the overlay is inserted already at
-        // its final values with nothing to visibly animate from (the
-        // same reason HomeSearchRow's showControls fade-in waits a beat
-        // after isFocused before animating in).
+        // A separate tick, so the overlay is drawn at its start before it moves.
         DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: AppMotion.snappy)) {
-                dropStage = .midArc
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                // Plain easeOut, not a spring — a spring here would
-                // overshoot rotation past 42° and bounce back, which
-                // reads as changing tumble direction instead of the
-                // steady one-way spin the sketch shows.
-                withAnimation(.easeOut(duration: 0.22)) {
-                    dropStage = .landed
+            withAnimation(.smooth(duration: 0.38)) { dropStage = .landed }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                withAnimation(.smooth(duration: 0.22)) { dropStage = .melted }
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.55)) { swellingFolderId = folderId }
+                // The data lands as the bubble swells: the photo joins the others
+                // in the fan and the count rolls.
+                Task { await likesStore.like(pod, folderId: folderId) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) { swellingFolderId = nil }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                    withAnimation(.easeIn(duration: AppMotion.quick)) {
-                        dropStage = .vanished
-                    }
-                    // The actual data update — and with it, the real
-                    // photo's own pop-in transition and the count
-                    // badge's roll — waits until *here*, once the decoy
-                    // has landed and vanished, rather than firing the
-                    // instant the tap registers. Both used to animate at
-                    // the same time as the decoy's own flight, so the
-                    // real photo's pop-in was playing out hidden behind/
-                    // simultaneous with the decoy and never actually
-                    // seen on its own.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        Task {
-                            await likesStore.like(pod, folderId: folderId)
-                            // A beat to actually see the real photo pop
-                            // into the fan and the count roll, before
-                            // the sheet dismisses.
-                            try? await Task.sleep(nanoseconds: 1_500_000_000)
-                            onDismiss()
-                        }
-                    }
-                }
+                // A beat to see it settle before the sheet closes.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { onDismiss() }
             }
         }
     }
@@ -226,19 +208,15 @@ struct LikeFolderPickerSheet: View {
     }
 }
 
-/// Fixed points the existing-folder "drop" overlay animates through: a
-/// diagonal descent onto the bubble, rotating in one direction the whole
-/// way (a tumble, not tilt-overshoot-settle-back), then shrinking into the
-/// bubble's middle. x/yFraction are fractions of the bubble's diameter,
-/// from its center.
+/// Where the photo that drops into a folder is: straight above the bubble at
+/// full size, then at its centre small (landed), then gone (melted into it).
+/// x/yFraction are fractions of the bubble's diameter, from its center.
 private struct FolderDropValues {
     var scale: CGFloat
-    var rotationDegrees: Double
-    var xFraction: CGFloat
     var yFraction: CGFloat
+    var opacity: Double
 
-    static let start = FolderDropValues(scale: 1.0, rotationDegrees: -4, xFraction: -0.25, yFraction: -1.0)
-    static let midArc = FolderDropValues(scale: 0.9, rotationDegrees: 20, xFraction: -0.1, yFraction: -0.5)
-    static let landed = FolderDropValues(scale: 0.5, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
-    static let vanished = FolderDropValues(scale: 0.1, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
+    static let start = FolderDropValues(scale: 1.0, yFraction: -0.95, opacity: 1)
+    static let landed = FolderDropValues(scale: 0.42, yFraction: 0, opacity: 1)
+    static let melted = FolderDropValues(scale: 0.2, yFraction: 0, opacity: 0)
 }
