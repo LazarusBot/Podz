@@ -38,11 +38,33 @@ final class ImageCache {
         return diskDirectory.appendingPathComponent(hex)
     }
 
+    /// Photos of the huts you liked or have a stay at, kept for when there's no
+    /// signal (Application Support, not Caches: iOS doesn't empty it).
+    private let packDirectory = OfflineStorage.subdirectory("images")
+
+    private func packPath(for url: String) -> URL {
+        let digest = SHA256.hash(data: Data(url.utf8))
+        return packDirectory.appendingPathComponent(digest.map { String(format: "%02x", $0) }.joined())
+    }
+
+    /// Makes sure this photo is on the phone for good. True when it is.
+    func keepForOffline(urlString: String) async -> Bool {
+        let path = packPath(for: urlString)
+        if FileManager.default.fileExists(atPath: path.path) { return true }
+        guard let url = URL(string: urlString), urlString.hasPrefix("http"),
+              let (data, response) = try? await URLSession.shared.data(from: url),
+              (response as? HTTPURLResponse).map({ (200...299).contains($0.statusCode) }) ?? true,
+              ImageLoader.decodeImage(from: data) != nil else { return false }
+        try? data.write(to: path)
+        return true
+    }
+
     func image(for url: String) -> UIImage? {
         if let cached = memoryCache.object(forKey: url as NSString) {
             return cached
         }
-        guard let data = try? Data(contentsOf: diskPath(for: url)),
+        let stored = (try? Data(contentsOf: diskPath(for: url))) ?? (try? Data(contentsOf: packPath(for: url)))
+        guard let data = stored,
               let image = ImageLoader.decodeImage(from: data) else {
             return nil
         }
