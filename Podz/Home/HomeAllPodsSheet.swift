@@ -67,7 +67,7 @@ struct HomeAllPodsSheet: View {
     // MARK: - Body
 
     var body: some View {
-        SectionPage(title: title, onBack: { dismiss() }) {
+        SectionPage(title: title, onBack: { dismiss() }, respectsSafeArea: true) {
             VStack(alignment: .leading, spacing: 0) {
                 T("\(shown.count) \(shown.count == 1 ? "hut" : "huts")")
                     .font(AppFont.regularLabel(13))

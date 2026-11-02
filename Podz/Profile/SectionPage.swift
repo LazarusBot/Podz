@@ -33,6 +33,10 @@ struct SectionPage<Content: View, Trailing: View>: View {
     /// the pills (Reservations' Lenny bubble) makes it taller, so that sits on a
     /// clean ground and the rows go behind it.
     var fadeHeight: CGFloat = 180
+    /// A page shown in a sheet or a cover respects the bottom safe area (a tab's
+    /// content doesn't): the pills sit 40 above it, and the fade reaches the
+    /// screen's true edge instead of stopping at the home-indicator zone.
+    var respectsSafeArea = false
     @ViewBuilder var trailing: () -> Trailing
     @ViewBuilder var content: () -> Content
 
@@ -69,7 +73,8 @@ struct SectionPage<Content: View, Trailing: View>: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: fadeHeight)
+            .frame(height: fadeHeight + (respectsSafeArea ? ScreenInsets.bottom : 0))
+            .ignoresSafeArea(edges: respectsSafeArea ? .bottom : [])
             .allowsHitTesting(false)
 
             HStack(spacing: 13) {
@@ -77,15 +82,15 @@ struct SectionPage<Content: View, Trailing: View>: View {
                 trailing()
             }
             .padding(.horizontal, 24)
-            .controlStackPadding()
+            .padding(.bottom, respectsSafeArea ? DetailLayout.controlStackGap : DetailLayout.controlStackGap + ScreenInsets.bottom)
         }
         .background(Color.homeBackground.ignoresSafeArea())
     }
 }
 
 extension SectionPage where Trailing == EmptyView {
-    init(title: String, onBack: @escaping () -> Void, fadeHeight: CGFloat = 180, @ViewBuilder content: @escaping () -> Content) {
-        self.init(title: title, onBack: onBack, fadeHeight: fadeHeight, trailing: { EmptyView() }, content: content)
+    init(title: String, onBack: @escaping () -> Void, fadeHeight: CGFloat = 180, respectsSafeArea: Bool = false, @ViewBuilder content: @escaping () -> Content) {
+        self.init(title: title, onBack: onBack, fadeHeight: fadeHeight, respectsSafeArea: respectsSafeArea, trailing: { EmptyView() }, content: content)
     }
 }
 
