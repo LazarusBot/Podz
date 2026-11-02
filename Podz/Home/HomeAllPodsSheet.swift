@@ -69,7 +69,7 @@ struct HomeAllPodsSheet: View {
     var body: some View {
         // A tall fade, solid over its lower half: the photos can't be seen through
         // or around the back pill, and they melt away softly above it.
-        SectionPage(title: title, onBack: { dismiss() }, fadeHeight: 320, respectsSafeArea: true) {
+        SectionPage(title: title, onBack: { dismiss() }, fade: .photos, respectsSafeArea: true) {
             VStack(alignment: .leading, spacing: 0) {
                 T("\(shown.count) \(shown.count == 1 ? "hut" : "huts")")
                     .font(AppFont.regularLabel(13))

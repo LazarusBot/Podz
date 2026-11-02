@@ -22,6 +22,22 @@ extension View {
     }
 }
 
+/// Where a page's fade into the ground begins and where it is solid, as shares of
+/// the screen's height (0 top, 1 bottom). The fade covers the whole screen, so
+/// moving it is just changing these two numbers: a page with something floating
+/// above the pills (Reservations' Lenny bubble) starts it higher.
+struct SectionFade {
+    var start: CGFloat
+    var solid: CGFloat
+
+    /// Rows melt away over the lower part and are gone behind the pills.
+    static let standard = SectionFade(start: 0.72, solid: 0.88)
+    /// Higher, for a floating bubble above the pills.
+    static let tall = SectionFade(start: 0.60, solid: 0.80)
+    /// Photo cards (See all): they must never be seen around the pill.
+    static let photos = SectionFade(start: 0.66, solid: 0.86)
+}
+
 /// The page every screen Profile opens is built on (`design.md`): a big
 /// title at the top, no navigation bar, and at the bottom the same pill row
 /// as the pod detail: the round back pill, plus whatever action the page has
@@ -29,13 +45,11 @@ extension View {
 struct SectionPage<Content: View, Trailing: View>: View {
     let title: String
     var onBack: () -> Void
-    /// How tall the fade into the ground is. A page with something floating above
-    /// the pills (Reservations' Lenny bubble) makes it taller, so that sits on a
-    /// clean ground and the rows go behind it.
-    var fadeHeight: CGFloat = 180
+    /// The fade into the ground, over the whole screen (see `SectionFade`).
+    var fade: SectionFade = .standard
     /// A page shown in a sheet or a cover respects the bottom safe area (a tab's
-    /// content doesn't): the pills sit 40 above it, and the fade reaches the
-    /// screen's true edge instead of stopping at the home-indicator zone.
+    /// content doesn't): the pills sit 40 above it. The fade covers the whole
+    /// screen either way.
     var respectsSafeArea = false
     @ViewBuilder var trailing: () -> Trailing
     @ViewBuilder var content: () -> Content
@@ -65,16 +79,15 @@ struct SectionPage<Content: View, Trailing: View>: View {
             // Fade into the ground behind the pills.
             LinearGradient(
                 stops: [
-                    .init(color: Color.homeBackground.opacity(0), location: 0),
-                    // A tall fade is solid over its lower part, where Lenny sits.
-                    .init(color: Color.homeBackground, location: fadeHeight > 180 ? 0.5 : 1),
+                    .init(color: Color.homeBackground.opacity(0), location: fade.start),
+                    .init(color: Color.homeBackground, location: fade.solid),
                     .init(color: Color.homeBackground, location: 1)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: fadeHeight + (respectsSafeArea ? ScreenInsets.bottom : 0))
-            .ignoresSafeArea(edges: respectsSafeArea ? .bottom : [])
+            // The whole screen, edge to edge: nothing shows below it.
+            .ignoresSafeArea()
             .allowsHitTesting(false)
 
             HStack(spacing: 13) {
@@ -89,8 +102,8 @@ struct SectionPage<Content: View, Trailing: View>: View {
 }
 
 extension SectionPage where Trailing == EmptyView {
-    init(title: String, onBack: @escaping () -> Void, fadeHeight: CGFloat = 180, respectsSafeArea: Bool = false, @ViewBuilder content: @escaping () -> Content) {
-        self.init(title: title, onBack: onBack, fadeHeight: fadeHeight, respectsSafeArea: respectsSafeArea, trailing: { EmptyView() }, content: content)
+    init(title: String, onBack: @escaping () -> Void, fade: SectionFade = .standard, respectsSafeArea: Bool = false, @ViewBuilder content: @escaping () -> Content) {
+        self.init(title: title, onBack: onBack, fade: fade, respectsSafeArea: respectsSafeArea, trailing: { EmptyView() }, content: content)
     }
 }
 
