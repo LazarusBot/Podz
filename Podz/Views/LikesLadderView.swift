@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// The Likes page as a ladder: one fixed rail that always spans the same
-/// heights, from the lowest hut in the app up to the highest one. Your liked
-/// huts sit on it at their real altitude, so the page reads like a thermometer
-/// of where you want to go: the same size whether you've liked two huts or
-/// twenty. Round photos on the rail, a name and a height beside each, a fade
-/// at the bottom. Nothing else.
+/// heights, from the lowest hut in the app up to the highest one, and it's long:
+/// a metre is a point, so it takes several screens to climb it. Your liked huts
+/// sit on it at their real altitude, the same size whether you've liked two
+/// huts or twenty. It opens on your highest hut. Round photos on the rail, a
+/// name and a height beside each, a fade at the bottom. Nothing else.
 struct LikesLadderView: View {
     let pods: [Pod]
     let photoURLs: [UUID: String]
@@ -29,9 +29,11 @@ struct LikesLadderView: View {
 
     private let headerHeight: CGFloat = 80
     private let railX: CGFloat = 52
-    private let photoSize: CGFloat = 52
+    private let photoSize: CGFloat = 60
+    /// A point per metre: the rail is thousands of points long.
+    private let pointsPerMetre: CGFloat = 1
     /// Closest two photos may sit.
-    private let minGap: CGFloat = 60
+    private let minGap: CGFloat = 72
     /// Under the rail: room for the tab bar.
     private let bottomRoom: CGFloat = 130
 
@@ -44,6 +46,12 @@ struct LikesLadderView: View {
         let high = heights.max() ?? 3000
         let low = (heights.min() ?? 0) / 500 * 500
         return (min(low, high - 500), high)
+    }
+
+    /// The rail's length: always the same, whatever's liked.
+    private var railLength: CGFloat {
+        let (low, high) = scale
+        return CGFloat(high - low) * pointsPerMetre + 2 * 26
     }
 
     private func rungs(height: CGFloat) -> [Rung] {
@@ -69,28 +77,35 @@ struct LikesLadderView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let railHeight = max(proxy.size.height - headerHeight - bottomRoom, 380)
+            let railHeight = max(railLength, proxy.size.height)
             let placed = rungs(height: railHeight)
             // If many huts crowd the rail, it grows past the screen instead of
             // overlapping them.
             let contentHeight = max(railHeight, (placed.last?.y ?? 0) + photoSize + 40)
 
             ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        header.frame(height: headerHeight, alignment: .top)
+                ScrollViewReader { reader in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            header.frame(height: headerHeight, alignment: .top)
 
-                        ZStack(alignment: .topLeading) {
-                            rail(height: railHeight)
-                            ForEach(Array(placed.enumerated()), id: \.element.id) { index, rung in
-                                row(rung, index: index)
+                            ZStack(alignment: .topLeading) {
+                                rail(height: railHeight)
+                                ForEach(Array(placed.enumerated()), id: \.element.id) { index, rung in
+                                    row(rung, index: index).id(rung.id)
+                                }
                             }
+                            .frame(height: contentHeight, alignment: .topLeading)
                         }
-                        .frame(height: contentHeight, alignment: .topLeading)
+                        Color.clear.frame(height: bottomRoom)
                     }
-                    Color.clear.frame(height: bottomRoom)
+                    .scrollIndicators(.hidden)
+                    // It opens on your highest hut, not on the empty summit.
+                    .onAppear {
+                        guard let first = placed.first else { return }
+                        DispatchQueue.main.async { reader.scrollTo(first.id, anchor: UnitPoint(x: 0.5, y: 0.3)) }
+                    }
                 }
-                .scrollIndicators(.hidden)
                 .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
                     scrollState.updateOffset(offset)
                 }
