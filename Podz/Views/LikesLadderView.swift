@@ -412,7 +412,8 @@ struct LadderHut {
 
 /// Reaching a hut shows it under the altitude, as the inset rounded card from
 /// "Did you book it?": its photo, the name and "2,734 m · Region" in white on
-/// the flat scrim. It fades and settles in, and gives way to the next hut.
+/// the flat scrim. It fades and settles in, stays while you're between huts,
+/// and gives way to the next hut you reach.
 private struct LadderCard: View {
     @ObservedObject var reading: LadderReading
     let huts: [LadderHut]
@@ -422,9 +423,16 @@ private struct LadderCard: View {
     let maxWidth: CGFloat
     var onOpen: (Pod) -> Void
 
-    /// The hut level with the reading, if one is.
+    /// The last hut the reading reached: the card stays until another one is.
+    @State private var lastID: UUID?
+
+    /// The hut level with the reading, if one is right now.
+    private var reachedID: UUID? {
+        huts.first { abs($0.pageY - reading.offset - readingY) < 26 }?.pod.id
+    }
+
     private var current: LadderHut? {
-        huts.first { abs($0.pageY - reading.offset - readingY) < 26 }
+        huts.first { $0.pod.id == lastID }
     }
 
     var body: some View {
@@ -439,6 +447,10 @@ private struct LadderCard: View {
         .padding(.leading, 24)
         .padding(.top, readingY + 30)
         .animation(.smooth(duration: 0.35), value: current?.pod.id)
+        // A hut reached takes the card; passing between huts leaves it be.
+        .onChange(of: reachedID) { _, id in
+            if let id { lastID = id }
+        }
     }
 
     private func card(_ pod: Pod) -> some View {
