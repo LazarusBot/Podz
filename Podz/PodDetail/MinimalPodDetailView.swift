@@ -85,13 +85,13 @@ struct MinimalPodDetailView: View {
                             VStack(spacing: 0) {
                                 // Back from the hut, the page empties: only the
                                 // pod's photo and Lenny's question remain.
-                                if !asksIfBooked && !isBookingExternal { titleBlock }
+                                if !asksIfBooked && !isBooking { titleBlock }
                                 if asksIfBooked {
                                     EmptyView()
                                 } else if isBooking {
                                     // What's been decided so far, to change on its own.
                                     BookingChips(flow: activeBooking)
-                                        .padding(.top, isBookingExternal ? 0 : 14)
+                                        .padding(.top, 0)
                                 } else {
                                     keyFacts
                                     stackChips
@@ -391,13 +391,10 @@ struct MinimalPodDetailView: View {
         }
     }
 
-    /// The prompt's layout: the photo as a card, nothing else but Lenny.
-    private var showsCard: Bool { (asksIfBooked || isBookingExternal) && !isExtended }
-
-    /// Adding a stay booked through the hut: the questions keep the card's
-    /// layout, so the whole moment looks the same from "Did you book it?" to
-    /// "Added!".
-    private var isBookingExternal: Bool { isBooking && isExternalFlow }
+    /// The prompt's layout, and the booking's, in the app or through the hut: the
+    /// photo as a card, nothing else but Lenny, so the whole moment looks the same
+    /// from the question to "Booked!".
+    private var showsCard: Bool { (asksIfBooked || isBooking) && !isExtended }
 
     /// The old content leaves quickly, the new arrives a beat later, so the
     /// photo's move is the thing you see.
