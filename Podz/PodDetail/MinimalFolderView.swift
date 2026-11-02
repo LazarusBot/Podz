@@ -5,6 +5,11 @@ import SwiftUI
 /// a check; the rest dim), then "Open" goes to the selected pod. The grid
 /// scrolls under a fade into the ground and the back / share / Open pills.
 struct MinimalFolderView: View {
+    /// The folder's own name, as the page's title.
+    let title: String
+    /// Under the title: who shared it, for one that isn't yours. The count of
+    /// pods when nil.
+    var subtitle: String? = nil
     let pods: [Pod]
     let photoURLs: [UUID: String]
     var onBack: () -> Void
@@ -25,6 +30,8 @@ struct MinimalFolderView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
+                header
+
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(pods) { pod in
                         FolderPodTile(
@@ -38,7 +45,7 @@ struct MinimalFolderView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 8)
+                .padding(.top, 20)
                 // Room to scroll the last row above the buttons.
                 .padding(.bottom, 190)
             }
@@ -54,6 +61,23 @@ struct MinimalFolderView: View {
         // would sit on top of the buttons.
         .onAppear { TabBarVisibilityState.shared.isHidden = true }
         .onDisappear { TabBarVisibilityState.shared.isHidden = false }
+    }
+
+    /// The folder's name, like the Likes and Home titles, and a quiet line under it.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(AppFont.semiBoldLabel(30))
+                .tracking(-0.6)
+                .foregroundColor(.homeText)
+                .lineLimit(2)
+            Text(subtitle ?? "\(pods.count) \(pods.count == 1 ? "pod" : "pods")")
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.homeSubtitle)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 25)
     }
 
     private var actionRow: some View {
