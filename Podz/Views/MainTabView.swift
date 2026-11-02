@@ -8,6 +8,10 @@ struct MainTabView: View {
     @State private var selectedTab: TravelerTab = .feed
     @StateObject private var tabRouter = TabRouter.shared
     @StateObject private var contactTracker = HutContactTracker.shared
+    // Watched only to keep the huts you need offline up to date.
+    @StateObject private var likesStore = LikesStore.shared
+    @StateObject private var reservationsStore = ReservationsStore.shared
+    @StateObject private var podsStore = PodsStore.shared
     @Environment(\.scenePhase) private var scenePhase
 
     /// Distance from the bar's bottom edge to the true screen edge —
@@ -84,6 +88,15 @@ struct MainTabView: View {
             guard asks, let podId = contactTracker.pendingPodId else { return }
             selectedTab = .feed
             DeepLinkRouter.shared.pendingPodId = podId
+        }
+        // The huts you liked or have a stay at are kept on the phone (photos, map,
+        // details) for when there's no signal; a pause first, so a burst of
+        // changes is one pass.
+        .task(id: "\(likesStore.likes.count)-\(reservationsStore.reservations.count)-\(podsStore.pods.count)") {
+            guard !podsStore.pods.isEmpty else { return }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            await OfflinePackStore.shared.sync()
         }
         // Keep the passes on the phone fresh, so they open with no signal.
         .task { await TripPassStore.shared.refreshFromServer() }

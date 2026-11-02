@@ -62,8 +62,13 @@ final class LikesStore: ObservableObject {
                 .execute()
                 .value
             likes = Dictionary(uniqueKeysWithValues: rows.map { ($0.podId, $0.folderId) })
+            OfflineStorage.save(rows.map { CachedLike(podId: $0.podId, folderId: $0.folderId) }, as: "likes-\(userId.uuidString)")
         } catch {
             lastError = error.localizedDescription
+            // No signal: the likes from the last time, so the page isn't empty.
+            if likes.isEmpty, let kept = OfflineStorage.load([CachedLike].self, named: "likes-\(userId.uuidString)") {
+                likes = Dictionary(uniqueKeysWithValues: kept.map { ($0.podId, $0.folderId) })
+            }
         }
     }
     
@@ -77,9 +82,19 @@ final class LikesStore: ObservableObject {
                 .order("created_at")
                 .execute()
                 .value
+            OfflineStorage.save(folders, as: "folders-\(userId.uuidString)")
         } catch {
             lastError = error.localizedDescription
+            if folders.isEmpty, let kept = OfflineStorage.load([LikeFolder].self, named: "folders-\(userId.uuidString)") {
+                folders = kept
+            }
         }
+    }
+
+    /// A like as kept on the phone.
+    private struct CachedLike: Codable {
+        let podId: UUID
+        let folderId: UUID?
     }
     
     /// Creates a new folder and returns it — nil on failure.

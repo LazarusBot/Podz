@@ -211,15 +211,21 @@ final class PodsStore: ObservableObject {
     /// The same photos with their credit, for the ones taken from Wikimedia
     /// Commons.
     func photoRows(forPodId podId: UUID) async -> [PodPhotoRow] {
+        let name = "photos-\(podId.uuidString)"
         do {
-            return try await supabase
+            let rows: [PodPhotoRow] = try await supabase
                 .from("pod_photos")
                 .select("pod_id, url, position, credit")
                 .eq("pod_id", value: podId)
                 .order("position")
                 .execute()
                 .value
+            // Kept for when there's no signal.
+            OfflineStorage.save(rows, as: name)
+            return rows
         } catch {
+            // No signal: the copy from the last time, if there is one.
+            if let kept = OfflineStorage.load([PodPhotoRow].self, named: name), !kept.isEmpty { return kept }
             // Before the credit column exists, ask for the plain columns.
             if let plain: [PodPhotoRow] = try? await supabase
                 .from("pod_photos")

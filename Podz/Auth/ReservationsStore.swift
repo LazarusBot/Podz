@@ -56,9 +56,15 @@ final class ReservationsStore: ObservableObject {
                 .order("check_in")
                 .execute()
                 .value
+            OfflineStorage.save(reservations, as: "reservations-\(userId.uuidString)")
             return true
         } catch {
             lastError = error.localizedDescription
+            // No signal: your reservations from the last time, so the page isn't
+            // empty up there.
+            if reservations.isEmpty, let kept = OfflineStorage.load([Reservation].self, named: "reservations-\(userId.uuidString)") {
+                reservations = kept
+            }
             return false
         }
     }

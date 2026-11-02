@@ -92,8 +92,26 @@ actor MapSnapshotCache {
         directory.appendingPathComponent(key.replacingOccurrences(of: ",", with: "_") + ".jpg")
     }
 
+    /// Maps of the huts you liked or have a stay at: kept for the mountains.
+    private static let packDirectory = OfflineStorage.subdirectory("maps")
+
+    private static func packFile(_ key: String) -> URL {
+        packDirectory.appendingPathComponent(key.replacingOccurrences(of: ",", with: "_") + ".jpg")
+    }
+
     private static func loadFromDisk(_ key: String) -> UIImage? {
-        (try? Data(contentsOf: file(key))).flatMap(UIImage.init(data:))
+        let data = (try? Data(contentsOf: file(key))) ?? (try? Data(contentsOf: packFile(key)))
+        return data.flatMap(UIImage.init(data:))
+    }
+
+    /// Makes sure this spot's map is on the phone for good. True when it is.
+    func keepForOffline(_ coordinate: CLLocationCoordinate2D) async -> Bool {
+        let key = String(format: "%.4f,%.4f", coordinate.latitude, coordinate.longitude)
+        let path = Self.packFile(key)
+        if FileManager.default.fileExists(atPath: path.path) { return true }
+        guard let image = await image(for: coordinate), let data = image.jpegData(compressionQuality: 0.8) else { return false }
+        try? data.write(to: path)
+        return true
     }
 
     private static func saveToDisk(_ image: UIImage, _ key: String) {
