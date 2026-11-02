@@ -40,6 +40,8 @@ struct LikesView: View {
     @State private var isEditMode = false
     @State private var folderPendingDeletion: LikeFolder?
     @State private var folderPendingShare: LikeFolder?
+    /// The Likes page is the ladder; the folders (the foam) are one caption away.
+    @State private var showsFolders = false
 
     private var likedPods: [Pod] {
         podsStore.pods.filter { likesStore.isLiked($0) }
@@ -78,11 +80,20 @@ struct LikesView: View {
             } else if let sharedFolder = selectedSharedFolder {
                 sharedFolderContentView(folder: sharedFolder)
                     .transition(.blurReplace)
-            } else {
+            } else if showsFolders || likedPods.isEmpty {
                 foldersOverview
                     .transition(.blurReplace)
+            } else {
+                LikesLadderView(
+                    pods: likedPods,
+                    photoURLs: podsStore.primaryPhotoByPodId,
+                    onOpen: { selectedPod = $0 },
+                    onFolders: { showsFolders = true }
+                )
+                .transition(.blurReplace)
             }
         }
+        .animation(.easeInOut(duration: 0.35), value: showsFolders)
         .animation(.easeInOut(duration: 0.35), value: selectedFolder?.id)
         .animation(.easeInOut(duration: 0.35), value: selectedSharedFolder?.id)
         // Same zoom-from-the-tapped-photo cover Home uses — the folder
@@ -114,6 +125,20 @@ struct LikesView: View {
                         .tracking(-0.6)
                         .foregroundColor(.homeText)
                     Spacer()
+                    if !isEditMode && !likedPods.isEmpty {
+                        Button { showsFolders = false } label: {
+                            HStack(spacing: 5) {
+                                Text("Ladder")
+                                    .underline(color: Color.homeSubtitle.opacity(0.5))
+                                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                            }
+                            .font(AppFont.regularLabel(13))
+                            .foregroundColor(.homeSubtitle)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                     if isEditMode && !likesStore.folders.isEmpty {
                         Button("Done") {
                             withAnimation { isEditMode = false }
