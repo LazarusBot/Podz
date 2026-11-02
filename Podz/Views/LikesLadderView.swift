@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// The Likes page as a ladder: your liked huts on one rail, the highest at the
-/// top and the lowest at the bottom, spaced by how much higher each one is.
-/// Scrolling feels like climbing: a small marker on the rail reads the altitude
-/// you're at, and a soft tick marks each hut you pass. Nothing else: a title,
-/// a line that says how high it goes, and round photos (the satellite view when
-/// there's no photo). The page fades into the ground at both ends.
+/// The Likes page as a ladder: one fixed rail that always spans the same
+/// heights, from the lowest hut in the app up to the highest one. Your liked
+/// huts sit on it at their real altitude, so the page reads like a thermometer
+/// of where you want to go: the same size whether you've liked two huts or
+/// twenty. Round photos on the rail, a name and a height beside each, a fade
+/// at the bottom. Nothing else.
 struct LikesLadderView: View {
     let pods: [Pod]
     let photoURLs: [UUID: String]
@@ -13,282 +13,195 @@ struct LikesLadderView: View {
     /// The folders (the foam) live behind a caption.
     var onFolders: () -> Void
 
+    @StateObject private var podsStore = PodsStore.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared = false
-    @State private var scroll = ScrollSnapshot(offset: 0, viewport: 800)
 
-    private struct ScrollSnapshot: Equatable {
-        var offset: CGFloat
-        var viewport: CGFloat
-    }
-
-    /// One hut on the rail.
     private struct Rung: Identifiable {
         let pod: Pod
+        /// Where its altitude falls on the rail.
+        let trueY: CGFloat
+        /// Where its photo sits (pushed down a little when two huts are close).
         let y: CGFloat
         var id: UUID { pod.id }
     }
 
-    // Layout constants.
-    private let headerHeight: CGFloat = 104
-    private let railX: CGFloat = 60
-    private let photoSize: CGFloat = 84
-    private let minGap: CGFloat = 132
-    private let maxGap: CGFloat = 250
-    private let pointsPerMetre: CGFloat = 0.5
-    private let railTop: CGFloat = 28
+    private let headerHeight: CGFloat = 80
+    private let railX: CGFloat = 52
+    private let photoSize: CGFloat = 52
+    /// Closest two photos may sit.
+    private let minGap: CGFloat = 60
+    /// Under the rail: room for the tab bar.
+    private let bottomRoom: CGFloat = 130
 
-    // MARK: - The ladder
+    // MARK: - The scale
 
-    /// Highest first. Huts without an altitude go last, after a gap.
-    private var rungs: [Rung] {
-        let known = pods.filter { $0.altitudeM != nil }.sorted { ($0.altitudeM ?? 0) > ($1.altitudeM ?? 0) }
-        let unknown = pods.filter { $0.altitudeM == nil }.sorted { $0.name < $1.name }
+    /// The rail's heights: the lowest hut in the app (rounded down to 500 m) up
+    /// to the highest. A hut above 6,000 m is a typo and is ignored.
+    private var scale: (low: Int, high: Int) {
+        let heights = podsStore.pods.compactMap(\.altitudeM).filter { $0 > 0 && $0 < 6000 }
+        let high = heights.max() ?? 3000
+        let low = (heights.min() ?? 0) / 500 * 500
+        return (min(low, high - 500), high)
+    }
+
+    private func rungs(height: CGFloat) -> [Rung] {
+        let (low, high) = scale
+        let span = CGFloat(max(high - low, 1))
+        let top: CGFloat = 26
+        let usable = height - top * 2
+        let known = pods.filter { ($0.altitudeM ?? 0) > 0 }
+            .sorted { ($0.altitudeM ?? 0) > ($1.altitudeM ?? 0) }
         var result: [Rung] = []
-        var y = railTop
-        for (index, pod) in known.enumerated() {
-            if index > 0, let previous = known[index - 1].altitudeM, let current = pod.altitudeM {
-                let drop = CGFloat(previous - current) * pointsPerMetre
-                y += min(max(drop, minGap), maxGap)
-            }
-            result.append(Rung(pod: pod, y: y))
-        }
-        if !unknown.isEmpty {
-            y += known.isEmpty ? 0 : maxGap * 0.6
-            for (index, pod) in unknown.enumerated() {
-                if index > 0 { y += minGap }
-                result.append(Rung(pod: pod, y: y))
-            }
+        var lastY = -CGFloat.infinity
+        for pod in known {
+            let altitude = CGFloat(min(max(pod.altitudeM ?? low, low), high))
+            let trueY = top + (1 - (altitude - CGFloat(low)) / span) * usable
+            let y = max(trueY, lastY + minGap)
+            result.append(Rung(pod: pod, trueY: trueY, y: y))
+            lastY = y
         }
         return result
     }
 
-    private var knownRungs: [Rung] { rungs.filter { $0.pod.altitudeM != nil } }
-
-    private func railHeight(_ rungs: [Rung]) -> CGFloat { (rungs.last?.y ?? railTop) + photoSize / 2 + 160 }
-
-    /// Altitude to a point on the rail, by interpolating between the huts.
-    private func y(forAltitude altitude: Double, in rungs: [Rung]) -> CGFloat? {
-        for pair in zip(rungs, rungs.dropFirst()) {
-            guard let upper = pair.0.pod.altitudeM.map(Double.init), let lower = pair.1.pod.altitudeM.map(Double.init),
-                  altitude <= upper, altitude >= lower, upper > lower else { continue }
-            let t = (upper - altitude) / (upper - lower)
-            return pair.0.y + CGFloat(t) * (pair.1.y - pair.0.y)
-        }
-        return nil
-    }
-
-    /// A point on the rail back to an altitude.
-    private func altitude(atY y: CGFloat, in rungs: [Rung]) -> Int? {
-        guard let first = rungs.first, let last = rungs.last,
-              let top = first.pod.altitudeM, let bottom = last.pod.altitudeM else { return nil }
-        if y <= first.y { return top }
-        if y >= last.y { return bottom }
-        for pair in zip(rungs, rungs.dropFirst()) where y >= pair.0.y && y <= pair.1.y {
-            guard let upper = pair.0.pod.altitudeM, let lower = pair.1.pod.altitudeM, pair.1.y > pair.0.y else { continue }
-            let t = Double((y - pair.0.y) / (pair.1.y - pair.0.y))
-            return Int((Double(upper) - t * Double(upper - lower)).rounded())
-        }
-        return nil
-    }
-
-    /// Where the viewport's marker sits on the rail.
-    private var markerY: CGFloat { scroll.offset + scroll.viewport * 0.42 - headerHeight }
-
     // MARK: - Body
 
     var body: some View {
-        let all = rungs
-        let known = knownRungs
-        let height = railHeight(all)
+        GeometryReader { proxy in
+            let railHeight = max(proxy.size.height - headerHeight - bottomRoom, 380)
+            let placed = rungs(height: railHeight)
+            // If many huts crowd the rail, it grows past the screen instead of
+            // overlapping them.
+            let contentHeight = max(railHeight, (placed.last?.y ?? 0) + photoSize + 40)
 
-        ZStack(alignment: .top) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    header
-                        .frame(height: headerHeight, alignment: .top)
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header.frame(height: headerHeight, alignment: .top)
 
-                    ZStack(alignment: .topLeading) {
-                        rail(from: all.first?.y ?? railTop, to: all.last?.y ?? railTop)
-                        ticks(known)
-                        ForEach(Array(all.enumerated()), id: \.element.id) { index, rung in
-                            row(rung, index: index)
+                        ZStack(alignment: .topLeading) {
+                            rail(height: railHeight)
+                            ForEach(Array(placed.enumerated()), id: \.element.id) { index, rung in
+                                row(rung, index: index)
+                            }
                         }
+                        .frame(height: contentHeight, alignment: .topLeading)
                     }
-                    .frame(height: height, alignment: .topLeading)
+                    Color.clear.frame(height: bottomRoom)
                 }
-            }
-            .scrollIndicators(.hidden)
-            .onScrollGeometryChange(for: ScrollSnapshot.self) { geometry in
-                ScrollSnapshot(offset: geometry.contentOffset.y, viewport: geometry.containerSize.height)
-            } action: { _, snapshot in
-                scroll = snapshot
-                scrollState.updateOffset(snapshot.offset)
-            }
+                .scrollIndicators(.hidden)
+                .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
+                    scrollState.updateOffset(offset)
+                }
 
-            // The soft edge under the title, and the app's fade at the bottom.
-            LinearGradient(colors: [.homeBackground, .homeBackground.opacity(0)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 24)
-                .allowsHitTesting(false)
-            VStack { Spacer(); BottomFade().frame(height: 300) }
-                .allowsHitTesting(false)
-
-            marker(known)
+                // The app's own fade into the ground, under the tab bar.
+                BottomFade()
+                    .frame(height: 260)
+                    .allowsHitTesting(false)
+            }
+            .background(Color.homeBackground)
         }
-        .background(Color.homeBackground)
         .onAppear {
             scrollState.reset()
             withAnimation(.smooth(duration: 0.6)) { appeared = true }
         }
-        .sensoryFeedback(.selection, trigger: nearestHutID(known))
     }
 
     // MARK: - Pieces
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Likes")
-                    .font(AppFont.semiBoldLabel(30))
-                    .tracking(-0.6)
-                    .foregroundColor(.homeText)
-                Spacer()
-                Button(action: onFolders) {
-                    HStack(spacing: 5) {
-                        Text("Folders")
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-                    }
-                    .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeSubtitle)
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
+        HStack(alignment: .firstTextBaseline) {
+            Text("Likes")
+                .font(AppFont.semiBoldLabel(30))
+                .tracking(-0.6)
+                .foregroundColor(.homeText)
+            Spacer()
+            Button(action: onFolders) {
+                HStack(spacing: 5) {
+                    Text("Folders")
+                        .underline(color: Color.homeSubtitle.opacity(0.5))
+                    Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
                 }
-                .buttonStyle(.plain)
-            }
-            Text(summary)
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 24)
         .padding(.top, 25)
     }
 
-    /// "12 huts · 1,640 to 3,835 m".
-    private var summary: String {
-        let heights = pods.compactMap(\.altitudeM)
-        let count = "\(pods.count) \(pods.count == 1 ? "hut" : "huts")"
-        guard let low = heights.min(), let high = heights.max() else { return count }
-        return low == high ? "\(count) · \(Self.metres(high))" : "\(count) · \(Self.metres(low)) to \(Self.metres(high))"
+    /// The rail, with the app's highest altitude at its top and the lowest at its
+    /// foot, so the scale is always the same.
+    private func rail(height: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            Rectangle()
+                .fill(Color.homeText.opacity(0.14))
+                .frame(width: 1, height: height - 52)
+                .offset(x: railX, y: 26)
+            Text(Self.metres(scale.high))
+                .font(AppFont.regularLabel(11))
+                .foregroundColor(.homeSubtitle)
+                .offset(x: railX - 40, y: 2)
+            Text(Self.metres(scale.low))
+                .font(AppFont.regularLabel(11))
+                .foregroundColor(.homeSubtitle)
+                .offset(x: railX - 40, y: height - 22)
+        }
     }
 
     private static func metres(_ value: Int) -> String {
         "\(value.formatted(.number.grouping(.automatic))) m"
     }
 
-    /// The rail: a hairline from the first hut to the last.
-    private func rail(from top: CGFloat, to bottom: CGFloat) -> some View {
-        Rectangle()
-            .fill(Color.homeText.opacity(0.14))
-            .frame(width: 1, height: max(bottom - top, 0))
-            .offset(x: railX, y: top)
-    }
-
-    /// A tick and its altitude at every 500 m the huts span.
-    private func ticks(_ rungs: [Rung]) -> some View {
-        let heights = rungs.compactMap { $0.pod.altitudeM }
-        return ZStack(alignment: .topLeading) {
-            if let low = heights.min(), let high = heights.max(), high - low >= 400 {
-                ForEach(Array(stride(from: (low / 500 + 1) * 500, through: high, by: 500)), id: \.self) { level in
-                    if let y = y(forAltitude: Double(level), in: rungs) {
-                        HStack(spacing: 6) {
-                            Text("\(level)")
-                                .font(AppFont.regularLabel(10))
-                                .foregroundColor(.homeSubtitle)
-                                .frame(width: 30, alignment: .trailing)
-                            Rectangle().fill(Color.homeText.opacity(0.14)).frame(width: 8, height: 1)
-                        }
-                        .offset(x: railX - 36, y: y - 6)
-                    }
-                }
-            }
-        }
-    }
-
-    /// One hut: a dot on the rail, a short rung, the round photo, the name and
-    /// the altitude. It rises into place a beat after the one above.
+    /// One hut: a small dash on the rail at its real altitude, its round photo
+    /// on the rail, the name and the height beside it.
     private func row(_ rung: Rung, index: Int) -> some View {
         let shown = appeared || reduceMotion
         let delay = 0.05 * Double(min(index, 8))
         return Button { onOpen(rung.pod) } label: {
-            rowContent(rung)
+            HStack(spacing: 14) {
+                photo(rung.pod)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(rung.pod.name)
+                        .font(AppFont.semiBoldLabel(15))
+                        .foregroundColor(.homeText)
+                        .lineLimit(1)
+                    Text(Self.metres(rung.pod.altitudeM ?? 0))
+                        .font(AppFont.regularLabel(13))
+                        .foregroundColor(.homeSubtitle)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.leading, railX - photoSize / 2)
+            .padding(.trailing, 24)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .offset(y: rung.y - photoSize / 2 + (shown ? 0 : 18))
+        .offset(y: rung.y - photoSize / 2 + (shown ? 0 : 14))
         .opacity(shown ? 1 : 0)
         .animation(.smooth(duration: 0.6).delay(delay), value: appeared)
-    }
-
-    private func rowContent(_ rung: Rung) -> some View {
-        HStack(spacing: 0) {
-            Color.clear.frame(width: railX - 3, height: 1)
-            Circle().fill(Color.homeText).frame(width: 7, height: 7)
-            Rectangle().fill(Color.homeText.opacity(0.14)).frame(width: 16, height: 1)
-            photoCircle(rung.pod).padding(.leading, 22)
-            labels(rung.pod).padding(.leading, 16).padding(.trailing, 24)
-            Spacer(minLength: 0)
+        .background(alignment: .topLeading) {
+            // Where the altitude really is, when the photo had to move aside.
+            if abs(rung.y - rung.trueY) > 4 {
+                Rectangle()
+                    .fill(Color.homeText.opacity(0.35))
+                    .frame(width: 10, height: 1)
+                    .offset(x: railX - 5, y: rung.trueY - (rung.y - photoSize / 2))
+            }
         }
-        .contentShape(Rectangle())
     }
 
-    private func photoCircle(_ pod: Pod) -> some View {
-        let photo = PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate)
+    private func photo(_ pod: Pod) -> some View {
+        let picture = PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate)
         return Color.clear
             .frame(width: photoSize, height: photoSize)
-            .overlay { photo.allowsHitTesting(false) }
+            .overlay { picture.allowsHitTesting(false) }
             .clipShape(Circle())
-    }
-
-    private func labels(_ pod: Pod) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(pod.name)
-                .font(AppFont.semiBoldLabel(16))
-                .foregroundColor(.homeText)
-                .lineLimit(2)
-            Text(caption(for: pod))
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
-                .lineLimit(1)
-        }
-    }
-
-    private func caption(for pod: Pod) -> String {
-        let altitude = pod.altitudeM.map { Self.metres($0) }
-        return [altitude, pod.region ?? pod.country].compactMap { $0 }.joined(separator: " · ")
-    }
-
-    /// The marker on the rail: the altitude you're at, fixed on the screen.
-    @ViewBuilder
-    private func marker(_ rungs: [Rung]) -> some View {
-        if rungs.count > 1, let level = altitude(atY: markerY, in: rungs) {
-            Text(Self.metres(level))
-                .font(AppFont.semiBoldLabel(11))
-                .foregroundColor(.homeBackground)
-                .padding(.horizontal, 9)
-                .frame(height: 22)
-                .background(Capsule().fill(Color.homeText))
-                .contentTransition(.numericText())
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, railX - 30)
-                .padding(.top, scroll.viewport * 0.42 - 11)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
-    }
-
-    /// The hut the marker is next to, for the tick.
-    private func nearestHutID(_ rungs: [Rung]) -> UUID? {
-        rungs.first { abs($0.y - markerY) < 36 }?.pod.id
+            // The ground around it, so the rail reads as passing behind.
+            .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 3))
     }
 }
