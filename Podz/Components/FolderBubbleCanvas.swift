@@ -110,6 +110,7 @@ private struct FoamField<Item: Identifiable, Content: View>: View, Animatable {
         let cells = FoamLayout.cells(
             centers: centers,
             radii: radii,
+            keys: items.map { String(describing: $0.id) },
             width: width,
             top: topInset,
             looseness: looseness

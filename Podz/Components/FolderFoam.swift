@@ -13,6 +13,8 @@ struct FoamCell: Equatable {
     var center: CGPoint
     var radius: CGFloat
     var cuts: [Cut]
+    /// What makes this bubble's outline its own lumpy shape (its folder's id).
+    var shapeKey: String = ""
 }
 
 /// Packs circles into a compact, slightly overlapping cluster and works out
@@ -123,7 +125,7 @@ enum FoamLayout {
     /// The cells for a set of packed `centers`. `looseness` 0 is as packed;
     /// 1 pushes the bubbles far enough apart that none touch (so they're
     /// plain circles again), in between is a partial spread.
-    static func cells(centers packed: [CGPoint], radii: [CGFloat], width: CGFloat, top: CGFloat, looseness: CGFloat) -> [FoamCell] {
+    static func cells(centers packed: [CGPoint], radii: [CGFloat], keys: [String], width: CGFloat, top: CGFloat, looseness: CGFloat) -> [FoamCell] {
         let n = radii.count
         let l = min(max(looseness, 0), 1)
         var centers = packed.map { point in
@@ -146,7 +148,7 @@ enum FoamLayout {
                     cuts.append(.init(direction: CGVector(dx: ux, dy: uy), distance: distance))
                 }
             }
-            return FoamCell(center: centers[i], radius: radii[i], cuts: cuts)
+            return FoamCell(center: centers[i], radius: radii[i], cuts: cuts, shapeKey: keys.indices.contains(i) ? keys[i] : "")
         }
     }
 
@@ -164,6 +166,8 @@ enum FoamLayout {
 struct FoamCellShape: Shape {
     var radius: CGFloat
     var cuts: [FoamCell.Cut]
+    /// Gives the outline its own lumps, like a climbing hold: never a clean circle.
+    var shapeKey: String = ""
 
     /// How round the corners are. The polygon is inset by this much, then
     /// stroked with a round join of twice the width.
@@ -172,9 +176,17 @@ struct FoamCellShape: Shape {
     func path(in rect: CGRect) -> Path {
         let center = CGPoint(x: rect.midX, y: rect.midY)
         let inner = max(radius - Self.cornerRadius, 1)
+        // A few slow waves of different counts, each with its own size and phase
+        // from the key: an uneven, rounded lump, the same one every time.
+        func wave(_ count: Double, _ minSize: Double, _ spread: Double, _ salt: UInt32) -> (count: Double, size: Double, phase: Double) {
+            (count, minSize + spread * Double(FoamLayout.jitter(shapeKey, salt: salt)), 2 * .pi * Double(FoamLayout.jitter(shapeKey, salt: salt + 50)))
+        }
+        let waves = shapeKey.isEmpty ? [] : [wave(2, 0.045, 0.045, 21), wave(3, 0.035, 0.035, 22), wave(5, 0.018, 0.022, 23)]
         var polygon: [CGPoint] = (0..<96).map { step in
             let angle = Double(step) / 96 * 2 * .pi
-            return CGPoint(x: center.x + inner * CGFloat(cos(angle)), y: center.y + inner * CGFloat(sin(angle)))
+            let lump = waves.reduce(1.0) { $0 + $1.size * cos($1.count * angle + $1.phase) }
+            let r = inner * CGFloat(lump)
+            return CGPoint(x: center.x + r * CGFloat(cos(angle)), y: center.y + r * CGFloat(sin(angle)))
         }
         for cut in cuts {
             polygon = Self.clip(
@@ -223,7 +235,7 @@ struct FoamCellView: View {
     var color: Color = .homePill
 
     var body: some View {
-        let shape = FoamCellShape(radius: cell.radius, cuts: cell.cuts)
+        let shape = FoamCellShape(radius: cell.radius, cuts: cell.cuts, shapeKey: cell.shapeKey)
         ZStack {
             shape.fill(color)
             shape.stroke(color, style: StrokeStyle(lineWidth: FoamCellShape.cornerRadius * 2, lineJoin: .round))

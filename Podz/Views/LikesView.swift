@@ -49,7 +49,8 @@ struct LikesView: View {
         likesStore.pods(in: folder.id, from: likedPods)
     }
 
-    private func sharedWithAvatarURLs(for folder: LikeFolder) -> [String] {
+    /// Who a folder of yours is shared with (the same order every time).
+    private func sharedWith(_ folder: LikeFolder) -> [FolderPerson] {
         // `friendIdsWithAccess` returns a Set — its iteration order isn't
         // guaranteed stable between separate calls, so without sorting,
         // this array's order (and therefore which avatar lands in which
@@ -59,7 +60,9 @@ struct LikesView: View {
         // each time this recomputed in a new order.
         likesStore.friendIdsWithAccess(to: folder.id)
             .sorted { $0.uuidString < $1.uuidString }
-            .compactMap { friendsStore.profilesById[$0]?.avatarURL }
+            .compactMap { id in
+                friendsStore.profilesById[id].map { FolderPerson(id: id, name: $0.displayName, avatarURL: $0.avatarURL) }
+            }
     }
 
     var body: some View {
@@ -142,7 +145,7 @@ struct LikesView: View {
                                 pods: pods(in: folder),
                                 photoURLs: podsStore.primaryPhotoByPodId,
                                 mirrored: index % 2 == 1,
-                                sharedWithAvatarURLs: sharedWithAvatarURLs(for: folder),
+                                sharedWith: sharedWith(folder),
                                 showDeleteBadge: isEditMode,
                                 isWiggling: isEditMode,
                                 onDelete: { folderPendingDeletion = folder },
@@ -230,6 +233,7 @@ struct LikesView: View {
     private func folderContentView(folder: LikeFolder) -> some View {
         MinimalFolderView(
             title: folder.name,
+            sharedWith: sharedWith(folder),
             pods: pods(in: folder),
             photoURLs: podsStore.primaryPhotoByPodId,
             onBack: { selectedFolder = nil },

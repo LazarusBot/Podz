@@ -15,8 +15,8 @@ struct FolderBubble: View {
     let photoURLs: [UUID: String]
     /// Alternate bubbles mirror their photos, so the photos don't line up.
     var mirrored = false
-    /// Avatars of friends the folder is shared with, under the name.
-    var sharedWithAvatarURLs: [String] = []
+    /// The friends the folder is shared with: their avatars, under the name.
+    var sharedWith: [FolderPerson] = []
     /// When set, the middle shows a name field instead (a new folder).
     var editableName: Binding<String>? = nil
     var onCommitName: (() -> Void)? = nil
@@ -145,35 +145,30 @@ struct FolderBubble: View {
                 .onAppear { nameFocused = true }
                 .frame(width: min(170, cell.radius * 1.5))
         } else {
-            VStack(spacing: 6) {
+            // The name sits on a solid label, so it reads over the photos, and the
+            // avatars of whoever it's shared with go with it: bigger, each cut out
+            // of the label by a ring of its own color.
+            VStack(spacing: 7) {
                 Text(name)
                     .font(AppFont.semiBoldLabel(15))
                     .foregroundColor(.homeText)
                     .lineLimit(1)
-                    .frame(maxWidth: cell.radius * 1.5)
 
                 if let subtitle {
-                    Text(subtitle)
+                    T(subtitle)
                         .font(AppFont.regularLabel(12))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)
                 }
 
-                if !sharedWithAvatarURLs.isEmpty {
-                    // Identified by the URL itself, not position, so a
-                    // recycled image view never keeps a previous avatar.
-                    HStack(spacing: -6) {
-                        ForEach(sharedWithAvatarURLs.prefix(3), id: \.self) { url in
-                            AvatarView(imageName: url, size: 24)
-                                // Opaque backing: overlapping circles would
-                                // show through each other while fading in.
-                                .background(Circle().fill(Color.homePill))
-                                .overlay(Circle().strokeBorder(Color.homePill, lineWidth: 1.5))
-                        }
-                    }
-                    .padding(.top, 2)
+                if !sharedWith.isEmpty {
+                    SharedAvatars(people: sharedWith, size: 30, maxShown: 3)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .frame(maxWidth: cell.radius * 1.5)
+            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.homeBackground))
         }
     }
 
@@ -193,6 +188,43 @@ struct FolderBubble: View {
             .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
             .transition(.scale.combined(with: .opacity))
         }
+    }
+}
+
+/// A friend a folder is shared with.
+struct FolderPerson: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let avatarURL: String?
+}
+
+/// Overlapping round avatars, each with a ring in the ground's color, then "+2"
+/// for the rest.
+struct SharedAvatars: View {
+    let people: [FolderPerson]
+    var size: CGFloat = 30
+    var maxShown = 3
+
+    var body: some View {
+        HStack(spacing: -size * 0.28) {
+            ForEach(people.prefix(maxShown)) { person in
+                AvatarView(imageName: person.avatarURL, size: size)
+                    // Opaque backing: overlapping circles would show through each
+                    // other while fading in.
+                    .background(Circle().fill(Color.homePill))
+                    .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 2.5))
+            }
+            if people.count > maxShown {
+                Text("+\(people.count - maxShown)")
+                    .font(AppFont.semiBoldLabel(size * 0.4))
+                    .foregroundColor(.homeText)
+                    .frame(width: size, height: size)
+                    .background(Circle().fill(Color.homePill))
+                    .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 2.5))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(people.map(\.name).joined(separator: ", "))
     }
 }
 
