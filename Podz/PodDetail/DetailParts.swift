@@ -28,13 +28,33 @@ enum DetailLayout {
 /// stack: clear over the top half, solid `homeBackground` at the bottom edge.
 /// Used by the Likes folder view, the Likes tab and the save-to-folder sheet.
 struct BottomFade: View {
+    /// A fixed, taller fade, solid over its lower half: for a page where Lenny's
+    /// bubble floats above the pills, so it keeps a clean ground and the rows go
+    /// behind it. Nil: the usual fade over the whole screen.
+    var height: CGFloat? = nil
+
     var body: some View {
-        LinearGradient(
-            stops: [.init(color: .clear, location: 0.5), .init(color: .homeBackground, location: 1)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        Group {
+            if let height {
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.homeBackground.opacity(0), location: 0),
+                        .init(color: .homeBackground, location: 0.5),
+                        .init(color: .homeBackground, location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: height)
+            } else {
+                LinearGradient(
+                    stops: [.init(color: .clear, location: 0.5), .init(color: .homeBackground, location: 1)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
+        }
         .allowsHitTesting(false)
     }
 }
