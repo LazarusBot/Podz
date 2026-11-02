@@ -50,17 +50,23 @@ struct FolderBubble: View {
 
     var body: some View {
         ZStack {
-            FoamCellView(cell: cell)
+            // The plain bubble is only the background of an empty folder: with at
+            // least one pod, its photo replaces it.
+            if pods.isEmpty {
+                FoamCellView(cell: cell)
+            }
 
-            // The folder's first photo covers the whole bubble, cut by its lumpy
-            // outline, with a soft veil so the name and the avatars read on it.
+            // The folder's first photo is the bubble: it covers all of it, lumps
+            // included (the photo is drawn larger than the bubble, then cut by its
+            // outline), with a soft veil so the name and the avatars read on it.
             if let cover = pods.first {
                 ZStack {
                     PodPhoto(url: photoURLs[cover.id], coordinate: cover.coordinate)
-                        .frame(width: cell.radius * 2, height: cell.radius * 2)
+                        .frame(width: cell.radius * 2.7, height: cell.radius * 2.7)
                         .clipped()
                     Color.black.opacity(0.3)
                 }
+                .frame(width: cell.radius * 2.7, height: cell.radius * 2.7)
                 .id(cover.id)
                 .transition(.opacity)
                 .mask(FoamCellView(cell: cell, color: .black))
