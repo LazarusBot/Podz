@@ -39,10 +39,10 @@ struct LoginSecurityView: View {
                 }
             }
         }
-        .alert("Email sent", isPresented: $showResetConfirmation) {
-            Button("OK") {}
+        .alert(tr("Email sent"), isPresented: $showResetConfirmation) {
+            Button(tr("OK")) {}
         } message: {
-            Text("Check \(email) for a link to reset your password.")
+            T("Check \(email) for a link to reset your password.")
         }
         .errorAlert($auth.lastError)
     }
@@ -59,7 +59,7 @@ private struct InfoRow: View {
             Text(value)
                 .font(AppFont.semiBoldLabel(16))
                 .foregroundColor(.homeText)
-            Text(label)
+            T(label)
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
         }

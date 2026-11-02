@@ -29,14 +29,14 @@ struct AvatarEditorView: View {
 
             ZStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Adjust photo")
+                    T("Adjust photo")
                         .font(AppFont.semiBoldLabel(30))
                         .tracking(-0.6)
                         .foregroundColor(.homeText)
                         .padding(.horizontal, 24)
                         .padding(.top, 25)
 
-                    Text("Pinch to zoom, drag to move")
+                    T("Pinch to zoom, drag to move")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
@@ -71,10 +71,10 @@ struct AvatarEditorView: View {
         }
         .background(Color.homeBackground.ignoresSafeArea())
         .task { await load() }
-        .alert("Couldn't save", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
-            Button("OK") { errorMessage = nil }
+        .alert(tr("Couldn't save"), isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button(tr("OK")) { errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "")
+            T(errorMessage ?? "")
         }
     }
 
@@ -116,7 +116,7 @@ struct AvatarEditorView: View {
                     }
                     .overlay(Circle().strokeBorder(Color.homeText.opacity(0.25), lineWidth: 0.5).allowsHitTesting(false))
             } else if failedToLoad {
-                Text("Couldn't open your photo.")
+                T("Couldn't open your photo.")
                     .font(AppFont.regularLabel(14))
                     .foregroundColor(.homeSubtitle)
                     .frame(width: diameter, height: diameter)
@@ -163,7 +163,7 @@ struct AvatarEditorView: View {
 
     private func caption(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
+            T(title)
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
                 .underline(color: Color.homeSubtitle.opacity(0.5))

@@ -36,7 +36,7 @@ struct AddFriendSheet: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
 
-            Text("Add a friend")
+            T("Add a friend")
                 .font(AppFont.semiBoldLabel(20))
                 .foregroundColor(.homeText)
                 .padding(.top, 8)
@@ -85,7 +85,7 @@ struct AddFriendSheet: View {
                     .font(AppFont.semiBoldLabel(15))
                     .foregroundColor(.homeText)
                 if let username = profile.username {
-                    Text("@\(username)")
+                    T("@\(username)")
                         // Same Darker-Grotesque-vs-Inter size mismatch as
                         // FriendsView's `FriendRequestRow` — see there.
                         .font(AppFont.regularLabel(12))
@@ -105,19 +105,19 @@ struct AddFriendSheet: View {
 
         switch existing?.status {
         case .accepted:
-            Text("Friends")
+            T("Friends")
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
         case .pending:
             if existing?.requesterId == auth.session?.user.id {
-                Text("Requested")
+                T("Requested")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .padding(.trailing, 8)
             } else {
                 // They already sent *you* one — nudge to respond from
                 // FriendsView rather than duplicating Accept/Decline here.
-                Text("Respond in Friends")
+                T("Respond in Friends")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
             }
@@ -141,7 +141,7 @@ struct AddFriendSheet: View {
                         ProgressView()
                             .tint(.homeBackground)
                     } else {
-                        Text("Add")
+                        T("Add")
                             .font(AppFont.semiBoldLabel(14))
                     }
                 }

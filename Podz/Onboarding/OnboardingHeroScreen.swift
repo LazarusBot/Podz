@@ -28,11 +28,11 @@ struct OnboardingHeroScreen<Bottom: View>: View {
                 .frame(maxHeight: .infinity)
 
             VStack(spacing: photoStyle == .card ? 18 : 23) {
-                Text(title)
+                T(title)
                     .font(OnboardingFont.title)
                     .foregroundColor(.onbText)
 
-                Text(subtitle)
+                T(subtitle)
                     .font(photoStyle == .card ? OnboardingFont.compact : OnboardingFont.body)
                     .lineSpacing(photoStyle == .card ? 0 : 5)
                     .foregroundColor(.onbSubtitle)

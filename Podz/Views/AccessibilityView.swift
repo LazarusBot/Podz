@@ -20,7 +20,7 @@ struct AccessibilityView: View {
                 }
             }
         ) {
-            Text("Podz follows your iOS accessibility settings, including VoiceOver, Dynamic Type, and Reduce Motion. There's nothing to configure here — manage them in Settings.")
+            T("Podz follows your iOS accessibility settings, including VoiceOver, Dynamic Type, and Reduce Motion. There's nothing to configure here — manage them in Settings.")
                 .font(AppFont.regularLabel(16))
                 .lineSpacing(5)
                 .foregroundColor(.homeBodyText)
