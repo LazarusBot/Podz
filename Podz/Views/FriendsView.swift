@@ -42,7 +42,7 @@ struct FriendsView: View {
             SectionHeading(title: friendsStore.friends.isEmpty ? "Friends" : "Friends (\(friendsStore.friends.count))")
 
             if friendsStore.friends.isEmpty {
-                Text("No friends yet. Add someone to plan trips together.")
+                T("No friends yet. Add someone to plan trips together.")
                     .font(AppFont.regularLabel(14))
                     .foregroundColor(.homeSubtitle)
                     .padding(.horizontal, 24)
@@ -76,11 +76,11 @@ private struct FriendRequestRow: View {
         HStack(spacing: 14) {
             AvatarView(imageName: profile?.avatarURL, size: 48)
             VStack(alignment: .leading, spacing: 2) {
-                Text(profile?.displayName ?? "Someone")
+                T(profile?.displayName ?? "Someone")
                     .font(AppFont.semiBoldLabel(16))
                     .foregroundColor(.homeText)
                 if let username = profile?.username {
-                    Text("@\(username)")
+                    T("@\(username)")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                 }
@@ -97,7 +97,7 @@ private struct FriendRequestRow: View {
                     .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1))
             }
             .buttonStyle(TapScaleButtonStyle())
-            .accessibilityLabel("Decline")
+            .accessibilityLabel(tr("Decline"))
             Button(action: onAccept) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))
@@ -106,7 +106,7 @@ private struct FriendRequestRow: View {
                     .background(Circle().fill(Color.homeText))
             }
             .buttonStyle(TapScaleButtonStyle())
-            .accessibilityLabel("Accept")
+            .accessibilityLabel(tr("Accept"))
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 10)
@@ -124,7 +124,7 @@ private struct FriendRow: View {
                     .font(AppFont.semiBoldLabel(16))
                     .foregroundColor(.homeText)
                 if let username = profile?.username {
-                    Text("@\(username)")
+                    T("@\(username)")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                 }
@@ -163,7 +163,7 @@ private struct SwipeToDeleteRow<Content: View>: View {
                     .frame(maxHeight: .infinity)
                     .background(Color.appBadgeRed)
             }
-            .accessibilityLabel("Remove friend")
+            .accessibilityLabel(tr("Remove friend"))
 
             content()
                 .background(Color.homeBackground)
@@ -198,15 +198,15 @@ private struct SwipeToDeleteRow<Content: View>: View {
                 }
         )
         .clipped()
-        .alert("Remove this friend?", isPresented: $showConfirmation) {
-            Button("Remove", role: .destructive) {
+        .alert(tr("Remove this friend?"), isPresented: $showConfirmation) {
+            Button(tr("Remove"), role: .destructive) {
                 withAnimation(.easeOut(duration: AppMotion.snappy)) {
                     offset = 0
                     isRevealed = false
                 }
                 onDelete()
             }
-            Button("Cancel", role: .cancel) {
+            Button(tr("Cancel"), role: .cancel) {
                 withAnimation(.easeOut(duration: AppMotion.snappy)) {
                     offset = 0
                     isRevealed = false

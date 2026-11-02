@@ -14,7 +14,7 @@ struct OnboardingPillButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            T(title)
                 .font(highlighted ? OnboardingFont.highlightedPill : OnboardingFont.compact)
                 .foregroundColor(highlighted ? .onbHighlightText : .onbText)
                 .lineLimit(1)
@@ -46,7 +46,7 @@ struct OnboardingBackButton: View {
         }
         .buttonStyle(TapScaleButtonStyle())
         .disabled(!isEnabled)
-        .accessibilityLabel("Back")
+        .accessibilityLabel(tr("Back"))
     }
 }
 
@@ -85,7 +85,7 @@ struct OnboardingFieldPill<Trailing: View>: View {
             TextField(
                 "",
                 text: $text,
-                prompt: Text(placeholder).foregroundColor(.onbText.opacity(0.6))
+                prompt: T(placeholder).foregroundColor(.onbText.opacity(0.6))
             )
             .font(OnboardingFont.compact)
             .foregroundColor(.onbText)

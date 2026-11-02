@@ -272,6 +272,55 @@ enum FrenchStrings {
         ("Booking request", "Demande de réservation"),
         ("Search by username", "Chercher par nom d'utilisateur"),
         ("Best", "Meilleurs"), ("Highest first", "Plus hauts d'abord"), ("Most beds", "Plus de lits"), ("A–Z", "A–Z"),
+
+        // Lenny's search
+        ("Extracting your stops.", "Repérage de tes étapes."), ("Finding the best pods around here.", "Recherche des meilleurs refuges autour."),
+        ("Loading your itinerary.", "Chargement de ton itinéraire."), ("Extracting {}.", "Repérage de {1}."),
+        ("Around each stop", "Autour de chaque étape"), ("Nothing found", "Rien trouvé"), ("Your plan is ready", "Ton plan est prêt"),
+        ("zero", "zéro"), ("one", "une"), ("two", "deux"), ("three", "trois"), ("four", "quatre"), ("five", "cinq"),
+        ("six", "six"), ("seven", "sept"), ("eight", "huit"), ("nine", "neuf"),
+        ("{} stop", "{1} étape"), ("{} stops", "{1} étapes"),
+        ("I can't see any pods right now. Check your connection and try again.", "Je ne vois aucun refuge pour l'instant. Vérifie ta connexion et réessaie."),
+        ("I couldn't make out a place in that. Try a town, a lake or a peak.", "Je n'ai pas reconnu de lieu là-dedans. Essaie une ville, un lac ou un sommet."),
+        ("I couldn't find any pods along that route. Try another stop, or a wider area.", "Je n'ai trouvé aucun refuge sur ce trajet. Essaie une autre étape, ou une zone plus large."),
+        // Onboarding and login
+        ("Book a shelter.", "Réserve un refuge."), ("In an instant", "En un instant"),
+        ("Ask Lenny about your trip, select and you’re all set.", "Parle de ton séjour à Lenny, choisis, et c'est réglé."),
+        ("Touch to start →", "Touche pour commencer →"),
+        ("Find the perfect pod", "Trouve le refuge idéal"),
+        ("Discover unique, architectural stays and cozy cabins hidden deep within nature's most stunning landscapes.", "Découvre des refuges uniques et des cabanes chaleureuses, cachés au cœur des plus beaux paysages de montagne."),
+        ("Meet Lenny", "Voici Lenny"),
+        ("Tell him where and when. He finds you a bed in a mountain pod.", "Dis-lui où et quand. Il te trouve un lit dans un refuge de montagne."),
+        ("Only this needed", "Rien de plus"), ("No stress, no multiple fields, just your mail.", "Pas de stress, pas de formulaire : juste ton e-mail."),
+        ("Tap your email", "Écris ton e-mail"),
+        ("Check your inbox", "Regarde ta boîte mail"), ("We sent you a 6-digit code. Enter it to get in.", "On t'a envoyé un code à 6 chiffres. Saisis-le pour entrer."),
+        ("Enter your code", "Saisis ton code"), ("Resend code", "Renvoyer le code"), ("Change email", "Changer d'e-mail"),
+        ("New code sent.", "Nouveau code envoyé."),
+        ("Where to first?", "Par où commencer ?"), ("Pick a region. You can change it anytime.", "Choisis une région. Tu pourras en changer à tout moment."),
+        ("Get started", "C'est parti"), ("Dolomites", "Dolomites"), ("Mont Blanc", "Mont Blanc"), ("Julian Alps", "Alpes juliennes"), ("Pyrenees", "Pyrénées"),
+        ("Security: wait {}s", "Sécurité : attends {1} s"), ("Too many emails, try later", "Trop d'e-mails, réessaie plus tard"),
+        ("Wrong or expired code", "Code incorrect ou expiré"), ("Invalid email", "E-mail invalide"),
+        ("Couldn't send, try again", "Envoi impossible, réessaie"), ("No connection", "Pas de connexion"),
+
+        // Login, accessibility, profile edit
+        ("Sign-in method", "Méthode de connexion"), ("Send password reset email", "Envoyer un e-mail de réinitialisation"),
+        ("Email sent", "E-mail envoyé"), ("Check {} for a link to reset your password.", "Vérifie {1} : tu y trouveras un lien pour réinitialiser ton mot de passe."),
+        ("Open Settings", "Ouvrir les Réglages"),
+        ("Podz follows your iOS accessibility settings, including VoiceOver, Dynamic Type, and Reduce Motion. There's nothing to configure here — manage them in Settings.", "Podz suit les réglages d'accessibilité d'iOS, dont VoiceOver, la taille du texte et la réduction des animations. Il n'y a rien à régler ici : gère-les dans les Réglages."),
+        ("Saving…", "Enregistrement…"), ("Save", "Enregistrer"), ("Username", "Nom d'utilisateur"), ("Name", "Nom"), ("Age", "Âge"), ("Location", "Lieu"),
+        ("Your photo", "Ta photo"), ("Change photo", "Changer de photo"), ("Press and hold the photo to adjust it", "Maintiens la photo pour l'ajuster"),
+        ("Profile photo. Double tap to change, press and hold to adjust", "Photo de profil. Touche deux fois pour changer, maintiens pour ajuster"),
+        ("Adjust photo", "Ajuster la photo"), ("Pinch to zoom, drag to move", "Pince pour zoomer, glisse pour déplacer"),
+        ("Rotate", "Pivoter"), ("Reset", "Réinitialiser"), ("Couldn't save", "Enregistrement impossible"),
+        ("Couldn't open your photo.", "Impossible d'ouvrir ta photo."), ("Couldn't prepare the photo.", "Impossible de préparer la photo."),
+
+        // Friends
+        ("Add friend", "Ajouter un ami"), ("Add a friend", "Ajouter un ami"), ("Requests", "Demandes"), ("Friends ({})", "Amis ({1})"),
+        ("No friends yet. Add someone to plan trips together.", "Pas encore d'amis. Ajoute quelqu'un pour planifier vos séjours ensemble."),
+        ("Decline", "Refuser"), ("Accept", "Accepter"), ("Remove friend", "Retirer l'ami"), ("Remove this friend?", "Retirer cet ami ?"),
+        ("Couldn't send request", "Envoi de la demande impossible"), ("Requested", "Demandé"), ("Respond in Friends", "Répondre dans Amis"), ("Add", "Ajouter"),
+        ("Message", "Message"), ("Send message", "Envoyer le message"), ("Send", "Envoyer"), ("Cancel reply", "Annuler la réponse"),
+
     ]
 }
 

@@ -16,13 +16,13 @@ struct OnboardingWelcomeStep: View {
                 Spacer()
 
                 VStack(spacing: 6) {
-                    Text("Book a shelter.")
-                    Text("In an instant")
+                    T("Book a shelter.")
+                    T("In an instant")
                 }
                 .font(OnboardingFont.title)
                 .foregroundColor(.onbText)
 
-                Text("Ask Lenny about your trip, select and you’re all set.")
+                T("Ask Lenny about your trip, select and you’re all set.")
                     .font(OnboardingFont.compact)
                     .foregroundColor(.onbSubtitle)
                     .multilineTextAlignment(.center)

@@ -57,7 +57,7 @@ struct LennyTimeline: View {
                     .frame(width: dotSize)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(step.title)
+                        T(step.title)
                             .font(AppFont.semiBoldLabel(15))
                             .foregroundColor(step.isDone || isActive ? .homeText : .homeSubtitle)
                             .contentTransition(.opacity)
@@ -123,7 +123,7 @@ private struct StepCaption: View {
     }
 
     var body: some View {
-        Text(shown)
+        T(shown)
             .font(AppFont.regularLabel(13))
             .foregroundColor(.homeSubtitle)
             .id(shown)
