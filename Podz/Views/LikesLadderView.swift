@@ -132,6 +132,11 @@ struct LikesLadderView: View {
                 }
                 .scrollIndicators(.hidden)
                 .scrollPosition($position)
+                // Each hut is a stop: the swipe comes to rest with it at the reading.
+                .scrollTargetBehavior(LadderStopBehavior(
+                    stops: placed.map { max(headerHeight + $0.y - proxy.size.height * readingShare, 0) },
+                    reading: reading
+                ))
                 .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
                     reading.offset = offset
                     scrollState.updateOffset(offset)
@@ -267,6 +272,41 @@ struct LikesLadderView: View {
             .clipShape(Circle())
             // The ground around it, so the rail reads as passing behind.
             .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 3))
+    }
+}
+
+// MARK: - Stopping at a hut
+
+/// Where a swipe comes to rest: at a hut, with it level with the reading. A
+/// slower swipe stops at the first hut in its path, so you can't slide past one
+/// without seeing it; a hard flick may carry on, and lands on the hut nearest
+/// to where it was heading.
+private struct LadderStopBehavior: ScrollTargetBehavior {
+    /// Scroll offsets at which a hut is level with the reading.
+    let stops: [CGFloat]
+    let reading: LadderReading
+
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        guard !stops.isEmpty else { return }
+        let ordered = stops.sorted()
+        let current = reading.offset
+        let proposed = target.rect.minY
+        guard abs(proposed - current) > 4 else { return }
+        let goesDown = proposed > current
+        let hardFlick = abs(context.velocity.dy) > 1800
+
+        var chosen: CGFloat?
+        if !hardFlick {
+            // The first hut in the way.
+            chosen = goesDown
+                ? ordered.first { $0 > current + 6 && $0 <= proposed + 48 }
+                : ordered.last { $0 < current - 6 && $0 >= proposed - 48 }
+        }
+        if chosen == nil, let nearest = ordered.min(by: { abs($0 - proposed) < abs($1 - proposed) }),
+           abs(nearest - proposed) < 220 {
+            chosen = nearest
+        }
+        if let chosen { target.rect.origin.y = chosen }
     }
 }
 
