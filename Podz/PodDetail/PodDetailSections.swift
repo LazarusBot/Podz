@@ -90,6 +90,7 @@ struct PodDetailSections: View {
                 row("Price", pod.priceText ?? (pod.isBookable ? nil : "Set by the hut"))
                 row("Opening", hutClean(pod.openingHours) ?? (pod.isBookable ? nil : "Ask the hut"))
                 row("Booking", pod.isBookable ? "In Podz" : "Through the hut")
+                row("Offline", OfflinePackStore.shared.isSaved(pod.id) ? "Saved on this phone" : nil)
             }
         }
     }
