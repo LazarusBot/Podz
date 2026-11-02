@@ -34,7 +34,7 @@ struct FolderPodTile: View {
                         .padding(.bottom, 16)
                 }
                 .overlay(alignment: .topTrailing) {
-                    if isSelected {
+                    if isSelected && !isEditing {
                         CheckGlyphShape()
                             .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
                             .frame(width: 12, height: 10)
@@ -50,19 +50,19 @@ struct FolderPodTile: View {
         }
         .buttonStyle(.plain)
         .rotationEffect(.degrees(isEditing ? wiggle : 0))
-        .overlay(alignment: .topLeading) {
+        // Editing swaps the check for a red minus, in the same place and size.
+        .overlay(alignment: .topTrailing) {
             if isEditing {
                 Button(action: onRemove) {
-                    Image(systemName: "minus")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.red))
-                        .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: 11, height: 1.6)
+                        .frame(width: 26, height: 26)
+                        .background(Color.appBadgeRed, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(tr("Remove from folder"))
-                .padding(10)
+                .padding(14)
                 .transition(.scale.combined(with: .opacity))
             }
         }
