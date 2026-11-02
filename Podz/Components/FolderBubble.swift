@@ -53,10 +53,10 @@ struct FolderBubble: View {
     /// place, more spread on a spiral that fills the bubble, each smaller the
     /// more there are and tilted a little by a stable amount.
     static func placement(index: Int, count: Int, seed: String) -> (offset: CGSize, scale: CGFloat, rotation: Double) {
-        if count <= 2 { return (photoOffsets[min(index, 1)], 1, 0) }
-        let radius = referenceRadius * 0.78 * sqrt((CGFloat(index) + 0.5) / CGFloat(count))
+        if count <= 2 { return (photoOffsets[min(index, 1)], 1.08, 0) }
+        let radius = referenceRadius * 0.85 * sqrt((CGFloat(index) + 0.5) / CGFloat(count))
         let angle = CGFloat(index) * 2.39996   // the golden angle: even spread
-        let scale = max(0.36, min(1, 1.35 / sqrt(CGFloat(count))))
+        let scale = max(0.52, min(1.12, 1.95 / sqrt(CGFloat(count))))
         let tilt = (Double(FoamLayout.jitter(seed, salt: 11)) - 0.5) * 12
         return (CGSize(width: radius * cos(angle), height: radius * sin(angle)), scale, tilt)
     }
