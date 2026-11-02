@@ -103,7 +103,7 @@ struct FolderBubble: View {
     @ViewBuilder
     private var label: some View {
         if let editableName {
-            TextField("Folder name", text: editableName)
+            TextField(tr("Folder name"), text: editableName)
                 .font(AppFont.semiBoldLabel(15))
                 .foregroundColor(.homeText)
                 .multilineTextAlignment(.center)

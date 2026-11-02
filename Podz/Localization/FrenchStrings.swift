@@ -109,7 +109,7 @@ enum FrenchStrings {
         ("Home", "Accueil"), ("Likes", "Favoris"), ("Profile", "Profil"),
         ("Where to tonight?", "Où ce soir ?"), ("Available tonight", "Disponibles ce soir"),
         ("See all", "Tout voir"), ("Search a region", "Chercher une région"),
-        ("Ask Lenny", "Demander à Lenny"), ("Ask Lenny to find it", "Demande à Lenny de le trouver"),
+        ("Ask Lenny to find it", "Demande à Lenny de le trouver"),
         ("Describe your trip and Lenny finds the pods", "Décris ton séjour et Lenny trouve les refuges"),
         ("Chamonix to Zermatt in 5 days", "De Chamonix à Zermatt en 5 jours"),
         ("No pods available yet.", "Aucun refuge disponible pour le moment."),
@@ -270,6 +270,7 @@ enum FrenchStrings {
         ("Switch to traveler mode", "Passer en mode voyageur"), ("Become a host", "Devenir hôte"),
         ("Open", "Ouvrir"),
         ("Booking request", "Demande de réservation"),
+        ("Search by username", "Chercher par nom d'utilisateur"),
     ]
 }
 

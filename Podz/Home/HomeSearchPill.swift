@@ -45,7 +45,7 @@ struct HomeSearchPill: View {
         TextField(
             "",
             text: $text,
-            prompt: Text(isLennyMode ? "Chamonix to Zermatt in 5 days" : "Search a region")
+            prompt: T(isLennyMode ? "Chamonix to Zermatt in 5 days" : "Search a region")
                 .foregroundColor(isLennyMode ? .homeSubtitleOnInverse : .homeSubtitle)
         )
         .font(AppFont.regularLabel(14))
@@ -97,7 +97,7 @@ struct HomeSearchPill: View {
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(tr("Ask Lenny"))
-        .accessibilityHint("Describe your trip and Lenny finds the pods")
+        .accessibilityHint(tr("Describe your trip and Lenny finds the pods"))
         .accessibilityAddTraits(isLennyMode ? .isSelected : [])
     }
 }
