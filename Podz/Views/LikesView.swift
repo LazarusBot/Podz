@@ -81,8 +81,9 @@ struct LikesView: View {
                 sharedFolderContentView(folder: sharedFolder)
                     .transition(.blurReplace)
             } else if showsFolders || likedPods.isEmpty {
+                // Ladder and folders swap instantly: no transition.
                 foldersOverview
-                    .transition(.blurReplace)
+                    .transition(.identity)
             } else {
                 LikesLadderView(
                     pods: likedPods,
@@ -90,10 +91,9 @@ struct LikesView: View {
                     onOpen: { selectedPod = $0 },
                     onFolders: { showsFolders = true }
                 )
-                .transition(.blurReplace)
+                .transition(.identity)
             }
         }
-        .animation(.easeInOut(duration: 0.35), value: showsFolders)
         .animation(.easeInOut(duration: 0.35), value: selectedFolder?.id)
         .animation(.easeInOut(duration: 0.35), value: selectedSharedFolder?.id)
         // Same zoom-from-the-tapped-photo cover Home uses — the folder

@@ -16,7 +16,9 @@ struct LikesLadderView: View {
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var appeared = false
+    /// The huts rise in once; coming back from the folders they're just there.
+    private static var hasPlayedEntry = false
+    @State private var appeared = Self.hasPlayedEntry
 
     private struct Rung: Identifiable {
         let pod: Pod
@@ -52,6 +54,14 @@ struct LikesLadderView: View {
     private var railLength: CGFloat {
         let (low, high) = scale
         return CGFloat(high - low) * pointsPerMetre + 2 * 26
+    }
+
+    /// Where an altitude falls on a rail of this height.
+    private func levelY(_ altitude: Int, height: CGFloat) -> CGFloat {
+        let (low, high) = scale
+        let span = CGFloat(max(high - low, 1))
+        let top: CGFloat = 26
+        return top + (1 - (CGFloat(altitude) - CGFloat(low)) / span) * (height - top * 2)
     }
 
     private func rungs(height: CGFloat) -> [Rung] {
@@ -119,7 +129,10 @@ struct LikesLadderView: View {
         }
         .onAppear {
             scrollState.reset()
-            withAnimation(.smooth(duration: 0.6)) { appeared = true }
+            if !Self.hasPlayedEntry {
+                Self.hasPlayedEntry = true
+                withAnimation(.smooth(duration: 0.6)) { appeared = true }
+            }
         }
     }
 
@@ -157,6 +170,17 @@ struct LikesLadderView: View {
                 .fill(Color.homeText.opacity(0.14))
                 .frame(width: 1, height: height - 52)
                 .offset(x: railX, y: 26)
+            // A quiet label every 500 m, so you know how high you are.
+            ForEach(Array(stride(from: (scale.low / 500 + 1) * 500, to: scale.high, by: 500)), id: \.self) { level in
+                HStack(spacing: 4) {
+                    Text(level.formatted(.number.grouping(.automatic)))
+                        .font(AppFont.regularLabel(11))
+                        .foregroundColor(.homeSubtitle)
+                        .frame(width: 34, alignment: .trailing)
+                    Rectangle().fill(Color.homeText.opacity(0.14)).frame(width: 6, height: 1)
+                }
+                .offset(x: railX - 44, y: levelY(level, height: height) - 7)
+            }
             Text(Self.metres(scale.high))
                 .font(AppFont.regularLabel(11))
                 .foregroundColor(.homeSubtitle)
