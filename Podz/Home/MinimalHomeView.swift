@@ -52,7 +52,7 @@ struct MinimalHomeView: View {
         var sections = HomeSection.discovery(from: worthy)
         let picked = PodQuality.ranked(podsStore.pods.filter { $0.featured == true }, photoIDs: photoIDs)
         if picked.count >= 3 {
-            sections.insert(HomeSection(id: "featured", title: "Hand-picked", pods: Array(picked.prefix(10))), at: 0)
+            sections.insert(HomeSection(id: "featured", title: "Hand-picked", pods: Array(picked.prefix(10)), allPods: picked), at: 0)
         }
         discovery = sections
         updateSearch()
@@ -90,7 +90,7 @@ struct MinimalHomeView: View {
                 // altitude, groups, region and kind. Searching hides them.
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
                     ForEach(discoverySections) { section in
-                        sectionHeader(title: section.title, pods: section.pods, id: section.id)
+                        sectionHeader(title: section.title, pods: section.pods, id: section.id, all: section)
                         shelf(section)
                             .padding(.top, 16)
                     }
@@ -114,7 +114,12 @@ struct MinimalHomeView: View {
         }
         .background(Color.homeBackground.ignoresSafeArea())
         .sheet(item: $seeAll) { section in
-            HomeAllPodsSheet(pods: section.pods, photoURLs: podsStore.primaryPhotoByPodId)
+            HomeAllPodsSheet(
+                title: section.title,
+                pods: section.allPods ?? section.pods,
+                photoURLs: podsStore.primaryPhotoByPodId,
+                initialSort: section.seeAllSort
+            )
         }
         // Zoom cover, same as the old Home: the tapped card's photo grows
         // into the detail and shrinks back on close. A pod with no card
@@ -180,13 +185,13 @@ struct MinimalHomeView: View {
     }
 
     /// A shelf's title and its "See all".
-    private func sectionHeader(title: String, pods: [Pod], id: String) -> some View {
+    private func sectionHeader(title: String, pods: [Pod], id: String, all: HomeSection? = nil) -> some View {
         HStack(alignment: .firstTextBaseline) {
             T(title)
                 .font(AppFont.semiBoldLabel(16))
                 .foregroundColor(.homeText)
             Spacer()
-            Button(tr("See all")) { seeAll = HomeSection(id: id, title: title, pods: pods) }
+            Button(tr("See all")) { seeAll = all ?? HomeSection(id: id, title: title, pods: pods) }
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
                 .disabled(pods.isEmpty)

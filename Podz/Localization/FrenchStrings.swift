@@ -271,6 +271,7 @@ enum FrenchStrings {
         ("Open", "Ouvrir"),
         ("Booking request", "Demande de réservation"),
         ("Search by username", "Chercher par nom d'utilisateur"),
+        ("Best", "Meilleurs"), ("Highest first", "Plus hauts d'abord"), ("Most beds", "Plus de lits"), ("A–Z", "A–Z"),
 
         // Lenny's search
         ("Extracting your stops.", "Repérage de tes étapes."), ("Finding the best pods around here.", "Recherche des meilleurs refuges autour."),

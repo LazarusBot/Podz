@@ -18,6 +18,11 @@ struct HomeSection: Identifiable {
     let title: String
     let pods: [Pod]
     var layout: Layout = .hero
+    /// Everything behind the shelf, for "See all" (the shelf itself shows a few);
+    /// nil when the shelf already is everything.
+    var allPods: [Pod]?
+    /// How "See all" starts out sorted.
+    var seeAllSort: HomeAllPodsSheet.Sort = .best
     /// The quiet line under each pod's name in a hero shelf; the default is
     /// "region · beds".
     var subtitle: ((Pod) -> String)?
@@ -34,13 +39,13 @@ struct HomeSection: Identifiable {
         let highest = pods.filter { (1...6_000).contains($0.altitudeM ?? 0) }
             .sorted { ($0.altitudeM ?? 0) > ($1.altitudeM ?? 0) }
         if highest.count >= 3 {
-            tall.append(HomeSection(id: "highest", title: "Highest", pods: Array(highest.prefix(8)), layout: .tall))
+            tall.append(HomeSection(id: "highest", title: "Highest", pods: Array(highest.prefix(8)), layout: .tall, allPods: highest, seeAllSort: .highest))
         }
 
         let big = pods.filter { ($0.bedsTotal ?? 0) >= 12 }
             .sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }
         if big.count >= 2 {
-            heroes.append(HomeSection(id: "groups", title: "Room for groups", pods: Array(big.prefix(8))) { pod in
+            heroes.append(HomeSection(id: "groups", title: "Room for groups", pods: Array(big.prefix(8)), allPods: big, seeAllSort: .beds) { pod in
                 [pod.bedsTotal.map { "\($0) beds" }, pod.region ?? pod.country].compactMap { $0 }.joined(separator: " · ")
             })
         }
@@ -52,7 +57,7 @@ struct HomeSection: Identifiable {
             .prefix(3)
         for (region, group) in regions {
             let ordered = group.sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }
-            let section = HomeSection(id: "region-\(region)", title: "In \(region)", pods: ordered, layout: .mosaic)
+            let section = HomeSection(id: "region-\(region)", title: "In \(region)", pods: ordered, layout: .mosaic, allPods: ordered)
             mosaics.append(section)
         }
 
@@ -62,7 +67,7 @@ struct HomeSection: Identifiable {
             .sorted { ($0.value.count, $1.key) > ($1.value.count, $0.key) }
             .prefix(2)
         for (kind, group) in kinds {
-            heroes.append(HomeSection(id: "kind-\(kind)", title: plural(kind.capitalized), pods: group))
+            heroes.append(HomeSection(id: "kind-\(kind)", title: plural(kind.capitalized), pods: Array(group.prefix(12)), allPods: group))
         }
 
         // Tall, mosaic, hero, mosaic, hero, mosaic...
