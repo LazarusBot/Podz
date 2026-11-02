@@ -45,11 +45,14 @@ enum FoamLayout {
     /// four times the pods of another is twice as wide. Equal folders are
     /// equal; an empty one is small but never vanishes; none is wider than
     /// `maxRadius`. A lone bubble is exactly the base.
+    /// A folder with a lot of pods grows at most to this many times the base.
+    static let maxFactor: CGFloat = 1.3
+
     static func radii(podCounts: [Int], base: CGFloat, maxRadius: CGFloat) -> [CGFloat] {
         guard podCounts.count > 1 else { return podCounts.map { _ in base } }
         let mean = max(CGFloat(podCounts.reduce(0, +)) / CGFloat(podCounts.count), 1)
         return podCounts.map { count in
-            let factor = min(max(sqrt(max(CGFloat(count), 0.5) / mean), 0.55), 1.6)
+            let factor = min(max(sqrt(max(CGFloat(count), 0.5) / mean), 0.55), maxFactor)
             return min(base * factor, maxRadius)
         }
     }

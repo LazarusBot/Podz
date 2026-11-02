@@ -40,7 +40,7 @@ struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
             let radii = FoamLayout.radii(
                 podCounts: counts,
                 base: FoamLayout.baseRadius(count: items.count),
-                maxRadius: width * 0.475
+                maxRadius: width * 0.37
             )
             packCache.radii = radii
             packCache.centers = FoamLayout.pack(radii: radii, ids: ids, width: width, top: Self.topInset)

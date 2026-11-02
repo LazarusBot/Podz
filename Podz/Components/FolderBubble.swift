@@ -40,9 +40,26 @@ struct FolderBubble: View {
     static let photoSize = CGSize(width: 119, height: 141)
 
     /// Where the photos sit at full size, from the center, in points.
-    private static let photoOffsets: [CGSize] = [CGSize(width: 79, height: -89), CGSize(width: -71, height: 97)]
+    static let photoOffsets: [CGSize] = [CGSize(width: 79, height: -89), CGSize(width: -71, height: 97)]
 
     private var scale: CGFloat { cell.radius / Self.referenceRadius }
+
+    /// The pods whose photos are drawn: all of them, up to a sensible number
+    /// (past that they'd only be a blur).
+    private var shownPods: [Pod] { Array(pods.prefix(Self.maxPhotos)) }
+    static let maxPhotos = 24
+
+    /// Where one photo sits at the full-size bubble: one or two keep their
+    /// place, more spread on a spiral that fills the bubble, each smaller the
+    /// more there are and tilted a little by a stable amount.
+    static func placement(index: Int, count: Int, seed: String) -> (offset: CGSize, scale: CGFloat, rotation: Double) {
+        if count <= 2 { return (photoOffsets[min(index, 1)], 1, 0) }
+        let radius = referenceRadius * 0.78 * sqrt((CGFloat(index) + 0.5) / CGFloat(count))
+        let angle = CGFloat(index) * 2.39996   // the golden angle: even spread
+        let scale = max(0.36, min(1, 1.35 / sqrt(CGFloat(count))))
+        let tilt = (Double(FoamLayout.jitter(seed, salt: 11)) - 0.5) * 12
+        return (CGSize(width: radius * cos(angle), height: radius * sin(angle)), scale, tilt)
+    }
 
     @FocusState private var nameFocused: Bool
     @State private var isPressed = false
@@ -52,19 +69,25 @@ struct FolderBubble: View {
         ZStack {
             FoamCellView(cell: cell)
 
-            // Photos stay inside the bubble: cut off at its edges.
+            // Every pod's photo is inside the bubble, overlapping where there are
+            // many (smaller the more there are), cut off at its edges.
             ZStack {
-                ForEach(Array(pods.prefix(2).enumerated()), id: \.element.id) { index, pod in
-                    let offset = Self.photoOffsets[index]
+                ForEach(Array(shownPods.enumerated()), id: \.element.id) { index, pod in
+                    let place = Self.placement(index: index, count: shownPods.count, seed: pod.id.uuidString)
                     BubblePhoto(url: photoURLs[pod.id], coordinate: pod.coordinate)
-                        .scaleEffect(scale)
-                        .opacity(0.55)
-                        .offset(x: (mirrored ? -offset.width : offset.width) * scale, y: offset.height * scale)
+                        .scaleEffect(scale * place.scale)
+                        .rotationEffect(.degrees(place.rotation))
+                        .opacity(shownPods.count > 2 ? 0.7 : 0.55)
+                        .offset(
+                            x: (mirrored ? -place.offset.width : place.offset.width) * scale,
+                            y: place.offset.height * scale
+                        )
                         // A newly added pod pops in rather than swapping
                         // silently.
                         .transition(.scale(scale: 0.4).combined(with: .opacity))
                 }
             }
+            .animation(.smooth(duration: 0.5), value: shownPods.map(\.id))
             .mask(FoamCellView(cell: cell, color: .black))
 
             label
