@@ -12,6 +12,8 @@ struct HomePodCard: View {
     /// Replaces the default "region · beds" line (the highest shelf says the
     /// altitude, for example).
     var subtitleOverride: String?
+    /// A second quiet line under the first (price, whether it's open).
+    var detailLine: String?
     var onTap: () -> Void
 
     private var subtitle: String {
@@ -46,6 +48,12 @@ struct HomePodCard: View {
                         .font(AppFont.regularLabel(14))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)
+                    if let detailLine {
+                        T(detailLine)
+                            .font(AppFont.regularLabel(12))
+                            .foregroundColor(.homeSubtitle.opacity(0.8))
+                            .lineLimit(1)
+                    }
                 }
                 .padding(.horizontal, 5)
             }
