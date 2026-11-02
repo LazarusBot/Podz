@@ -27,11 +27,11 @@ struct OnboardingRegionStep: View {
             Spacer(minLength: 24)
 
             VStack(spacing: 23) {
-                Text("Where to first?")
+                T("Where to first?")
                     .font(OnboardingFont.title)
                     .foregroundColor(.onbText)
 
-                Text("Pick a region. You can change it anytime.")
+                T("Pick a region. You can change it anytime.")
                     .font(OnboardingFont.body)
                     .foregroundColor(.onbSubtitle)
                     .multilineTextAlignment(.center)
@@ -90,7 +90,7 @@ private struct RegionTile: View {
                     .frame(height: 90)
             }
             .overlay(alignment: .bottomLeading) {
-                Text(region.rawValue)
+                T(region.rawValue)
                     .font(AppFont.semiBoldLabel(15))
                     .foregroundColor(.white)
                     .padding(.leading, 18)

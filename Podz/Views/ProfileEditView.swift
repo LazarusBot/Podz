@@ -114,16 +114,16 @@ struct ProfileEditView: View {
             .fullScreenCover(isPresented: $showsAvatarEditor) {
                 AvatarEditorView(imageURL: auth.profile?.avatarURL) { showsAvatarEditor = false }
             }
-            .accessibilityLabel("Profile photo. Double tap to change, press and hold to adjust")
+            .accessibilityLabel(tr("Profile photo. Double tap to change, press and hold to adjust"))
             .accessibilityAddTraits(.isButton)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Your photo")
+                T("Your photo")
                     .font(AppFont.semiBoldLabel(16))
                     .foregroundColor(.homeText)
                 Button { showsPhotoPicker = true } label: {
                     HStack(spacing: 5) {
-                        Text("Change photo")
+                        T("Change photo")
                             .font(AppFont.regularLabel(13))
                             .foregroundColor(.homeSubtitle)
                             .underline(color: Color.homeSubtitle.opacity(0.5))
@@ -136,7 +136,7 @@ struct ProfileEditView: View {
                 }
                 .buttonStyle(.plain)
 
-                Text("Press and hold the photo to adjust it")
+                T("Press and hold the photo to adjust it")
                     .font(AppFont.regularLabel(12))
                     .foregroundColor(.homeSubtitle.opacity(0.8))
             }
@@ -157,7 +157,7 @@ struct ProfileEditView: View {
         submit: SubmitLabel
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label)
+            T(label)
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
 
@@ -167,7 +167,7 @@ struct ProfileEditView: View {
                         .font(AppFont.semiBoldLabel(17))
                         .foregroundColor(.homeSubtitle)
                 }
-                TextField("", text: text, prompt: Text("—").foregroundColor(.homeSubtitle))
+                TextField("", text: text, prompt: T("—").foregroundColor(.homeSubtitle))
                     .font(AppFont.semiBoldLabel(17))
                     .foregroundColor(.homeText)
                     .tint(.homeText)

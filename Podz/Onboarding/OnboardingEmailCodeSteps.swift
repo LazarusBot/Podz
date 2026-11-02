@@ -35,7 +35,7 @@ struct OnboardingEmailStep: View {
 
                 // Reserved height so an error appearing doesn't push the
                 // pill around.
-                Text(auth.lastError.map(OnboardingErrorText.short) ?? " ")
+                T(auth.lastError.map(OnboardingErrorText.short) ?? " ")
                     .font(OnboardingFont.caption)
                     .foregroundColor(.appBadgeRed)
                     .lineLimit(1)
@@ -105,14 +105,14 @@ struct OnboardingCodeStep: View {
     private var footer: some View {
         Group {
             if let error = auth.lastError {
-                Text(OnboardingErrorText.short(error)).foregroundColor(.appBadgeRed)
+                T(OnboardingErrorText.short(error)).foregroundColor(.appBadgeRed)
             } else if let resendNote {
-                Text(resendNote).foregroundColor(.onbSubtitle)
+                T(resendNote).foregroundColor(.onbSubtitle)
             } else {
                 HStack(spacing: 8) {
-                    Button("Resend code", action: resend)
-                    Text("·")
-                    Button("Change email", action: onChangeEmail)
+                    Button(tr("Resend code"), action: resend)
+                    T("·")
+                    Button(tr("Change email"), action: onChangeEmail)
                 }
                 .foregroundColor(.onbSubtitle)
             }
