@@ -25,7 +25,6 @@ import UIKit
 /// swap itself as plumbing, not something worth a second flourish on top).
 struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
-    @StateObject private var appMode = AppModeStore.shared
 
     var body: some View {
         Group {
@@ -33,11 +32,7 @@ struct OnboardingView: View {
                 LaunchLoadingView()
                     .preferredColorScheme(.light)
             } else if auth.isAuthenticated && !auth.justRegistered {
-                if FeatureFlags.hosting && auth.profile?.isHost == true && appMode.mode == .host {
-                    HostTabView()
-                } else {
-                    MainTabView()
-                }
+                MainTabView()
             } else {
                 OnboardingFlow()
             }
@@ -59,7 +54,7 @@ private struct LaunchLoadingView: View {
     /// Same sizing as `PodSection.cardSize` — two cards on screen plus a
     /// sliver of a third peeking at the trailing edge.
     private var cardSize: CGFloat {
-        (UIScreen.main.bounds.width - 24 - 2 * 12 - 24) / 2
+        (ScreenInsets.screenWidth - 24 - 2 * 12 - 24) / 2
     }
 
     var body: some View {

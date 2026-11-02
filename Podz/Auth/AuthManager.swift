@@ -149,30 +149,6 @@ final class AuthManager: ObservableObject {
         }
     }
     
-    /// Flips the current user into a host — see SQL/host_accounts.sql for
-    /// the column this writes and the policy that then lets them insert
-    /// pods. Idempotent: calling it again once already a host just
-    /// re-confirms the same state, nothing special-cased either way.
-    @discardableResult
-    func becomeHost() async -> Bool {
-        guard let userId = session?.user.id else {
-            lastError = "No active session — can't become a host."
-            return false
-        }
-        do {
-            try await supabase
-                .from("profiles")
-                .update(["is_host": AnyJSON.bool(true)])
-                .eq("id", value: userId)
-                .execute()
-            await fetchProfile()
-            return true
-        } catch {
-            lastError = error.localizedDescription
-            return false
-        }
-    }
-
     /// Call once the onboarding intro steps have been shown/dismissed.
     func finishPostRegisterOnboarding() {
         justRegistered = false
@@ -257,10 +233,6 @@ final class AuthManager: ObservableObject {
     func signOut() async {
         do {
             try await supabase.auth.signOut()
-            // Whoever signs in next (possibly a different account)
-            // starts in hiker mode, not whatever this session had
-            // switched to — see AppModeStore's own doc comment.
-            AppModeStore.shared.reset()
         } catch {
             lastError = error.localizedDescription
         }

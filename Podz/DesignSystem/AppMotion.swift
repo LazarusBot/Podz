@@ -5,9 +5,6 @@ import Foundation
 /// number (Home alone had 0.15/0.2/0.25 scattered across unrelated
 /// transitions with no reasoning tying the differences together).
 enum AppMotion {
-    /// Small state toggles — a mode switch, a busy indicator flipping,
-    /// a coachmark dismissing.
-    static let quick: Double = 0.15
 
     /// The app's most common transition — toggling a UI element's
     /// visibility/selection (tab bar shrink, sheet row swap, badge

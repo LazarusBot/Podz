@@ -133,8 +133,7 @@ struct LennyPlanView: View {
             }
             Group {
                 if isPick, let reason = stop.pickReason {
-                    T("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.homeText)
-                        + T("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
+                    Text("\(T("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(.homeText))\(T("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle))")
                 } else if let pod, let distance = stop.distanceCaption(for: pod) {
                     Text(distance).font(AppFont.regularLabel(13)).foregroundColor(.homeSubtitle)
                 } else {

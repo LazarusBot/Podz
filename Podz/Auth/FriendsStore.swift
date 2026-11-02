@@ -32,11 +32,6 @@ final class FriendsStore: ObservableObject {
         return friendships.filter { $0.status == .pending && $0.addresseeId == userId }
     }
 
-    var outgoingRequests: [Friendship] {
-        guard let userId = AuthManager.shared.session?.user.id else { return [] }
-        return friendships.filter { $0.status == .pending && $0.requesterId == userId }
-    }
-
     /// The relationship with a given user, if any — used to show the
     /// right button state ("Add," "Requested," "Friends") in search
     /// results instead of always offering to send a request.

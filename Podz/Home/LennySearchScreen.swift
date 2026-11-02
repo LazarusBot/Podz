@@ -123,8 +123,11 @@ struct LennySearchScreen: View {
         } else {
             TimelineView(.periodic(from: .now, by: 0.45)) { context in
                 let shownDots = reduceMotion ? 3 : Int(context.date.timeIntervalSinceReferenceDate / 0.45) % 4
-                (0..<3).reduce(T("Lenny is searching")) { text, index in
-                    text + T(".").foregroundColor(index < shownDots ? .homeText : .clear)
+                HStack(spacing: 0) {
+                    T("Lenny is searching")
+                    ForEach(0..<3, id: \.self) { index in
+                        Text(".").foregroundColor(index < shownDots ? .homeText : .clear)
+                    }
                 }
             }
             .transition(.blurReplace)

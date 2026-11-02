@@ -25,31 +25,6 @@ enum AppFont {
             : .system(size: size, weight: .black)
     }
 
-    /// Medium variant of the pill label — used for inactive category
-    /// chips, where the Black weight is reserved for the selected state.
-    static func pillLabelMedium(_ size: CGFloat = 14) -> Font {
-        darkerGrotesqueAvailable
-            ? .custom("DarkerGrotesque-Medium", size: size)
-            : .system(size: size, weight: .medium)
-    }
-
-    /// Bold (not Black) variant of the pill label — used for section
-    /// titles and pod names, one step down from Black-weight text like
-    /// the "@username" header or active category pills.
-    static func pillLabelBold(_ size: CGFloat = 14) -> Font {
-        darkerGrotesqueAvailable
-            ? .custom("DarkerGrotesque-Bold", size: size)
-            : .system(size: size, weight: .bold)
-    }
-
-    /// SemiBold variant — matches the Figma auth screens' text field
-    /// input/placeholder and the "or" divider (Darker Grotesque SemiBold).
-    static func pillLabelSemiBold(_ size: CGFloat = 14) -> Font {
-        darkerGrotesqueAvailable
-            ? .custom("DarkerGrotesque-SemiBold", size: size)
-            : .system(size: size, weight: .semibold)
-    }
-
     static func mediumLabel(_ size: CGFloat = 14) -> Font {
         interVariable(size: size, weight: 500)
     }
@@ -71,23 +46,6 @@ enum AppFont {
     /// rather than falling back to the system font outright.
     static func regularLabel(_ size: CGFloat = 14) -> Font {
         interVariable(size: size, weight: 400)
-    }
-
-    /// Stepper big number ("0", "3") — 20pt Black
-    static func stepperValue(_ size: CGFloat = 20) -> Font {
-        darkerGrotesqueAvailable
-            ? .custom("DarkerGrotesque-Black", size: size)
-            : .system(size: size, weight: .black)
-    }
-
-    /// List item title ("Hikers", "Wifi", "Pets") — 10pt Bold
-    static func itemTitle(_ size: CGFloat = 10) -> Font {
-        interVariable(size: size, weight: 700)
-    }
-
-    /// List item helper text ("Number of hikers with you.") — 8pt Medium
-    static func itemHelper(_ size: CGFloat = 8) -> Font {
-        interVariable(size: size, weight: 500)
     }
 
     /// `wght` as a four-character font-variation axis tag, packed into a
