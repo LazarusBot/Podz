@@ -20,6 +20,10 @@ struct LikeFolderPickerSheet: View {
     /// the same card).
     @State private var savingIntoFolderId: UUID?
     @State private var dropStage = FolderDropValues.start
+    /// The folder the photo is melting into, and where its centre is, so every
+    /// other bubble can give way away from it.
+    @State private var swellingFolderId: UUID?
+    @State private var pressCenter: CGPoint?
 
     /// What the canvas draws: each folder, plus the one being named.
     private enum Slot: Identifiable {
@@ -87,19 +91,27 @@ struct LikeFolderPickerSheet: View {
                 pods: likesStore.pods(in: folder.id, from: PodsStore.shared.pods),
                 photoURLs: PodsStore.shared.primaryPhotoByPodId,
                 mirrored: index % 2 == 1,
-                // The photo falls onto the bubble and shrinks into it.
+                // The folder that takes the photo swells; every other one gives way
+                // (a shift away from it and a hair smaller, a beat later the farther
+                // it is), so the bump travels through the foam.
+                swell: swellScale(for: folder.id, cell: cell),
+                reactionOffset: reactionOffset(for: folder.id, cell: cell),
+                reactionDelay: reactionDelay(for: folder.id, cell: cell),
+                // The photo glides onto the bubble and shrinks into it.
                 // Positioned in fractions of the bubble's diameter, from
                 // its center.
                 incomingDropContent: folder.id == savingIntoFolderId ? { diameter in
                     AnyView(
                         BubblePhoto(url: PodsStore.shared.primaryPhotoByPodId[pod.id], coordinate: pod.coordinate)
+                            // Flattening against the edge: its bottom stays put.
+                            .scaleEffect(x: dropStage.stretch, y: dropStage.squash, anchor: .bottom)
                             .scaleEffect(dropStage.scale * diameter / (FolderBubble.referenceRadius * 2))
-                            .rotationEffect(.degrees(dropStage.rotationDegrees))
-                            .offset(x: dropStage.xFraction * diameter, y: dropStage.yFraction * diameter)
+                            .opacity(dropStage.opacity)
+                            .offset(y: dropStage.yFraction * diameter)
                             .allowsHitTesting(false)
                     )
                 } : nil,
-                onTap: { saveLike(into: folder.id) }
+                onTap: { saveLike(into: folder.id, at: cell.center) }
             )
             // The freshly-created folder pops in with its pod already
             // inside — the "put the pod in it" moment commitNewFolder() is
@@ -171,51 +183,69 @@ struct LikeFolderPickerSheet: View {
         }
     }
 
-    private func saveLike(into folderId: UUID) {
+    // MARK: - The foam's reaction
+
+    /// How far the bump reaches, in points.
+    private let reach: CGFloat = 460
+
+    private func distance(from cell: FoamCell) -> CGFloat? {
+        guard let pressCenter else { return nil }
+        return hypot(cell.center.x - pressCenter.x, cell.center.y - pressCenter.y)
+    }
+
+    private func swellScale(for id: UUID, cell: FoamCell) -> CGFloat {
+        guard swellingFolderId != nil else { return 1 }
+        if id == swellingFolderId { return 1.06 }
+        let falloff = max(0, 1 - (distance(from: cell) ?? reach) / reach)
+        return 1 - 0.025 * falloff
+    }
+
+    /// Away from the bubble taking the photo, less the farther it is.
+    private func reactionOffset(for id: UUID, cell: FoamCell) -> CGSize {
+        guard swellingFolderId != nil, id != swellingFolderId, let pressCenter,
+              let d = distance(from: cell), d > 1 else { return .zero }
+        let falloff = max(0, 1 - d / reach)
+        let push = 10 * falloff
+        return CGSize(width: (cell.center.x - pressCenter.x) / d * push, height: (cell.center.y - pressCenter.y) / d * push)
+    }
+
+    /// The bump reaches the far bubbles a beat later.
+    private func reactionDelay(for id: UUID, cell: FoamCell) -> Double {
+        guard id != swellingFolderId, let d = distance(from: cell) else { return 0 }
+        return Double(min(d / 1800, 0.25))
+    }
+
+    // MARK: - Saving
+
+    /// The pod's photo glides straight down to the folder and, the moment it
+    /// touches the edge, adapts to it: it flattens into the foam and melts there
+    /// (it never goes to the middle). The bubble answers at the same instant, a
+    /// soft swell, and the whole foam gives way and settles, a wave from the
+    /// bubble outward. No arc, no spin.
+    private func saveLike(into folderId: UUID, at center: CGPoint) {
+        guard savingIntoFolderId == nil else { return }
         savingIntoFolderId = folderId
+        pressCenter = center
         dropStage = .start
-        // A separate tick before the first withAnimation — setting both
-        // in the same synchronous block risks SwiftUI coalescing them
-        // into a single render, where the overlay is inserted already at
-        // its final values with nothing to visibly animate from (the
-        // same reason HomeSearchRow's showControls fade-in waits a beat
-        // after isFocused before animating in).
+        // A separate tick, so the card is drawn at its start before it moves.
         DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: AppMotion.snappy)) {
-                dropStage = .midArc
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                // Plain easeOut, not a spring — a spring here would
-                // overshoot rotation past 42° and bounce back, which
-                // reads as changing tumble direction instead of the
-                // steady one-way spin the sketch shows.
-                withAnimation(.easeOut(duration: 0.22)) {
-                    dropStage = .landed
+            withAnimation(.smooth(duration: 0.32)) { dropStage = .touching }
+            // Contact: the card adapts to the edge and the foam answers.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                withAnimation(.smooth(duration: 0.32)) { dropStage = .absorbed }
+                withAnimation(.smooth(duration: 0.5)) { swellingFolderId = folderId }
+                // The data lands with the swell: the photo joins the others in the
+                // fan and the count rolls.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    Task { await likesStore.like(pod, folderId: folderId) }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                    withAnimation(.easeIn(duration: AppMotion.quick)) {
-                        dropStage = .vanished
-                    }
-                    // The actual data update — and with it, the real
-                    // photo's own pop-in transition and the count
-                    // badge's roll — waits until *here*, once the decoy
-                    // has landed and vanished, rather than firing the
-                    // instant the tap registers. Both used to animate at
-                    // the same time as the decoy's own flight, so the
-                    // real photo's pop-in was playing out hidden behind/
-                    // simultaneous with the decoy and never actually
-                    // seen on its own.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        Task {
-                            await likesStore.like(pod, folderId: folderId)
-                            // A beat to actually see the real photo pop
-                            // into the fan and the count roll, before
-                            // the sheet dismisses.
-                            try? await Task.sleep(nanoseconds: 1_500_000_000)
-                            onDismiss()
-                        }
-                    }
+                // The foam lets go and settles.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.smooth(duration: 0.6)) { swellingFolderId = nil }
                 }
+                // A beat to see it settle before the sheet closes.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.25) { onDismiss() }
             }
         }
     }
@@ -226,19 +256,19 @@ struct LikeFolderPickerSheet: View {
     }
 }
 
-/// Fixed points the existing-folder "drop" overlay animates through: a
-/// diagonal descent onto the bubble, rotating in one direction the whole
-/// way (a tumble, not tilt-overshoot-settle-back), then shrinking into the
-/// bubble's middle. x/yFraction are fractions of the bubble's diameter,
-/// from its center.
+/// Where the photo that drops into a folder is: above the bubble (start), just
+/// touching its top edge (touching), then flattened into that edge and gone
+/// (absorbed). yFraction is a fraction of the bubble's diameter, from its center
+/// (the edge is at -0.5).
 private struct FolderDropValues {
     var scale: CGFloat
-    var rotationDegrees: Double
-    var xFraction: CGFloat
     var yFraction: CGFloat
+    var opacity: Double
+    /// Wider and flatter as it adapts to the edge.
+    var stretch: CGFloat
+    var squash: CGFloat
 
-    static let start = FolderDropValues(scale: 1.0, rotationDegrees: -4, xFraction: -0.25, yFraction: -1.0)
-    static let midArc = FolderDropValues(scale: 0.9, rotationDegrees: 20, xFraction: -0.1, yFraction: -0.5)
-    static let landed = FolderDropValues(scale: 0.5, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
-    static let vanished = FolderDropValues(scale: 0.1, rotationDegrees: 42, xFraction: 0.0, yFraction: 0.0)
+    static let start = FolderDropValues(scale: 0.8, yFraction: -1.1, opacity: 1, stretch: 1, squash: 1)
+    static let touching = FolderDropValues(scale: 0.8, yFraction: -0.69, opacity: 1, stretch: 1, squash: 1)
+    static let absorbed = FolderDropValues(scale: 0.8, yFraction: -0.52, opacity: 0, stretch: 1.12, squash: 0.08)
 }

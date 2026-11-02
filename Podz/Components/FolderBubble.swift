@@ -20,6 +20,12 @@ struct FolderBubble: View {
     /// When set, the middle shows a name field instead (a new folder).
     var editableName: Binding<String>? = nil
     var onCommitName: (() -> Void)? = nil
+    /// A swell while a pod melts in; the other bubbles give way (a small shift
+    /// away from it, and a hair smaller), the farther ones a beat later, so the
+    /// bump travels through the foam.
+    var swell: CGFloat = 1
+    var reactionOffset: CGSize = .zero
+    var reactionDelay: Double = 0
     /// Drawn above the bubble; takes its diameter. Used for the photo that
     /// drops in while you save a like.
     var incomingDropContent: ((CGFloat) -> AnyView)? = nil
@@ -70,7 +76,10 @@ struct FolderBubble: View {
         .frame(width: cell.radius * 2, height: cell.radius * 2)
         .overlay { deleteBadge }
         .contentShape(Circle())
-        .scaleEffect(isPressed ? 0.98 : 1)
+        .scaleEffect((isPressed ? 0.98 : 1) * swell)
+        .offset(reactionOffset)
+        .animation(.smooth(duration: 0.55).delay(reactionDelay), value: swell)
+        .animation(.smooth(duration: 0.55).delay(reactionDelay), value: reactionOffset)
         .rotationEffect(.degrees(isWiggling ? wiggleAngle : 0))
         .onTapGesture {
             guard editableName == nil, !showDeleteBadge else { return }
