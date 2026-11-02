@@ -45,6 +45,8 @@ struct Pod: Codable, Identifiable, Equatable {
     /// What a night costs per person (nil = not known: the hut sets it).
     var pricePerNight: Double?
     var priceCurrency: String?
+    /// Hand-picked: shown first and ranked above the rest.
+    var featured: Bool?
 
     /// "45 € / night", when the price is known.
     var priceText: String? {
@@ -78,6 +80,7 @@ struct Pod: Codable, Identifiable, Equatable {
         case bookingURL = "booking_url"
         case openingHours = "opening_hours"
         case source, facilities
+        case featured
         case pricePerNight = "price_per_night"
         case priceCurrency = "price_currency"
     }
