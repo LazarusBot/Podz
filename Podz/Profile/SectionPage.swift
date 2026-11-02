@@ -29,6 +29,10 @@ extension View {
 struct SectionPage<Content: View, Trailing: View>: View {
     let title: String
     var onBack: () -> Void
+    /// How tall the fade into the ground is. A page with something floating above
+    /// the pills (Reservations' Lenny bubble) makes it taller, so that sits on a
+    /// clean ground and the rows go behind it.
+    var fadeHeight: CGFloat = 180
     @ViewBuilder var trailing: () -> Trailing
     @ViewBuilder var content: () -> Content
 
@@ -56,11 +60,16 @@ struct SectionPage<Content: View, Trailing: View>: View {
 
             // Fade into the ground behind the pills.
             LinearGradient(
-                colors: [Color.homeBackground.opacity(0), Color.homeBackground],
+                stops: [
+                    .init(color: Color.homeBackground.opacity(0), location: 0),
+                    // A tall fade is solid over its lower part, where Lenny sits.
+                    .init(color: Color.homeBackground, location: fadeHeight > 180 ? 0.5 : 1),
+                    .init(color: Color.homeBackground, location: 1)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 180)
+            .frame(height: fadeHeight)
             .allowsHitTesting(false)
 
             HStack(spacing: 13) {
@@ -75,8 +84,8 @@ struct SectionPage<Content: View, Trailing: View>: View {
 }
 
 extension SectionPage where Trailing == EmptyView {
-    init(title: String, onBack: @escaping () -> Void, @ViewBuilder content: @escaping () -> Content) {
-        self.init(title: title, onBack: onBack, trailing: { EmptyView() }, content: content)
+    init(title: String, onBack: @escaping () -> Void, fadeHeight: CGFloat = 180, @ViewBuilder content: @escaping () -> Content) {
+        self.init(title: title, onBack: onBack, fadeHeight: fadeHeight, trailing: { EmptyView() }, content: content)
     }
 }
 

@@ -46,6 +46,9 @@ struct MyReservationsView: View {
         SectionPage(
             title: "Reservations",
             onBack: onBack,
+            // With Lenny's bubble above the pills the fade rises with it, so the
+            // bubble has a clean ground and the past stays behind it.
+            fadeHeight: tips.isEmpty ? 180 : 340,
             trailing: {
                 DetailTextButton(title: "Plan with Lenny", isHighlighted: isEmpty) {
                     TabRouter.shared.lennyRequested = true
