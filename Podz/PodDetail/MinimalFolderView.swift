@@ -10,14 +10,20 @@ struct MinimalFolderView: View {
     /// Under the title: who shared it, for one that isn't yours. The count of
     /// pods when nil.
     var subtitle: String? = nil
+    /// Who the folder is shared with: shown under the title, to manage.
+    var sharedWith: [FolderPerson] = []
     let pods: [Pod]
     let photoURLs: [UUID: String]
     var onBack: () -> Void
     var onOpenPod: (Pod) -> Void
     /// Nil for a folder that isn't yours — there's nothing to share.
     var onShare: (() -> Void)? = nil
+    /// Nil for a folder that isn't yours: nothing to take out of it.
+    var onRemovePod: ((Pod) -> Void)? = nil
 
     @State private var selectedID: UUID?
+    /// Press and hold a tile: they wiggle and each gets a minus (yours only).
+    @State private var isEditing = false
 
     private let columns = [GridItem(.flexible(), spacing: 13), GridItem(.flexible(), spacing: 13)]
 
@@ -38,10 +44,19 @@ struct MinimalFolderView: View {
                             pod: pod,
                             photoURL: photoURLs[pod.id],
                             isSelected: pod.id == selectedPod?.id,
+                            isEditing: isEditing,
                             onTap: {
                                 withAnimation(.easeInOut(duration: AppMotion.snappy)) { selectedID = pod.id }
+                            },
+                            onRemove: {
+                                withAnimation(.smooth(duration: 0.35)) { onRemovePod?(pod) }
+                            },
+                            onLongPress: {
+                                guard onRemovePod != nil else { return }
+                                withAnimation(.smooth(duration: 0.3)) { isEditing = true }
                             }
                         )
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
                 }
                 .padding(.horizontal, 24)
@@ -71,13 +86,50 @@ struct MinimalFolderView: View {
                 .tracking(-0.6)
                 .foregroundColor(.homeText)
                 .lineLimit(2)
-            Text(subtitle ?? "\(pods.count) \(pods.count == 1 ? "pod" : "pods")")
+            T(subtitle ?? "\(pods.count) \(pods.count == 1 ? "pod" : "pods")")
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
+
+            if !sharedWith.isEmpty {
+                sharedRow
+                    .padding(.top, 10)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)
         .padding(.top, 25)
+    }
+
+    /// "Shared with Léa and 2 others ›", with their avatars: tap to manage.
+    private var sharedRow: some View {
+        Button { onShare?() } label: {
+            HStack(spacing: 10) {
+                SharedAvatars(people: sharedWith, size: 32, maxShown: 4)
+                HStack(spacing: 5) {
+                    T(sharedText)
+                        .underline(color: Color.homeSubtitle.opacity(0.5))
+                    if onShare != nil {
+                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                    }
+                }
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.homeSubtitle)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(onShare == nil)
+    }
+
+    private var sharedText: String {
+        let names = sharedWith.map(\.name)
+        switch names.count {
+        case 0: return ""
+        case 1: return "Shared with \(names[0])"
+        case 2: return "Shared with \(names[0]) and \(names[1])"
+        default: return "Shared with \(names[0]) and \(names.count - 1) others"
+        }
     }
 
     private var actionRow: some View {
@@ -93,8 +145,13 @@ struct MinimalFolderView: View {
                 }
             }
 
-            DetailTextButton(title: "Open") {
-                if let selectedPod { onOpenPod(selectedPod) }
+            // While editing, the pill is Done (highlighted); otherwise Open.
+            DetailTextButton(title: isEditing ? "Done" : "Open", isHighlighted: isEditing) {
+                if isEditing {
+                    withAnimation(.smooth(duration: 0.3)) { isEditing = false }
+                } else if let selectedPod {
+                    onOpenPod(selectedPod)
+                }
             }
         }
         .padding(.horizontal, 24)

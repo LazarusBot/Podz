@@ -15,8 +15,8 @@ struct FolderBubble: View {
     let photoURLs: [UUID: String]
     /// Alternate bubbles mirror their photos, so the photos don't line up.
     var mirrored = false
-    /// Avatars of friends the folder is shared with, under the name.
-    var sharedWithAvatarURLs: [String] = []
+    /// The friends the folder is shared with: their avatars, under the name.
+    var sharedWith: [FolderPerson] = []
     /// When set, the middle shows a name field instead (a new folder).
     var editableName: Binding<String>? = nil
     var onCommitName: (() -> Void)? = nil
@@ -40,7 +40,7 @@ struct FolderBubble: View {
     static let photoSize = CGSize(width: 119, height: 141)
 
     /// Where the photos sit at full size, from the center, in points.
-    private static let photoOffsets: [CGSize] = [CGSize(width: 79, height: -89), CGSize(width: -71, height: 97)]
+    static let photoOffsets: [CGSize] = [CGSize(width: 79, height: -89), CGSize(width: -71, height: 97)]
 
     private var scale: CGFloat { cell.radius / Self.referenceRadius }
 
@@ -50,22 +50,27 @@ struct FolderBubble: View {
 
     var body: some View {
         ZStack {
-            FoamCellView(cell: cell)
-
-            // Photos stay inside the bubble: cut off at its edges.
-            ZStack {
-                ForEach(Array(pods.prefix(2).enumerated()), id: \.element.id) { index, pod in
-                    let offset = Self.photoOffsets[index]
-                    BubblePhoto(url: photoURLs[pod.id], coordinate: pod.coordinate)
-                        .scaleEffect(scale)
-                        .opacity(0.55)
-                        .offset(x: (mirrored ? -offset.width : offset.width) * scale, y: offset.height * scale)
-                        // A newly added pod pops in rather than swapping
-                        // silently.
-                        .transition(.scale(scale: 0.4).combined(with: .opacity))
-                }
+            // The plain bubble is only the background of an empty folder: with at
+            // least one pod, its photo replaces it.
+            if pods.isEmpty {
+                FoamCellView(cell: cell)
             }
-            .mask(FoamCellView(cell: cell, color: .black))
+
+            // The folder's first photo is the bubble: it covers all of it, lumps
+            // included (the photo is drawn larger than the bubble, then cut by its
+            // outline), with a soft veil so the name and the avatars read on it.
+            if let cover = pods.first {
+                ZStack {
+                    PodPhoto(url: photoURLs[cover.id], coordinate: cover.coordinate)
+                        .frame(width: cell.radius * 2.7, height: cell.radius * 2.7)
+                        .clipped()
+                    Color.black.opacity(0.3)
+                }
+                .frame(width: cell.radius * 2.7, height: cell.radius * 2.7)
+                .id(cover.id)
+                .transition(.opacity)
+                .mask(FoamCellView(cell: cell, color: .black))
+            }
 
             label
 
@@ -122,35 +127,27 @@ struct FolderBubble: View {
                 .onAppear { nameFocused = true }
                 .frame(width: min(170, cell.radius * 1.5))
         } else {
-            VStack(spacing: 6) {
+            // The name, and the avatars of whoever the folder is shared with, right
+            // on the bubble: white over a photo, ink over a plain one.
+            let hasCover = !pods.isEmpty
+            VStack(spacing: 7) {
                 Text(name)
                     .font(AppFont.semiBoldLabel(15))
-                    .foregroundColor(.homeText)
+                    .foregroundColor(hasCover ? .white : .homeText)
                     .lineLimit(1)
-                    .frame(maxWidth: cell.radius * 1.5)
 
                 if let subtitle {
-                    Text(subtitle)
+                    T(subtitle)
                         .font(AppFont.regularLabel(12))
-                        .foregroundColor(.homeSubtitle)
+                        .foregroundColor(hasCover ? .white.opacity(0.85) : .homeSubtitle)
                         .lineLimit(1)
                 }
 
-                if !sharedWithAvatarURLs.isEmpty {
-                    // Identified by the URL itself, not position, so a
-                    // recycled image view never keeps a previous avatar.
-                    HStack(spacing: -6) {
-                        ForEach(sharedWithAvatarURLs.prefix(3), id: \.self) { url in
-                            AvatarView(imageName: url, size: 24)
-                                // Opaque backing: overlapping circles would
-                                // show through each other while fading in.
-                                .background(Circle().fill(Color.homePill))
-                                .overlay(Circle().strokeBorder(Color.homePill, lineWidth: 1.5))
-                        }
-                    }
-                    .padding(.top, 2)
+                if !sharedWith.isEmpty {
+                    SharedAvatars(people: sharedWith, size: 30, maxShown: 3)
                 }
             }
+            .frame(maxWidth: cell.radius * 1.5)
         }
     }
 
@@ -170,6 +167,43 @@ struct FolderBubble: View {
             .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
             .transition(.scale.combined(with: .opacity))
         }
+    }
+}
+
+/// A friend a folder is shared with.
+struct FolderPerson: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let avatarURL: String?
+}
+
+/// Overlapping round avatars, each with a ring in the ground's color, then "+2"
+/// for the rest.
+struct SharedAvatars: View {
+    let people: [FolderPerson]
+    var size: CGFloat = 30
+    var maxShown = 3
+
+    var body: some View {
+        HStack(spacing: -size * 0.28) {
+            ForEach(people.prefix(maxShown)) { person in
+                AvatarView(imageName: person.avatarURL, size: size)
+                    // Opaque backing: overlapping circles would show through each
+                    // other while fading in.
+                    .background(Circle().fill(Color.homePill))
+                    .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 2.5))
+            }
+            if people.count > maxShown {
+                Text("+\(people.count - maxShown)")
+                    .font(AppFont.semiBoldLabel(size * 0.4))
+                    .foregroundColor(.homeText)
+                    .frame(width: size, height: size)
+                    .background(Circle().fill(Color.homePill))
+                    .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 2.5))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(people.map(\.name).joined(separator: ", "))
     }
 }
 

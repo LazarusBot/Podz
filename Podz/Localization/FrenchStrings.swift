@@ -271,6 +271,8 @@ enum FrenchStrings {
         ("Open", "Ouvrir"),
         ("Booking request", "Demande de réservation"),
         ("Search by username", "Chercher par nom d'utilisateur"),
+        ("Remove from folder", "Retirer du dossier"),
+        ("Shared with {}", "Partagé avec {1}"), ("Shared with {} and {}", "Partagé avec {1} et {2}"), ("Shared with {} and {} others", "Partagé avec {1} et {2} autres"),
         ("Best", "Meilleurs"), ("Highest first", "Plus hauts d'abord"), ("Most beds", "Plus de lits"), ("A–Z", "A–Z"),
 
         // Lenny's search

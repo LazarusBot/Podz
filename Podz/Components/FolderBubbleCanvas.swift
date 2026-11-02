@@ -15,6 +15,24 @@ struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
     /// Builds one bubble from the item, its index and its cell.
     @ViewBuilder var content: (Item, Int, FoamCell) -> Content
 
+    /// The Likes page opens with the bubbles apart (plain separate shapes) and
+    /// you pinch in to bring them closer; the save sheet opens packed.
+    init(
+        items: [Item],
+        podCount: @escaping (Item) -> Int,
+        width: CGFloat,
+        bottomRoom: CGFloat = 40,
+        startsLoose: Bool = false,
+        @ViewBuilder content: @escaping (Item, Int, FoamCell) -> Content
+    ) {
+        self.items = items
+        self.podCount = podCount
+        self.width = width
+        self.bottomRoom = bottomRoom
+        self.content = content
+        _looseness = State(initialValue: startsLoose ? 1 : 0)
+    }
+
     private static var topInset: CGFloat { 24 }
 
     /// 0 packed ... 1 unpacked. One value drives everything: it follows the
@@ -40,7 +58,7 @@ struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
             let radii = FoamLayout.radii(
                 podCounts: counts,
                 base: FoamLayout.baseRadius(count: items.count),
-                maxRadius: width * 0.475
+                maxRadius: width * 0.37
             )
             packCache.radii = radii
             packCache.centers = FoamLayout.pack(radii: radii, ids: ids, width: width, top: Self.topInset)
@@ -110,6 +128,7 @@ private struct FoamField<Item: Identifiable, Content: View>: View, Animatable {
         let cells = FoamLayout.cells(
             centers: centers,
             radii: radii,
+            keys: items.map { String(describing: $0.id) },
             width: width,
             top: topInset,
             looseness: looseness
