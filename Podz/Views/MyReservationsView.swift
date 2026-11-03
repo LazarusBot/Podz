@@ -77,12 +77,18 @@ struct MyReservationsView: View {
                     if !past.isEmpty {
                         CollapsibleHeading(title: "Past", count: past.count, isOpen: $showsPast)
                         if showsPast {
-                            ForEach(past) { reservation in
+                            ForEach(Array(past.enumerated()), id: \.element.id) { index, reservation in
                                 stayRow(reservation, number: nil, isLast: true)
                                     .opacity(0.6)
                                     .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
+                                    // One after the other on the way in (the
+                                    // first few; a long list doesn't make you
+                                    // wait), all together on the way out.
+                                    .transition(.asymmetric(
+                                        insertion: .opacity.animation(.easeOut(duration: 0.18).delay(0.06 * Double(min(index, 6)))),
+                                        removal: .opacity
+                                    ))
                             }
-                            .transition(.opacity)
                         }
                     }
 
