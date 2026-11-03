@@ -61,25 +61,27 @@ struct TrustBadge: View {
     }
 }
 
-/// "Open now" / "Closed until June" with a dot, flat `homePill`. Open is quiet
-/// (a `homeText` dot, good news doesn't shout); **closed is red** (dot and
-/// label in `appBadgeRed`), the one state that can spoil a trip. The dot is
-/// the only round mark here, so it can't be mistaken for the trust badge.
+/// "Open now" / "Closed until June" with a dot. Open is quiet (flat `homePill`,
+/// a `homeText` dot: good news doesn't shout). **Closed is red** (`alertFill`
+/// inside, `alertInk` for the dot, the label and a 1pt outline): red is for
+/// what can cancel the trip. The dot is the only plain round mark here, so it
+/// can't be mistaken for the trust badge.
 struct OpenStatusChip: View {
     let status: OpeningStatus.Result
 
     var body: some View {
         HStack(spacing: 7) {
             Circle()
-                .fill(status.isOpen ? Color.homeText : Color.appBadgeRed)
+                .fill(status.isOpen ? Color.homeText : Color.alertInk)
                 .frame(width: 8, height: 8)
             T(status.label)
                 .font(AppFont.regularLabel(13))
-                .foregroundColor(status.isOpen ? .homeText : .appBadgeRed)
+                .foregroundColor(status.isOpen ? .homeText : .alertInk)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(Color.homePill, in: Capsule())
+        .background(status.isOpen ? Color.homePill : Color.alertFill, in: Capsule())
+        .overlay { if !status.isOpen { Capsule().strokeBorder(Color.alertInk.opacity(0.45), lineWidth: 1) } }
         .accessibilityElement(children: .combine)
     }
 }
