@@ -6,6 +6,7 @@ struct OnboardingEmailStep: View {
     @StateObject private var auth = AuthManager.shared
     @Binding var email: String
     var onCodeSent: () -> Void
+    @State private var legal: LegalDocument?
 
     private var trimmedEmail: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -40,7 +41,22 @@ struct OnboardingEmailStep: View {
                     .foregroundColor(.appBadgeRed)
                     .lineLimit(1)
                     .padding(.horizontal, 32)
+
+                // Continuing is accepting: the two documents are one tap away.
+                Text(.init(tr("By continuing you accept the [Terms](podz-legal://terms) and the [Privacy Policy](podz-legal://privacy).")))
+                    .font(OnboardingFont.caption)
+                    .foregroundColor(.white.opacity(0.6))
+                    .tint(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .environment(\.openURL, OpenURLAction { url in
+                        legal = url.host == "privacy" ? .privacy : .terms
+                        return .handled
+                    })
             }
+        }
+        .sheet(item: $legal) { document in
+            LegalDocumentView(document: document, respectsSafeArea: true) { legal = nil }
         }
         .onAppear { auth.lastError = nil }
     }
