@@ -155,6 +155,21 @@ final class BookingFlow: ObservableObject {
         }
     }
 
+    /// A stop whose opening hours say it's closed on the dates picked (the first
+    /// night or the last), so Lenny says so before the traveler books.
+    private var closedNote: String? {
+        for (index, entry) in entries.enumerated() {
+            let checkIn = date(forStop: index)
+            let lastNight = shifted(checkIn, by: max(nightsFor(index) - 1, 0))
+            for day in [checkIn, lastNight] {
+                if let status = OpeningStatus.evaluate(entry.pod.openingHours, today: day), !status.isOpen {
+                    return "Heads up: \(entry.pod.name) looks closed on those dates."
+                }
+            }
+        }
+        return nil
+    }
+
     /// How many nights each stop probably gets, from the stay the user gave.
     private var suggestedNights: Int? {
         request?.suggestedNightsPerStop(stops: entries.count, maximum: Self.maxNights)
@@ -327,8 +342,8 @@ final class BookingFlow: ObservableObject {
                 }
             case .review:
                 mode == .external
-                    ? "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I add it to your reservations?"
-                    : "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?\(listedNote.map { " " + $0 } ?? "")"
+                    ? "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I add it to your reservations?\(closedNote.map { " " + $0 } ?? "")"
+                    : "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?\((closedNote ?? listedNote).map { " " + $0 } ?? "")"
             }
         }
     }

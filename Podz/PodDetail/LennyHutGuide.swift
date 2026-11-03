@@ -117,8 +117,14 @@ struct LennyHutGuide: View {
     // MARK: - What Lenny says
 
     /// On the stack: the one thing worth knowing that the badges above don't
-    /// say. (Open or closed and "Unverified" are chips already.)
+    /// say. (Open or closed and the trust mark are chips already, but a closed hut is said first.)
     private static func stackMessage(_ pod: Pod, _ liveBedsAvailable: Int?) -> String {
+        // Closed comes first: it's the thing that can spoil the trip.
+        if let status = OpeningStatus.evaluate(pod.openingHours), !status.isOpen {
+            return pod.isBookable
+                ? "\(status.label). Pick dates after that and I'll book it."
+                : "\(status.label). Call ahead if you're going sooner."
+        }
         if pod.isBookable {
             if let live = liveBedsAvailable {
                 return live > 0
