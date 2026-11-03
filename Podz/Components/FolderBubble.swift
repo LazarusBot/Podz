@@ -39,9 +39,6 @@ struct FolderBubble: View {
     static let referenceRadius: CGFloat = 150
     static let photoSize = CGSize(width: 119, height: 141)
 
-    /// Where the photos sit at full size, from the center, in points.
-    static let photoOffsets: [CGSize] = [CGSize(width: 79, height: -89), CGSize(width: -71, height: 97)]
-
     private var scale: CGFloat { cell.radius / Self.referenceRadius }
 
     @FocusState private var nameFocused: Bool

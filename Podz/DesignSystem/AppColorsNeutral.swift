@@ -27,24 +27,4 @@ extension Color {
         dark: Color(white: 0.22)
     )
 
-    /// PodDetailView's secondary detail text — region/country, altitude,
-    /// "No rooms listed yet" — was `Color(white: 0.67)`.
-    static let appTextSubtle = Color(
-        light: Color(white: 0.67),
-        dark: Color(white: 0.6)
-    )
-
-    /// LennyJourneyProgress's unresolved-stop icon/label — was
-    /// `Color(white: 0.8)`.
-    static let appJourneyUnresolvedIcon = Color(
-        light: Color(white: 0.8),
-        dark: Color(white: 0.45)
-    )
-
-    /// LennyJourneyProgress's unresolved-stop ring stroke/fill — was
-    /// `Color(white: 0.85)`.
-    static let appJourneyUnresolvedRing = Color(
-        light: Color(white: 0.85),
-        dark: Color(white: 0.35)
-    )
 }

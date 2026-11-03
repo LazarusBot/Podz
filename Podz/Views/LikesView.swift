@@ -134,7 +134,7 @@ struct LikesView: View {
                     FolderBubbleCanvas(
                         items: likesItems,
                         podCount: podCount(of:),
-                        width: UIScreen.main.bounds.width,
+                        width: ScreenInsets.screenWidth,
                         bottomRoom: 100,
                         // Apart on entry; pinch in to bring them closer.
                         startsLoose: true

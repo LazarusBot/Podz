@@ -20,24 +20,12 @@ final class ReservationsStore: ObservableObject {
     static let shared = ReservationsStore()
 
     @Published private(set) var reservations: [Reservation] = []
-    /// Reservations made *against* pods this host owns — not `reservations`
-    /// above, which is the guest side (your own bookings elsewhere). A
-    /// completely separate array rather than folding into the same one,
-    /// since a host viewing their own pods' bookings and a guest viewing
-    /// their own trips are different questions with different RLS access
-    /// paths (see SQL/host_guests.sql) even for the same signed-in user.
-    @Published private(set) var hostedReservations: [Reservation] = []
     /// The guests behind `hostedReservations` — same
     /// batch-fetch-only-what's-missing pattern as `PostsStore.profilesById`.
     @Published private(set) var profilesById: [UUID: Profile] = [:]
     @Published var lastError: String?
     /// The stay just added, so the Reservations page can show that it's new.
     @Published var lastAddedId: UUID?
-    /// Transient "+1" badge on the Pods tab — a self-clearing
-    /// confirmation, not a persistent unread-style count, since there's nothing ongoing to
-    /// track here (just "a reservation was made, go look").
-    @Published private(set) var showRecentReservationBadge = false
-    private var recentReservationBadgeTask: Task<Void, Never>?
 
     private init() {}
 
@@ -66,54 +54,6 @@ final class ReservationsStore: ObservableObject {
                 reservations = kept
             }
             return false
-        }
-    }
-
-    /// Every reservation across every pod this host owns, most recent
-    /// `checkIn` first is left to the caller (sorted here by `check_in`
-    /// ascending, same as `fetchMine`) — `HostGuestsView` splits it into
-    /// upcoming/past itself, same as `MyReservationsView` already does
-    /// for the guest side. Re-fetches the host's own pod list first
-    /// rather than trusting `PodsStore.shared.pods` is already populated
-    /// — this can be the very first thing that runs if Guests is opened
-    /// before Pods ever was.
-    func fetchForHostedPods() async {
-        guard let userId = AuthManager.shared.session?.user.id else { return }
-        await PodsStore.shared.fetchPods()
-        let podIds = PodsStore.shared.pods.filter { $0.hostId == userId }.map(\.id)
-        guard !podIds.isEmpty else {
-            hostedReservations = []
-            return
-        }
-        do {
-            hostedReservations = try await supabase
-                .from("reservations")
-                .select()
-                .in("pod_id", values: podIds.map { $0.uuidString })
-                .order("check_in")
-                .execute()
-                .value
-            await fetchProfilesIfNeeded(for: Set(hostedReservations.map { $0.userId }))
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    private func fetchProfilesIfNeeded(for userIds: Set<UUID>) async {
-        let missing = userIds.filter { profilesById[$0] == nil }
-        guard !missing.isEmpty else { return }
-        do {
-            let fetched: [Profile] = try await supabase
-                .from("profiles")
-                .select()
-                .in("id", values: Array(missing).map { $0.uuidString })
-                .execute()
-                .value
-            for profile in fetched {
-                profilesById[profile.id] = profile
-            }
-        } catch {
-            // Non-fatal — the row just shows a fallback name.
         }
     }
 
@@ -147,31 +87,6 @@ final class ReservationsStore: ObservableObject {
         } catch {
             lastError = error.localizedDescription
             return false
-        }
-    }
-
-    /// Kicks off the transient "+1" badge on the Pods tab.
-    /// `ReservationSheet` never actually covers the tab bar (it grows in
-    /// place inside `PodDetailView`, which doesn't hide it), so the call
-    /// site (`ReservationSheet.submit()`) fires this once its own
-    /// "Reservation confirmed" state has already shown and is collapsing
-    /// away, not the moment `create()` resolves — reads as one
-    /// confirmation handing off to the next rather than both firing at
-    /// once.
-    func flashRecentReservationBadge() {
-        recentReservationBadgeTask?.cancel()
-        // Low damping fraction on purpose — lets the spring overshoot
-        // past its resting scale before settling, which reads as an
-        // actual "pop" rather than a plain fade/grow-in.
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.45)) {
-            showRecentReservationBadge = true
-        }
-        recentReservationBadgeTask = Task {
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: AppMotion.standard)) {
-                showRecentReservationBadge = false
-            }
         }
     }
 

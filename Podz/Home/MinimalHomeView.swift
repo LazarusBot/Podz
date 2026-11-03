@@ -28,7 +28,7 @@ struct MinimalHomeView: View {
     /// A fixed width from the screen, not `containerRelativeFrame`: inside a
     /// horizontal scroll view nested in this vertical one it resolved to an
     /// infinite width and crashed the layer tree.
-    private static var cardWidth: CGFloat { UIScreen.main.bounds.width - 97 }
+    private static var cardWidth: CGFloat { ScreenInsets.screenWidth - 97 }
 
     /// What the feed shows. With thousands of listed huts, these are worked out
     /// when the pods or the query change, not on every redraw (scrolling

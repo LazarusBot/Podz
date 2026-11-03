@@ -24,29 +24,3 @@ struct ProfileMenuRow: View {
     }
 }
 
-/// A quiet label above a group of rows, optionally with a right-aligned
-/// note (used by the host Pods screen). The screens Profile opens use
-/// `SectionHeading`.
-struct SectionLabel: View {
-    let title: String
-    var trailing: String? = nil
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
-
-            if let trailing {
-                Spacer()
-                Text(trailing)
-                    .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeSubtitle)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 6)
-    }
-}

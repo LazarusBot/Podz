@@ -4,6 +4,14 @@ import SwiftUI
 /// window. Pages inside a tab ignore the bottom safe area, so they can't ask
 /// their own geometry for it.
 enum ScreenInsets {
+    /// The width of the screen the app is on (through the scene, not the
+    /// deprecated `UIScreen.main`).
+    static var screenWidth: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.screen.bounds.width }
+            .first ?? 393
+    }
+
     static var bottom: CGFloat {
         UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.keyWindow }

@@ -15,7 +15,6 @@ struct ProfileView: View {
     @StateObject private var auth = AuthManager.shared
     @StateObject private var friendsStore = FriendsStore.shared
     @StateObject private var likesStore = LikesStore.shared
-    @StateObject private var appMode = AppModeStore.shared
     @StateObject private var router = TabRouter.shared
     @State private var showEditProfile = false
     @State private var showsAvatarEditor = false
@@ -24,7 +23,6 @@ struct ProfileView: View {
     @State private var showLoginSecurity = false
     @State private var showAccessibility = false
     @State private var showDeleteAccountConfirmation = false
-    @State private var showAddPod = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -43,13 +41,6 @@ struct ProfileView: View {
             }
         }
         .background(Color.homeBackground.ignoresSafeArea())
-        // A sheet, not another full-screen push: this is a multi-step form
-        // (see AddPodView's own `step`), "a focused task on top of Profile".
-        // It has no dark palette yet.
-        .sheet(isPresented: $showAddPod) {
-            AddPodView()
-                .preferredColorScheme(.light)
-        }
         // Everything under Profile follows the system appearance, and the
         // pages it opens have their own bottom bar, so the tab bar steps
         // aside while one is showing.
@@ -101,7 +92,6 @@ struct ProfileView: View {
                 VStack(spacing: 0) {
                     ProfileListRow(title: "Friends") { showFriends = true }
                     ProfileListRow(title: "Reservations") { showReservations = true }
-                    hostingRow
                     ProfileListRow(title: "Login and security") { showLoginSecurity = true }
                     ProfileListRow(title: "Accessibility") { showAccessibility = true }
                 }
@@ -167,36 +157,6 @@ struct ProfileView: View {
             }
 
             Spacer(minLength: 0)
-        }
-    }
-
-    /// A host switches between traveling and hosting from here (it used to
-    /// be the tab bar's long-press); anyone else can become one — which
-    /// also takes them straight into the pod form, since being a host only
-    /// matters once there's a pod behind it.
-    @ViewBuilder
-    private var hostingRow: some View {
-        if !FeatureFlags.hosting {
-            // Parked: shown greyed, with a caption, until the host side is
-            // ready.
-            ProfileListRow(
-                title: "Switch to host mode",
-                showsChevron: false,
-                caption: "Coming soon",
-                isDisabled: true
-            ) {}
-        } else if auth.profile?.isHost == true {
-            ProfileListRow(
-                title: appMode.mode == .host ? "Switch to traveler mode" : "Switch to host mode",
-                showsChevron: false
-            ) {
-                appMode.mode = appMode.mode == .host ? .hiker : .host
-            }
-        } else {
-            ProfileListRow(title: "Become a host") {
-                Task { await AuthManager.shared.becomeHost() }
-                showAddPod = true
-            }
         }
     }
 }
