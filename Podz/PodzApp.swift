@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct PodzApp: App {
+    init() {
+        TapScaleButtonStyle.warmUp()
+    }
+
     var body: some Scene {
         WindowGroup {
             OnboardingView()
