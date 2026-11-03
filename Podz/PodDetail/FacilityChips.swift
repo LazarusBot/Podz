@@ -24,7 +24,7 @@ struct FacilityChips: View {
 /// The trust mark under a hut's name, flat `homePill` like every chip. A partner
 /// hut is **Verified** (a check in a `homeText` disc): its beds, prices and
 /// availability come from the hut itself. A listed hut is **Unverified** (an
-/// empty ring): its information comes from OpenStreetMap, nobody at Podz has
+/// empty disc with a question mark): its information comes from OpenStreetMap, nobody at Podz has
 /// checked it. Tap either for the plain explanation.
 struct TrustBadge: View {
     let isVerified: Bool
@@ -38,9 +38,12 @@ struct TrustBadge: View {
                     .frame(width: 14, height: 14)
                     .background(Color.homeText, in: Circle())
             } else {
-                Circle()
-                    .strokeBorder(Color.homeSubtitle, lineWidth: 1.2)
-                    .frame(width: 8, height: 8)
+                // The check's counterpart: a question mark in an empty disc.
+                Text("?")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.homeSubtitle)
+                    .frame(width: 14, height: 14)
+                    .overlay(Circle().strokeBorder(Color.homeSubtitle, lineWidth: 1.2))
             }
             T(isVerified ? "Verified" : "Unverified")
                 .font(AppFont.regularLabel(13))
@@ -58,28 +61,25 @@ struct TrustBadge: View {
     }
 }
 
-/// "Open now" / "Closed until June" with a dot: filled when it's open, a ring
-/// when it's closed. Open is quiet (flat `homePill`, good news doesn't shout);
-/// **closed is the one that stands out**: the label in `homeText`, semibold,
-/// with a 1pt `homeText` outline, since it's the state that can spoil a trip.
-/// No color: red stays for errors.
+/// "Open now" / "Closed until June" with a dot, flat `homePill`. Open is quiet
+/// (a `homeText` dot, good news doesn't shout); **closed is red** (dot and
+/// label in `appBadgeRed`), the one state that can spoil a trip. The dot is
+/// the only round mark here, so it can't be mistaken for the trust badge.
 struct OpenStatusChip: View {
     let status: OpeningStatus.Result
 
     var body: some View {
         HStack(spacing: 7) {
             Circle()
-                .fill(status.isOpen ? Color.homeText : Color.clear)
-                .overlay(Circle().strokeBorder(status.isOpen ? Color.clear : Color.homeText, lineWidth: 1.4))
+                .fill(status.isOpen ? Color.homeText : Color.appBadgeRed)
                 .frame(width: 8, height: 8)
             T(status.label)
-                .font(status.isOpen ? AppFont.regularLabel(13) : AppFont.semiBoldLabel(13))
-                .foregroundColor(.homeText)
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(status.isOpen ? .homeText : .appBadgeRed)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(Color.homePill, in: Capsule())
-        .overlay { if !status.isOpen { Capsule().strokeBorder(Color.homeText, lineWidth: 1) } }
         .accessibilityElement(children: .combine)
     }
 }
