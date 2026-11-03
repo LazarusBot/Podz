@@ -37,3 +37,19 @@ extension Color {
         dark: Color.white.opacity(0.88)
     )
 }
+
+extension Color {
+    /// Red for what can cancel the trip (a closed hut): a light red fill with a
+    /// dark red ink, flipped in dark mode. Errors keep `appBadgeRed`.
+    /// #FCE4E4 light / #4A1E1E dark — the chip's fill.
+    static let alertFill = Color(
+        light: Color(red: 0xFC / 255, green: 0xE4 / 255, blue: 0xE4 / 255),
+        dark: Color(red: 0x4A / 255, green: 0x1E / 255, blue: 0x1E / 255)
+    )
+
+    /// #A31616 light / #FF9C9C dark — its label, dot and outline.
+    static let alertInk = Color(
+        light: Color(red: 0xA3 / 255, green: 0x16 / 255, blue: 0x16 / 255),
+        dark: Color(red: 0xFF / 255, green: 0x9C / 255, blue: 0x9C / 255)
+    )
+}

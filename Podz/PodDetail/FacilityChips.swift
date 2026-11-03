@@ -26,57 +26,107 @@ struct FacilityChips: View {
     }
 }
 
-/// "Unverified" under a listed hut's name: its information comes from
-/// OpenStreetMap, nobody at Podz has checked it. A partner has no badge.
-struct UnverifiedBadge: View {
+/// The trust mark under a hut's name, flat `homePill` like every chip. A partner
+/// hut is **Verified** (a check in a `homeText` disc): its beds, prices and
+/// availability come from the hut itself. A listed hut is **Unverified** (an
+/// empty disc with a question mark): its information comes from OpenStreetMap, nobody at Podz has
+/// checked it. Tap either for the plain explanation.
+struct TrustBadge: View {
+    let isVerified: Bool
+
     var body: some View {
-        T("Unverified")
-            .font(AppFont.regularLabel(13))
-            .foregroundColor(.homeSubtitle)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.homePill, in: Capsule())
-            .accessibilityLabel(tr("Unverified listing"))
+        HStack(spacing: 7) {
+            if isVerified {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.homeBackground)
+                    .frame(width: 14, height: 14)
+                    .background(Color.homeText, in: Circle())
+            } else {
+                // The check's counterpart: a question mark in an empty disc.
+                Text("?")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.homeSubtitle)
+                    .frame(width: 14, height: 14)
+                    .overlay(Circle().strokeBorder(Color.homeSubtitle, lineWidth: 1.2))
+            }
+            T(isVerified ? "Verified" : "Unverified")
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(isVerified ? .homeText : .homeSubtitle)
+                .lineLimit(1)
+                .fixedSize()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundColor(.homeSubtitle)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.homePill, in: Capsule())
+        .contentShape(Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(tr(isVerified ? "Verified by Podz" : "Unverified listing"))
     }
 }
 
-/// "Open now" / "Closed until June" with a dot: filled when it's open, a ring
-/// when it's closed. Flat `homePill` like every chip, no color.
+/// "Open now" / "Closed until June" with a dot. Open is quiet (flat `homePill`,
+/// a `homeText` dot: good news doesn't shout). **Closed is red** (`alertFill`
+/// inside, `alertInk` for the dot, the label and a 1pt outline): red is for
+/// what can cancel the trip. The dot is the only plain round mark here, so it
+/// can't be mistaken for the trust badge.
 struct OpenStatusChip: View {
     let status: OpeningStatus.Result
 
     var body: some View {
         HStack(spacing: 7) {
             Circle()
-                .fill(status.isOpen ? Color.homeText : Color.clear)
-                .overlay(Circle().strokeBorder(Color.homeSubtitle, lineWidth: status.isOpen ? 0 : 1.2))
+                .fill(status.isOpen ? Color.homeText : Color.alertInk)
                 .frame(width: 8, height: 8)
             T(status.label)
                 .font(AppFont.regularLabel(13))
-                .foregroundColor(status.isOpen ? .homeText : .homeSubtitle)
+                .foregroundColor(status.isOpen ? .homeText : .alertInk)
+                .lineLimit(1)
+                .fixedSize()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(Color.homePill, in: Capsule())
+        .background(status.isOpen ? Color.homePill : Color.alertFill, in: Capsule())
+        .overlay { if !status.isOpen { Capsule().strokeBorder(Color.alertInk.opacity(0.45), lineWidth: 1) } }
         .accessibilityElement(children: .combine)
     }
 }
 
-/// Under the name: whether it's open (when the hours say so) and, for a listed
-/// hut, that nobody at Podz has checked it.
+/// Under the name: whether it's open (when the hours say so) and whether
+/// Podz has checked the hut (**Verified** for a partner, **Unverified** for a
+/// listed one, both tappable for the explanation).
 struct PodStatusRow: View {
     let pod: Pod
     var isCentered = true
 
+    @State private var explains = false
+
     private var status: OpeningStatus.Result? { OpeningStatus.evaluate(pod.openingHours) }
 
+    @ViewBuilder
+    private var chips: some View {
+        if let status { OpenStatusChip(status: status) }
+        Button { explains = true } label: { TrustBadge(isVerified: pod.isBookable) }
+            .buttonStyle(.plain)
+    }
+
     var body: some View {
-        if status != nil || !pod.isBookable {
-            HStack(spacing: 8) {
-                if let status { OpenStatusChip(status: status) }
-                if !pod.isBookable { UnverifiedBadge() }
-            }
-            .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+        // Side by side; when the room is short (beside the thumbnail) the chips
+        // stack instead of squeezing, so each is as long as its text.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { chips }
+            VStack(alignment: isCentered ? .center : .leading, spacing: 8) { chips }
+        }
+        .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+        .alert(tr(pod.isBookable ? "Verified by Podz" : "Not checked by Podz"), isPresented: $explains) {
+            Button(tr("OK"), role: .cancel) {}
+        } message: {
+            Text(tr(pod.isBookable
+                ? "This hut books through Podz: its beds, prices and availability come from the hut itself."
+                : "This hut comes from OpenStreetMap and nobody at Podz has checked its details. Call ahead before you go."))
         }
     }
 }
