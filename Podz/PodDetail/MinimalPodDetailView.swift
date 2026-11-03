@@ -246,14 +246,17 @@ struct MinimalPodDetailView: View {
     // MARK: - Text
 
     private var titleBlock: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             titleText
                 .foregroundColor(.homeText)
                 .multilineTextAlignment(.center)
+                // A long name takes two lines at most, then it shrinks a little.
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
             PodStatusRow(pod: pod)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 50)
+        .padding(.top, 30)
     }
 
     private var titleText: Text {
@@ -281,18 +284,18 @@ struct MinimalPodDetailView: View {
                     .foregroundColor(.homeText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                    .padding(.top, 14)
+                    .padding(.top, 10)
                     .padding(.horizontal, 24)
             }
         }
     }
 
-    /// Up to three facilities; the rest are in the sections.
+    /// One line of facilities, as many as fit; the rest are in the sections.
     @ViewBuilder
     private var stackChips: some View {
         if let facilities = pod.facilities, !facilities.isEmpty {
-            FacilityChips(facilities: Array(facilities.prefix(3)))
-                .padding(.top, 14)
+            FacilityChips(facilities: facilities, maxLines: 1)
+                .padding(.top, 12)
                 .padding(.horizontal, 24)
         }
     }

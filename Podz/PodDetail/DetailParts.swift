@@ -15,7 +15,7 @@ enum DetailLayout {
 
     /// The pod detail's photo is a little shorter than the others, to leave room
     /// for the key facts under the name.
-    static let podPhotoShare: CGFloat = 380 / 852
+    static let podPhotoShare: CGFloat = 360 / 852
 
     static func podPhotoHeight(screenHeight: CGFloat) -> CGFloat { screenHeight * podPhotoShare }
 
