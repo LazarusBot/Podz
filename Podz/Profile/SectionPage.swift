@@ -142,7 +142,7 @@ struct CollapsibleHeading: View {
 
     var body: some View {
         Button {
-            withAnimation(.smooth(duration: 0.35)) { isOpen.toggle() }
+            withAnimation(.easeOut(duration: 0.18)) { isOpen.toggle() }
         } label: {
             HStack(spacing: 6) {
                 T(title)

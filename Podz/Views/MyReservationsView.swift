@@ -82,7 +82,7 @@ struct MyReservationsView: View {
                                     .opacity(0.6)
                                     .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
                             }
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .transition(.opacity)
                         }
                     }
 
