@@ -39,6 +39,8 @@ struct LennyPlanView: View {
                             var details: [String] = []
                             if let distance = stop.distanceText(for: pod) { details.append("\(distance) away") }
                             if let beds = pod.bedsTotal { details.append("\(beds) \(beds == 1 ? "bed" : "beds")") }
+                            let asked = (request?.facilities ?? []).filter { (pod.facilities ?? []).contains($0) }
+                            if !asked.isEmpty { details.append(LennyFacilities.phrase(asked)) }
                             return LennySummaryView.Entry(
                                 stopName: stop.name,
                                 pod: pod,

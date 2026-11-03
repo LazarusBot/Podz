@@ -289,6 +289,12 @@ enum FrenchStrings {
         ("six", "six"), ("seven", "sept"), ("eight", "huit"), ("nine", "neuf"),
         ("{} stop", "{1} étape"), ("{} stops", "{1} étapes"),
         ("I can't see any pods right now. Check your connection and try again.", "Je ne vois aucun refuge pour l'instant. Vérifie ta connexion et réessaie."),
+        ("Tell me where you're heading and I'll look for huts with {}.", "Dis-moi où tu vas et je cherche des refuges avec {1}."),
+        ("with {}", "avec {1}"), ("{} and {}", "{1} et {2}"), ("{}, {} and {}", "{1}, {2} et {3}"),
+        ("{}. None lists {}", "{1}. Aucun ne mentionne {2}"), ("{}, with {}", "{1}, avec {2}"),
+        ("showers", "douches"), ("drinking water", "eau potable"), ("winter room", "local d'hiver"), ("meals", "repas"),
+        ("self-catering", "cuisine en autonomie"), ("electricity", "électricité"), ("wi-fi", "wi-fi"), ("heating", "chauffage"),
+        ("toilets", "toilettes"), ("dogs welcome", "chiens acceptés"), ("wheelchair access", "accès fauteuil roulant"),
         ("I couldn't make out a place in that. Try a town, a lake or a peak.", "Je n'ai pas reconnu de lieu là-dedans. Essaie une ville, un lac ou un sommet."),
         ("I couldn't find any pods along that route. Try another stop, or a wider area.", "Je n'ai trouvé aucun refuge sur ce trajet. Essaie une autre étape, ou une zone plus large."),
         // Onboarding and login
