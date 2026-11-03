@@ -347,6 +347,7 @@ final class BookingFlow: ObservableObject {
                 let checkOut = shifted(checkIn, by: nightsFor(index))
                 let success = await reservationsStore.create(podId: entry.pod.id, checkIn: checkIn, checkOut: checkOut, guests: guests, source: mode == .external ? "external" : nil)
                 guard success else {
+                    Analytics.shared.track(.reservationFailed, ["mode": mode == .external ? "external" : "partner", "stops": "\(entries.count)"])
                     let booked = bookedPodIDs.count
                     let started = booked == 0 ? "" : "I booked \(booked) of \(bookableCount). "
                     status = .failed("\(started)I couldn't book \(entry.pod.name) for \(checkIn.formatted(.dateTime.day().month(.abbreviated))). It may be full, so try other dates.")
@@ -354,6 +355,7 @@ final class BookingFlow: ObservableObject {
                 }
                 bookedPodIDs.insert(entry.pod.id)
             }
+            Analytics.shared.track(.reservationBooked, ["mode": mode == .external ? "external" : "partner", "stops": "\(entries.count)", "guests": "\(guests)"])
             status = .booked
         }
     }

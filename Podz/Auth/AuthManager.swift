@@ -203,10 +203,13 @@ final class AuthManager: ObservableObject {
             }
             guard Date().timeIntervalSince(user.createdAt) < Self.newAccountWindow else {
                 justRegistered = false
+                Analytics.shared.track(.loggedIn)
                 return .existingAccount
             }
+            Analytics.shared.track(.signedUp)
             return .newAccount
         } catch {
+            Analytics.shared.track(.codeFailed)
             justRegistered = false
             lastError = error.localizedDescription
             return .failed

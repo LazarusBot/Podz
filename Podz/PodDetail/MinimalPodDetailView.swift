@@ -178,6 +178,7 @@ struct MinimalPodDetailView: View {
         .interactiveDismissDisabled()
         .hutContactDialog(for: pod, isPresented: $showHutContact)
         .task {
+            Analytics.shared.track(.podOpened, ["pod_id": pod.id.uuidString, "kind": pod.isBookable ? "partner" : "listed"])
             async let photos = PodsStore.shared.photoRows(forPodId: pod.id)
             async let beds = pod.isBookable ? PodsStore.shared.bedsAvailableNow(forPodId: pod.id) : nil
             let (fetchedRows, fetchedBeds) = await (photos, beds)
@@ -490,6 +491,7 @@ struct MinimalPodDetailView: View {
 
     /// "Yes, I booked it": the same questions, then the stay goes on the list.
     private func startExternalBooking() {
+        Analytics.shared.track(.externalBookingStarted)
         contactTracker.clear()
         externalBooking.restart()
         isExternalFlow = true
@@ -501,6 +503,7 @@ struct MinimalPodDetailView: View {
 
     /// Book: the page steps back to the stack and Lenny starts asking.
     private func startBooking() {
+        Analytics.shared.track(.bookTapped)
         isExternalFlow = false
         booking.restart()
         withAnimation(.smooth(duration: 0.45)) {

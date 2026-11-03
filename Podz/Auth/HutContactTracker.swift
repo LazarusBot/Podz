@@ -38,6 +38,7 @@ final class HutContactTracker: ObservableObject {
     /// The traveler chose to call, email or visit this hut's website.
     func didContact(_ pod: Pod) {
         guard !pod.isBookable else { return }
+        Analytics.shared.track(.hutContactTapped, ["pod_id": pod.id.uuidString])
         pendingPodId = pod.id
         askNow = false
         leftTheApp = false
