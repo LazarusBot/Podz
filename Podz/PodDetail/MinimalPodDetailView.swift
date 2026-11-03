@@ -247,20 +247,13 @@ struct MinimalPodDetailView: View {
 
     private var titleBlock: some View {
         VStack(spacing: 10) {
-            titleText
+            // One line: a long name is cut with an ellipsis so the altitude stays.
+            DetailTitleLine(name: pod.name, altitude: pod.altitudeM.map { "\($0)m" })
                 .foregroundColor(.homeText)
-                .multilineTextAlignment(.center)
-                // A long name takes two lines at most, then it shrinks a little.
-                .lineLimit(2)
-                .minimumScaleFactor(0.85)
             PodStatusRow(pod: pod)
         }
         .padding(.horizontal, 24)
         .padding(.top, 30)
-    }
-
-    private var titleText: Text {
-        detailTitle(pod.name, detail: pod.altitudeM.map { "\($0)m" })
     }
 
     /// "120 beds · 18 free now  ·  45 € / night": what a traveler weighs first,
