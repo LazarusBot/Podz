@@ -316,6 +316,8 @@ enum FrenchStrings {
         ("Rotate", "Pivoter"), ("Reset", "Réinitialiser"), ("Couldn't save", "Enregistrement impossible"),
         ("Couldn't open your photo.", "Impossible d'ouvrir ta photo."), ("Couldn't prepare the photo.", "Impossible de préparer la photo."),
 
+        ("Expanded", "Déplié"), ("Collapsed", "Replié"),
+
         // About, legal, sign-up
         ("About Podz", "À propos de Podz"), ("Version {}", "Version {1}"), ("Terms of Service", "Conditions d'utilisation"),
         ("Privacy Policy", "Politique de confidentialité"), ("Last updated {}", "Dernière mise à jour : {1}"), ("November 2026", "novembre 2026"),

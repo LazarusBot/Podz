@@ -130,6 +130,45 @@ struct SectionHeading: View {
     }
 }
 
+/// A `SectionHeading` that opens and closes what's under it: the same quiet 13
+/// `homeSubtitle` label, the number of rows beside it and a thin chevron that
+/// turns down when it's open. For a group that shouldn't take the page (Past
+/// reservations): closed, only this line shows. The caller shows the rows when
+/// `isOpen`, inside `withAnimation`; the toggle here already is.
+struct CollapsibleHeading: View {
+    let title: String
+    let count: Int
+    @Binding var isOpen: Bool
+
+    var body: some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.18)) { isOpen.toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                T(title)
+                T("\(count)")
+                    .opacity(0.6)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .rotationEffect(.degrees(isOpen ? 90 : 0))
+                    .padding(.leading, 2)
+                Spacer(minLength: 0)
+            }
+            .font(AppFont.regularLabel(13))
+            .foregroundColor(.homeSubtitle)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 6)
+            // The whole line is the target, not just the words.
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(tr(title)), \(count)")
+        .accessibilityValue(tr(isOpen ? "Expanded" : "Collapsed"))
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
 /// A plain hairline between rows, in the ink color at 8%.
 struct Hairline: View {
     var body: some View {
