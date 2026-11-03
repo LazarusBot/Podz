@@ -15,7 +15,7 @@ enum DetailLayout {
 
     /// The pod detail's photo is a little shorter than the others, to leave room
     /// for the key facts under the name.
-    static let podPhotoShare: CGFloat = 380 / 852
+    static let podPhotoShare: CGFloat = 360 / 852
 
     static func podPhotoHeight(screenHeight: CGFloat) -> CGFloat { screenHeight * podPhotoShare }
 
@@ -193,6 +193,32 @@ func detailTitle(_ name: String, detail: String?) -> Text {
     guard let detail else { return nameText }
     let detailText = Text("  -  \(detail)").font(AppFont.semiBoldLabel(14))
     return Text("\(nameText)\(detailText)")
+}
+
+/// The pod page's title on one line: the name (20 semiBold) gives way with an
+/// ellipsis so the altitude (14 semiBold) is always there after it.
+struct DetailTitleLine: View {
+    let name: String
+    let altitude: String?
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(name)
+                .font(AppFont.semiBoldLabel(20))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if let altitude {
+                Text("  -  \(altitude)")
+                    .font(AppFont.semiBoldLabel(14))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .layoutPriority(1)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(altitude.map { "\(name), \($0)" } ?? name)
+    }
 }
 
 /// The back pill's "<" glyph from the Paper frames (8x12).

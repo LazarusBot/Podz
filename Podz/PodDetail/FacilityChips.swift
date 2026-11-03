@@ -6,9 +6,12 @@ struct FacilityChips: View {
     let facilities: [String]
     /// Lines centered (the stack) or flush left (the sections).
     var isCentered = true
+    /// Only this many lines are shown, the chips that don't fit are left out
+    /// (the stack shows one line; the sections show them all).
+    var maxLines: Int? = nil
 
     var body: some View {
-        FlowLayout(spacing: 8, lineSpacing: 8, isCentered: isCentered) {
+        FlowLayout(spacing: 8, lineSpacing: 8, isCentered: isCentered, maxLines: maxLines) {
             ForEach(facilities, id: \.self) { facility in
                 T(facility)
                     .font(AppFont.regularLabel(14))
@@ -18,6 +21,8 @@ struct FacilityChips: View {
                     .background(Color.homePill, in: Capsule())
             }
         }
+        .clipped()
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -131,6 +136,7 @@ private struct FlowLayout: Layout {
     var spacing: CGFloat
     var lineSpacing: CGFloat
     var isCentered = true
+    var maxLines: Int? = nil
 
     /// The indices of each line, given the width there is.
     private func lines(sizes: [CGSize], width: CGFloat) -> [[Int]] {
@@ -147,6 +153,10 @@ private struct FlowLayout: Layout {
         return lines
     }
 
+    private func shown(_ lines: [[Int]]) -> [[Int]] {
+        maxLines.map { Array(lines.prefix($0)) } ?? lines
+    }
+
     private func lineWidth(_ line: [Int], sizes: [CGSize]) -> CGFloat {
         var total: CGFloat = spacing * CGFloat(max(line.count - 1, 0))
         for index in line { total += sizes[index].width }
@@ -161,7 +171,7 @@ private struct FlowLayout: Layout {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let sizes: [CGSize] = subviews.map { $0.sizeThatFits(.unspecified) }
-        let rows = lines(sizes: sizes, width: proposal.width ?? .infinity)
+        let rows = shown(lines(sizes: sizes, width: proposal.width ?? .infinity))
         var height: CGFloat = lineSpacing * CGFloat(max(rows.count - 1, 0))
         var widest: CGFloat = 0
         for row in rows {
