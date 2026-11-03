@@ -29,6 +29,9 @@ struct MyReservationsView: View {
     @State private var tipIndex = 0
     /// The stay that was just added: it pops and glows for a moment.
     @State private var highlightedId: UUID?
+    /// The past stays are folded away until asked for, so they don't crowd
+    /// the page (or Lenny's bubble under it).
+    @State private var showsPast = false
 
     private var upcoming: [ReservationTrip] {
         ReservationTrip.group(reservationsStore.reservations.filter { $0.isUpcoming })
@@ -72,11 +75,14 @@ struct MyReservationsView: View {
                     }
 
                     if !past.isEmpty {
-                        SectionHeading(title: "Past")
-                        ForEach(past) { reservation in
-                            stayRow(reservation, number: nil, isLast: true)
-                                .opacity(0.6)
-                                .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
+                        CollapsibleHeading(title: "Past", count: past.count, isOpen: $showsPast)
+                        if showsPast {
+                            ForEach(past) { reservation in
+                                stayRow(reservation, number: nil, isLast: true)
+                                    .opacity(0.6)
+                                    .overlay(alignment: .bottom) { Hairline().padding(.horizontal, 24) }
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
 
