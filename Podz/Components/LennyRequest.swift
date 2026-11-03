@@ -25,6 +25,9 @@ struct LennyRequest {
     var nights: Int?
     var guests: Int?
     var startDate: Date?
+    /// Facilities asked for ("showers", "drinking water"), as the labels pods
+    /// store them. Huts that have them lead each stop.
+    var facilities: [String] = []
 
     /// How many nights each stop probably gets, from the stay the user gave.
     func suggestedNightsPerStop(stops: Int, maximum: Int) -> Int? {
@@ -39,6 +42,7 @@ struct LennyRequest {
         if let startDate { parts.append("from \(startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))") }
         if let nights { parts.append("\(nights) \(nights == 1 ? "night" : "nights")") }
         else if let days { parts.append("\(days) \(days == 1 ? "day" : "days")") }
+        if !facilities.isEmpty { parts.append("with \(LennyFacilities.phrase(facilities))") }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
@@ -63,7 +67,11 @@ enum LennyRequestParser {
         mentions.sort { $0.position < $1.position }
 
         // One word or a short phrase with nothing recognised: it is the place.
-        if mentions.isEmpty {
+        let folded = fold(text)
+        // Facility words ("huts with showers") aren't a place.
+        let placeWords = LennyFacilities.removing(from: folded).split(whereSeparator: { $0.isWhitespace || $0.isPunctuation })
+            .filter { !notPlaces.contains(String($0)) }
+        if mentions.isEmpty, !placeWords.isEmpty {
             let words = text.split(whereSeparator: { $0.isWhitespace })
             if words.count <= 4 {
                 let place = text.trimmingCharacters(in: .punctuationCharacters.union(.whitespaces))
@@ -74,11 +82,19 @@ enum LennyRequestParser {
         }
         request.mentions = Array(mentions.prefix(maxStops))
 
-        let folded = fold(text)
         request.guests = guests(in: folded)
+        request.facilities = LennyFacilities.wanted(in: foldedWithoutNames(folded, known: known))
         (request.days, request.nights) = stay(in: folded)
         request.startDate = startDate(in: text)
         return request
+    }
+
+    /// The sentence without the pods and regions it names, so a hut called
+    /// "Refuge de l'Eau Blanche" doesn't ask for drinking water.
+    private static func foldedWithoutNames(_ folded: String, known: [LennyRequest.Mention]) -> String {
+        known.reduce(folded) { text, mention in
+            text.replacingOccurrences(of: fold(mention.name), with: " ")
+        }
     }
 
     // MARK: - Pods, regions and countries by name

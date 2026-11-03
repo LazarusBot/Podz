@@ -123,7 +123,9 @@ final class LennySearchViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 450_000_000) // a beat, so the step reads
         guard !Task.isCancelled else { return }
         guard !request.mentions.isEmpty else {
-            errorMessage = "I couldn't make out a place in that. Try a town, a lake or a peak."
+            errorMessage = request.facilities.isEmpty
+                ? "I couldn't make out a place in that. Try a town, a lake or a peak."
+                : "Tell me where you're heading and I'll look for huts with \(LennyFacilities.phrase(request.facilities))."
             Analytics.shared.track(.lennySearch, ["found": "no_place"])
             phase = .results
             return
@@ -142,7 +144,7 @@ final class LennySearchViewModel: ObservableObject {
         steps[1].isDone = true
 
         // 3 - Pods around each stop, nearest first, and some along the way.
-        journeyStops = Self.journey(from: stops, pods: allPods)
+        journeyStops = Self.journey(from: stops, pods: allPods, wants: request.facilities)
         try? await Task.sleep(nanoseconds: 350_000_000)
         guard !Task.isCancelled else { return }
         let nothing = journeyStops.allSatisfy { $0.pods.isEmpty }
@@ -218,7 +220,7 @@ final class LennySearchViewModel: ObservableObject {
         return ([], [:])
     }
 
-    private static func journey(from located: [Located], pods allPods: [Pod]) -> [JourneyStop] {
+    private static func journey(from located: [Located], pods allPods: [Pod], wants: [String] = []) -> [JourneyStop] {
         var stops: [(stop: JourneyStop, coordinate: CLLocationCoordinate2D?)] = []
 
         for item in located {
@@ -234,11 +236,13 @@ final class LennySearchViewModel: ObservableObject {
                     ordered += around.pods
                     distances.merge(around.distances) { first, _ in first }
                 }
+                // The pod asked for stays first; its neighbours lead with what was asked.
+                ordered = [pod] + ranked(Array(ordered.dropFirst()), wants: wants)
                 stops.append((JourneyStop(name: name, pods: ordered, isResolved: true, distancesKm: distances, pickReason: "You asked for it"), item.coordinate))
             case .region, .country:
                 // No point to measure from: the pick is the pod with the most beds.
-                let byBeds = item.mention.pods.sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }
-                let reason = byBeds.first?.bedsTotal.map { "Most beds in \(name), \($0)" }
+                let byBeds = ranked(item.mention.pods.sorted { ($0.bedsTotal ?? 0) > ($1.bedsTotal ?? 0) }, wants: wants)
+                let reason = withWants(byBeds.first?.bedsTotal.map { "Most beds in \(name), \($0)" }, top: byBeds.first, wants: wants)
                 stops.append((JourneyStop(name: name, pods: byBeds, isResolved: true, pickReason: reason), item.coordinate))
             case .place:
                 guard let point = item.coordinate else {
@@ -246,10 +250,11 @@ final class LennySearchViewModel: ObservableObject {
                     continue
                 }
                 let around = nearest(to: point, in: allPods)
+                let pods = ranked(around.pods, wants: wants)
                 stops.append((JourneyStop(
-                    name: name, pods: around.pods, isResolved: true,
+                    name: name, pods: pods, isResolved: true,
                     distancesKm: around.distances,
-                    pickReason: around.pods.isEmpty ? nil : "Closest to \(name)"
+                    pickReason: pods.isEmpty ? nil : withWants("Closest to \(name)", top: pods.first, wants: wants)
                 ), point))
             }
         }
@@ -276,6 +281,29 @@ final class LennySearchViewModel: ObservableObject {
             ))
         }
         return withWaypoints
+    }
+
+    // MARK: - Facilities asked for
+
+    /// Huts that have everything asked for first, then those with some of it,
+    /// each group keeping its order (nearest, or most beds). Nothing is left
+    /// out: the data is incomplete, and a hut that lists nothing may still
+    /// have it.
+    static func ranked(_ pods: [Pod], wants: [String]) -> [Pod] {
+        guard !wants.isEmpty else { return pods }
+        func score(_ pod: Pod) -> Int { wants.filter { (pod.facilities ?? []).contains($0) }.count }
+        return pods.enumerated()
+            .sorted { (score($0.element), -$0.offset) > (score($1.element), -$1.offset) }
+            .map(\.element)
+    }
+
+    /// Lenny's pick reason, saying what the pick has of what was asked, or that
+    /// no hut lists it.
+    static func withWants(_ reason: String?, top: Pod?, wants: [String]) -> String? {
+        guard let reason, !wants.isEmpty, let top else { return reason }
+        let has = wants.filter { (top.facilities ?? []).contains($0) }
+        if has.isEmpty { return "\(reason). None lists \(LennyFacilities.phrase(wants))" }
+        return "\(reason), with \(LennyFacilities.phrase(has))"
     }
 
     /// "one stop", "three stops", "12 stops" — the step title's wording.
