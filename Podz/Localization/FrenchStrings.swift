@@ -316,6 +316,13 @@ enum FrenchStrings {
         ("Rotate", "Pivoter"), ("Reset", "Réinitialiser"), ("Couldn't save", "Enregistrement impossible"),
         ("Couldn't open your photo.", "Impossible d'ouvrir ta photo."), ("Couldn't prepare the photo.", "Impossible de préparer la photo."),
 
+        // About, legal, sign-up
+        ("About Podz", "À propos de Podz"), ("Version {}", "Version {1}"), ("Terms of Service", "Conditions d'utilisation"),
+        ("Privacy Policy", "Politique de confidentialité"), ("Last updated {}", "Dernière mise à jour : {1}"), ("November 2026", "novembre 2026"),
+        ("Share anonymous usage", "Partager l'usage anonyme"), ("On", "Activé"), ("Off", "Désactivé"),
+        ("Hut data © OpenStreetMap contributors. Photos from Wikimedia Commons, with their credits. Not every hut is checked by Podz.", "Données des refuges © contributeurs d'OpenStreetMap. Photos de Wikimedia Commons, avec leurs crédits. Podz ne vérifie pas tous les refuges."),
+        ("By continuing you accept the [Terms](podz-legal://terms) and the [Privacy Policy](podz-legal://privacy).", "En continuant, tu acceptes les [Conditions](podz-legal://terms) et la [Politique de confidentialité](podz-legal://privacy)."),
+
         // Friends
         ("Add friend", "Ajouter un ami"), ("Add a friend", "Ajouter un ami"), ("Requests", "Demandes"), ("Friends ({})", "Amis ({1})"),
         ("No friends yet. Add someone to plan trips together.", "Pas encore d'amis. Ajoute quelqu'un pour planifier vos séjours ensemble."),
