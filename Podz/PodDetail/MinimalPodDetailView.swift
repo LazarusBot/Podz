@@ -246,18 +246,14 @@ struct MinimalPodDetailView: View {
     // MARK: - Text
 
     private var titleBlock: some View {
-        VStack(spacing: 12) {
-            titleText
+        VStack(spacing: 10) {
+            // One line: a long name is cut with an ellipsis so the altitude stays.
+            DetailTitleLine(name: pod.name, altitude: pod.altitudeM.map { "\($0)m" })
                 .foregroundColor(.homeText)
-                .multilineTextAlignment(.center)
             PodStatusRow(pod: pod)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 50)
-    }
-
-    private var titleText: Text {
-        detailTitle(pod.name, detail: pod.altitudeM.map { "\($0)m" })
+        .padding(.top, 30)
     }
 
     /// "120 beds · 18 free now  ·  45 € / night": what a traveler weighs first,
@@ -281,18 +277,18 @@ struct MinimalPodDetailView: View {
                     .foregroundColor(.homeText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                    .padding(.top, 14)
+                    .padding(.top, 10)
                     .padding(.horizontal, 24)
             }
         }
     }
 
-    /// Up to three facilities; the rest are in the sections.
+    /// One line of facilities, as many as fit; the rest are in the sections.
     @ViewBuilder
     private var stackChips: some View {
         if let facilities = pod.facilities, !facilities.isEmpty {
-            FacilityChips(facilities: Array(facilities.prefix(3)))
-                .padding(.top, 14)
+            FacilityChips(facilities: facilities, maxLines: 1)
+                .padding(.top, 12)
                 .padding(.horizontal, 24)
         }
     }
