@@ -49,11 +49,21 @@ struct LennyReply: View {
             if message == nil {
                 typingDots
             } else {
-                Text(typed)
+                // The full line is laid out (invisible) from the start, so the
+                // bubble has its final height while it types and nothing around
+                // it has to move.
+                Text(message.map(tr) ?? "")
                     .font(AppFont.regularLabel(15))
-                    .foregroundColor(isError ? .white : .homeText)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
+                    .hidden()
+                    .overlay(alignment: .topLeading) {
+                        Text(typed)
+                            .font(AppFont.regularLabel(15))
+                            .foregroundColor(isError ? .white : .homeText)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
             }
         }
         .padding(.horizontal, 18)

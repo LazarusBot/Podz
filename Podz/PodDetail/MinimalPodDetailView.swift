@@ -85,7 +85,6 @@ struct MinimalPodDetailView: View {
                             VStack(spacing: 0) {
                                 // Back from the hut, the page empties: only the
                                 // pod's photo and Lenny's question remain.
-                                if !asksIfBooked && !isBooking { titleBlock }
                                 if asksIfBooked {
                                     EmptyView()
                                 } else if isBooking {
@@ -93,8 +92,7 @@ struct MinimalPodDetailView: View {
                                     BookingChips(flow: activeBooking)
                                         .padding(.top, 0)
                                 } else {
-                                    keyFacts
-                                    stackChips
+                                    factsThatFit
                                 }
                                 Spacer(minLength: 0)
                             }
@@ -103,8 +101,17 @@ struct MinimalPodDetailView: View {
                             .onTapGesture { if !isBooking && !asksIfBooked { toggleExtended() } }
                             .transition(Self.fadeIn)
 
+                            // Lenny's bubble sits where it does in Lenny's search and
+                            // booking: just above the control stack. It's part of the
+                            // layout, so the page above it gives way (long names and
+                            // many facilities never run under it).
+                            stackLenny
+                                .padding(.horizontal, 24)
+                                .padding(.top, 8)
+                                .transition(Self.fadeIn)
+
                             // The buttons float over the page: keep their room.
-                            Color.clear.frame(height: 83 + 24 + DetailLayout.controlStackGap + ScreenInsets.bottom)
+                            Color.clear.frame(height: 83 + 20 + DetailLayout.controlStackGap + ScreenInsets.bottom)
                         }
                     }
                     .frame(width: proxy.size.width, height: proxy.size.height)
@@ -113,15 +120,6 @@ struct MinimalPodDetailView: View {
                     if isExtended {
                         BottomFade()
                             .transition(.opacity)
-                    }
-
-                    // Lenny's bubble sits where it does in Lenny's search and
-                    // booking: just above the control stack.
-                    if !isExtended {
-                        stackLenny
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 83 + 20 + DetailLayout.controlStackGap + ScreenInsets.bottom)
-                            .transition(Self.fadeIn)
                     }
 
                     actionRow
@@ -245,15 +243,35 @@ struct MinimalPodDetailView: View {
 
     // MARK: - Text
 
-    private var titleBlock: some View {
+    private func titleBlock(lineLimit: Int? = nil) -> some View {
         VStack(spacing: 12) {
             titleText
                 .foregroundColor(.homeText)
                 .multilineTextAlignment(.center)
+                .lineLimit(lineLimit)
             PodStatusRow(pod: pod)
         }
         .padding(.horizontal, 24)
         .padding(.top, 50)
+    }
+
+    /// The name, the key facts and the facility chips, as much as fits between
+    /// the photo and Lenny's bubble: the chips go first (three, two, one, none;
+    /// they're all in the sections), then the name is held to two lines.
+    private var factsThatFit: some View {
+        ViewThatFits(in: .vertical) {
+            ForEach([3, 2, 1, 0], id: \.self) { chips in
+                VStack(spacing: 0) {
+                    titleBlock()
+                    keyFacts
+                    stackChips(limit: chips)
+                }
+            }
+            VStack(spacing: 0) {
+                titleBlock(lineLimit: 2)
+                keyFacts
+            }
+        }
     }
 
     private var titleText: Text {
@@ -289,9 +307,9 @@ struct MinimalPodDetailView: View {
 
     /// Up to three facilities; the rest are in the sections.
     @ViewBuilder
-    private var stackChips: some View {
-        if let facilities = pod.facilities, !facilities.isEmpty {
-            FacilityChips(facilities: Array(facilities.prefix(3)))
+    private func stackChips(limit: Int) -> some View {
+        if limit > 0, let facilities = pod.facilities, !facilities.isEmpty {
+            FacilityChips(facilities: Array(facilities.prefix(limit)))
                 .padding(.top, 14)
                 .padding(.horizontal, 24)
         }
