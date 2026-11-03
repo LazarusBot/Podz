@@ -48,6 +48,8 @@ struct TrustBadge: View {
             T(isVerified ? "Verified" : "Unverified")
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(isVerified ? .homeText : .homeSubtitle)
+                .lineLimit(1)
+                .fixedSize()
             Image(systemName: "chevron.right")
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundColor(.homeSubtitle)
@@ -77,6 +79,8 @@ struct OpenStatusChip: View {
             T(status.label)
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(status.isOpen ? .homeText : .alertInk)
+                .lineLimit(1)
+                .fixedSize()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -97,11 +101,19 @@ struct PodStatusRow: View {
 
     private var status: OpeningStatus.Result? { OpeningStatus.evaluate(pod.openingHours) }
 
+    @ViewBuilder
+    private var chips: some View {
+        if let status { OpenStatusChip(status: status) }
+        Button { explains = true } label: { TrustBadge(isVerified: pod.isBookable) }
+            .buttonStyle(.plain)
+    }
+
     var body: some View {
-        HStack(spacing: 8) {
-            if let status { OpenStatusChip(status: status) }
-            Button { explains = true } label: { TrustBadge(isVerified: pod.isBookable) }
-                .buttonStyle(.plain)
+        // Side by side; when the room is short (beside the thumbnail) the chips
+        // stack instead of squeezing, so each is as long as its text.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { chips }
+            VStack(alignment: isCentered ? .center : .leading, spacing: 8) { chips }
         }
         .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
         .alert(tr(pod.isBookable ? "Verified by Podz" : "Not checked by Podz"), isPresented: $explains) {
