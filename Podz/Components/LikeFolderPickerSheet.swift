@@ -65,7 +65,9 @@ struct LikeFolderPickerSheet: View {
                             items: slots,
                             podCount: podCount(of:),
                             width: proxy.size.width,
-                            bottomRoom: 170
+                            bottomRoom: 170,
+                            // Apart on entry, like the Likes tab; pinch in to pack them.
+                            startsLoose: true
                         ) { slot, index, cell in
                             bubble(for: slot, index: index, cell: cell)
                         }
