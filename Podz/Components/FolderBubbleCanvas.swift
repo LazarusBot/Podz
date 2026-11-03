@@ -16,7 +16,7 @@ struct FolderBubbleCanvas<Item: Identifiable, Content: View>: View {
     @ViewBuilder var content: (Item, Int, FoamCell) -> Content
 
     /// The Likes page opens with the bubbles apart (plain separate shapes) and
-    /// you pinch in to bring them closer; the save sheet opens packed.
+    /// you pinch in to bring them closer; the save sheet opens apart too.
     init(
         items: [Item],
         podCount: @escaping (Item) -> Int,
