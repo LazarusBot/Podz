@@ -19,6 +19,10 @@ struct PodzApp: App {
                 .onOpenURL { url in
                     DeepLinkRouter.shared.handle(url)
                 }
+                .task {
+                    Analytics.shared.start()
+                    DiagnosticsReporter.shared.start()
+                }
         }
     }
 }

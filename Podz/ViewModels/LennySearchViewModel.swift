@@ -124,6 +124,7 @@ final class LennySearchViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
         guard !request.mentions.isEmpty else {
             errorMessage = "I couldn't make out a place in that. Try a town, a lake or a peak."
+            Analytics.shared.track(.lennySearch, ["found": "no_place"])
             phase = .results
             return
         }
@@ -153,6 +154,11 @@ final class LennySearchViewModel: ObservableObject {
         if nothing {
             errorMessage = "I couldn't find any pods along that route. Try another stop, or a wider area."
         }
+        Analytics.shared.track(.lennySearch, [
+            "stops": "\(journeyStops.count)",
+            "pods": "\(journeyStops.reduce(0) { $0 + $1.pods.count })",
+            "found": nothing ? "no" : "yes"
+        ])
         phase = .results
     }
 

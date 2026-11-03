@@ -102,6 +102,7 @@ final class LikesStore: ObservableObject {
         guard let userId = AuthManager.shared.session?.user.id else { return nil }
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
+        Analytics.shared.track(.folderCreated)
         
         do {
             let folder: LikeFolder = try await supabase
@@ -253,6 +254,7 @@ final class LikesStore: ObservableObject {
     /// Likes a pod directly into a folder (optimistic).
     func like(_ pod: Pod, folderId: UUID?) async {
         guard let userId = AuthManager.shared.session?.user.id else { return }
+        Analytics.shared.track(.podLiked)
         // withAnimation — so PodCountBadge's .contentTransition(.numericText())
         // actually rolls to the new count instead of snapping; content
         // transitions only animate when the value change itself happens
