@@ -26,11 +26,17 @@ struct TapScaleButtonStyle: ButtonStyle {
         return generator
     }()
 
+    /// Builds the generator at launch. A `static let` is lazy, so without
+    /// this the very first tap on any button paid for creating it and felt
+    /// sticky.
+    static func warmUp() { _ = generator }
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .opacity(1)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: AppMotion.snappy), value: configuration.isPressed)
+            // Down fast, back a touch softer: the press answers at once.
+            .animation(configuration.isPressed ? .easeOut(duration: 0.08) : .easeOut(duration: AppMotion.snappy), value: configuration.isPressed)
             .onChange(of: configuration.isPressed) { _, isPressed in
                 if isPressed {
                     Self.generator.impactOccurred()

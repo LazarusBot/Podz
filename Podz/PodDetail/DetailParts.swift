@@ -128,6 +128,8 @@ struct DetailRoundButton<Label: View>: View {
             label()
                 .frame(width: 83, height: 83)
                 .background(DetailPill())
+                // The whole pill is the target, not just the thin glyph in it.
+                .contentShape(Circle())
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(accessibilityLabel)
@@ -167,13 +169,19 @@ struct DetailTextButton: View {
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity)
                 .frame(height: 83)
+                // One view for both states, so a pill that turns highlighted
+                // (or changes its words) fades instead of being swapped out
+                // under the finger.
                 .background {
-                    if isHighlighted {
-                        Capsule().fill(Color.homeText)
-                    } else {
+                    ZStack {
                         DetailPill()
+                        Capsule().fill(Color.homeText).opacity(isHighlighted ? 1 : 0)
                     }
                 }
+                .contentShape(Capsule())
+                .contentTransition(.opacity)
+                .animation(.smooth(duration: 0.25), value: isHighlighted)
+                .animation(.smooth(duration: 0.25), value: title)
         }
         .buttonStyle(TapScaleButtonStyle())
     }

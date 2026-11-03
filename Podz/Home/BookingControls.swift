@@ -17,7 +17,11 @@ struct BookingControlStack: View {
                 picker
                     .transition(.opacity)
             } else {
+                // While it books there's nothing to step back to: the pill
+                // rests instead of taking a tap that does nothing.
                 DetailBackButton { flow.back(onLeave: onLeave) }
+                    .disabled(flow.status == .booking)
+                    .opacity(flow.status == .booking ? 0.45 : 1)
                 primaryPill
             }
         }
@@ -32,27 +36,33 @@ struct BookingControlStack: View {
     }
 
     /// The right-hand pill at rest: the question as a plain button, then
-    /// Reserve / View reservations.
-    @ViewBuilder
+    /// Reserve / View reservations. One button whose words and fill change
+    /// (never a different view per state), so a tap that lands as the
+    /// question moves on still goes to the pill that's there.
     private var primaryPill: some View {
+        let pill = primary
+        return DetailTextButton(title: pill.title, isHighlighted: pill.isHighlighted, action: pill.action)
+            .disabled(!pill.isEnabled)
+            .opacity(pill.isEnabled ? 1 : 0.45)
+    }
+
+    private var primary: (title: String, isHighlighted: Bool, isEnabled: Bool, action: () -> Void) {
         switch (flow.status, flow.stage) {
         case _ where flow.bookableCount == 0:
             // All listed: nothing to reserve; the rows open each hut.
-            DetailTextButton(title: "Back to plan") { flow.back(onLeave: onLeave) }
+            return ("Back to plan", false, true, { flow.back(onLeave: onLeave) })
         case (.booked, _):
-            DetailTextButton(title: "View reservations", isHighlighted: true, action: onViewReservations)
+            return ("View reservations", true, true, onViewReservations)
         case (.booking, _):
-            DetailTextButton(title: flow.mode == .external ? "Adding…" : "Reserving…", action: {})
-                .disabled(true)
-                .opacity(0.45)
+            return (flow.mode == .external ? "Adding…" : "Reserving…", false, false, {})
         case (_, .guests):
-            DetailTextButton(title: flow.guestsConfirmed ? flow.guestsText : "Add guest") { flow.isPicking = true }
+            return (flow.guestsConfirmed ? flow.guestsText : "Add guest", false, true, { flow.isPicking = true })
         case (_, .date):
-            DetailTextButton(title: flow.dateConfirmed ? flow.dateText : "Add date") { flow.isPicking = true }
+            return (flow.dateConfirmed ? flow.dateText : "Add date", false, true, { flow.isPicking = true })
         case (_, .nights):
-            DetailTextButton(title: flow.nightsConfirmed ? flow.nightsText : "Add nights") { flow.isPicking = true }
+            return (flow.nightsConfirmed ? flow.nightsText : "Add nights", false, true, { flow.isPicking = true })
         case (_, .review):
-            DetailTextButton(title: flow.mode == .external ? "Add to my list" : "Reserve", isHighlighted: true, action: flow.reserve)
+            return (flow.mode == .external ? "Add to my list" : "Reserve", true, true, flow.reserve)
         }
     }
 
@@ -123,6 +133,7 @@ struct BookingControlStack: View {
                 .frame(width: 75, height: 75)
                 .background(Color.homePill, in: Circle())
                 .overlay(Circle().strokeBorder(Color.homeText.opacity(0.25), lineWidth: 0.5))
+                .contentShape(Circle())
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(accessibilityLabel)
@@ -166,6 +177,7 @@ struct BookingControlStack: View {
                 .scaleEffect(x: -1)
                 .frame(width: 83, height: 83)
                 .background(Circle().fill(Color.homeText))
+                .contentShape(Circle())
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(tr("Continue"))
