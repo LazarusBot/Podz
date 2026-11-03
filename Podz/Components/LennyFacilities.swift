@@ -6,20 +6,20 @@ import Foundation
 /// sentence (`LennyRequestParser`) and ranks each stop's huts by them
 /// (`LennySearchViewModel`).
 enum LennyFacilities {
-    /// (label as stored on a pod, the words for it, accents folded, lower case).
+    /// (label as stored on a pod, the words for it: lower case, no accents, dashes and apostrophes as spaces, as `LennyText.fold` writes them).
     /// Longest phrases first inside each pattern so "drinking water" wins over "water".
     private static let table: [(label: String, pattern: String)] = [
-        ("Drinking water", #"drinking water|potable water|fresh water|tap water|running water|water|eau potable|eau courante|point d'eau|eau"#),
+        ("Drinking water", #"drinking water|potable water|fresh water|tap water|running water|water|eau potable|eau courante|point d eau|eau"#),
         ("Showers", #"showers?|douches?|docce|doccia"#),
-        ("Winter room", #"winter (?:room|shelter|hut|refuge)|winterraum|salle d'hiver|local d'hiver|refuge d'hiver|locale invernale"#),
+        ("Winter room", #"winter (?:room|shelter|hut|refuge)|winterraum|salle d hiver|local d hiver|refuge d hiver|locale invernale"#),
         ("Meals", #"meals?|food|dinner|breakfast|lunch|restaurant|half[- ]board|demi[- ]pension|repas|diner|petit[- ]dejeuner|pasti|cena"#),
         ("Self-catering", #"self[- ]catering|kitchen|cooking|cook|cuisine|cuisiner"#),
         ("Electricity", #"electricity|power outlets?|plugs?|charging|electricite|prises?"#),
-        ("Wi-Fi", #"wi-?fi|internet|wlan"#),
+        ("Wi-Fi", #"wi ?fi|internet|wlan"#),
         ("Heating", #"heating|heated|heater|chauffage|chauffe|riscaldamento"#),
         ("Toilets", #"toilets?|wc|restrooms?|toilettes?|bagni"#),
         ("Dogs welcome", #"dogs?|pets?|chiens?|cani"#),
-        ("Wheelchair access", #"wheel-?chairs?|fauteuil roulant|step-free|disabled access"#)
+        ("Wheelchair access", #"wheel ?chairs?|fauteuil roulant|step-free|disabled access"#)
     ]
 
     private static let regexes: [(label: String, regex: NSRegularExpression)] = table.compactMap { entry in
@@ -29,7 +29,8 @@ enum LennyFacilities {
 
     /// The facilities a (folded, lower-case) sentence asks for, in the order
     /// they were said, each once.
-    static func wanted(in folded: String) -> [String] {
+    static func wanted(in text: String) -> [String] {
+        let folded = LennyText.fold(text)
         let whole = NSRange(folded.startIndex..., in: folded)
         var found: [(label: String, position: Int)] = []
         for (label, regex) in regexes {
@@ -42,7 +43,7 @@ enum LennyFacilities {
 
     /// The sentence without its facility words, to see whether a place is left.
     static func removing(from folded: String) -> String {
-        var text = folded
+        var text = LennyText.fold(folded)
         for (_, regex) in regexes {
             text = regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: " ")
         }

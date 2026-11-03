@@ -15,6 +15,8 @@ struct LennyRequest {
         let pods: [Pod]
         /// Where it was said, to keep the stops in the order of the sentence.
         let position: Int
+        /// How long the words are in the sentence (0 when unknown).
+        var length = 0
     }
 
     var mentions: [Mention] = []
@@ -148,7 +150,7 @@ enum LennyRequestParser {
         }
         for (alias, country) in countryAliases {
             if let group = byCountry[country] {
-                candidates.append(Candidate(name: country, key: alias, kind: .country, pods: group))
+                candidates.append(Candidate(name: country, key: fold(alias), kind: .country, pods: group))
             }
         }
 
@@ -156,16 +158,39 @@ enum LennyRequestParser {
         let whole = NSRange(folded.startIndex..., in: folded)
         var taken: [NSRange] = []
         var found: [LennyRequest.Mention] = []
-        // Longest names first, so "Refuge du Dôme" wins over "Dôme".
+        var matchedKeys: Set<String> = []
+        let ordered = candidates.sorted { $0.key.count > $1.key.count }
+        // Longest names first, so "Refuge du Dôme" wins over "Dôme". The words
+        // may be separated by any spaces ("Haute Savoie" is "Haute-Savoie").
         // With thousands of pods, skip the regex unless the name is even there.
-        for candidate in candidates.sorted(by: { $0.key.count > $1.key.count }) where candidate.key.count >= 3 && folded.contains(candidate.key) {
-            let pattern = "(?<![\\p{L}\\p{N}])" + NSRegularExpression.escapedPattern(for: candidate.key) + "(?![\\p{L}\\p{N}])"
+        for candidate in ordered where candidate.key.count >= 3 && folded.contains(candidate.key.split(separator: " ").first.map(String.init) ?? candidate.key) {
+            let words = candidate.key.split(separator: " ").map { NSRegularExpression.escapedPattern(for: String($0)) }
+            let pattern = "(?<![\\p{L}\\p{N}])" + words.joined(separator: #"\s+"#) + "(?![\\p{L}\\p{N}])"
             guard let regex = try? NSRegularExpression(pattern: pattern),
                   let match = regex.firstMatch(in: folded, range: whole),
                   !taken.contains(where: { NSIntersectionRange($0, match.range).length > 0 })
             else { continue }
             taken.append(match.range)
-            found.append(.init(name: candidate.name, kind: candidate.kind, pods: candidate.pods, position: match.range.location))
+            matchedKeys.insert(candidate.key)
+            found.append(.init(name: candidate.name, kind: candidate.kind, pods: candidate.pods, position: match.range.location, length: match.range.length))
+        }
+
+        // A name with a typo ("Zermat", "Chamonx", "Cortina d'Ampezo"): the same
+        // words, one letter off.
+        let tokens = LennyText.words(in: folded)
+        for candidate in ordered where candidate.key.count >= 7 && !matchedKeys.contains(candidate.key) {
+            let size = candidate.key.split(separator: " ").count
+            guard size <= tokens.count else { continue }
+            for start in 0...(tokens.count - size) {
+                let slice = tokens[start..<(start + size)]
+                let phrase = slice.map(\.word).joined(separator: " ")
+                guard LennyText.isTypo(phrase, of: candidate.key) else { continue }
+                let range = NSRange(location: slice.first!.range.location, length: NSMaxRange(slice.last!.range) - slice.first!.range.location)
+                guard !taken.contains(where: { NSIntersectionRange($0, range).length > 0 }) else { continue }
+                taken.append(range)
+                found.append(.init(name: candidate.name, kind: candidate.kind, pods: candidate.pods, position: range.location, length: range.length))
+                break
+            }
         }
         return found
     }
@@ -174,7 +199,9 @@ enum LennyRequestParser {
 
     /// Capitalised words that aren't places: the start of a sentence, days,
     /// months, pronouns and the little words of a request, in English and French.
-    private static let notPlaces: Set<String> = [
+    private static let notPlaces: Set<String> = Set(notPlacesRaw.map(LennyText.fold))
+
+    private static let notPlacesRaw: [String] = [
         "i", "i'd", "i'm", "i'll", "we", "we'd", "we're", "my", "our", "me", "us", "hi", "hello", "hey", "please",
         "can", "could", "would", "will", "should", "from", "to", "then", "next", "after", "also", "and", "or",
         "in", "on", "for", "with", "via", "near", "around", "by", "at", "the", "a", "an", "lenny", "looking",
@@ -195,6 +222,9 @@ enum LennyRequestParser {
         var found: [String: LennyRequest.Mention] = [:]
 
         func add(_ name: String, at position: Int) {
+            // Words a known place already covers (even with a typo) aren't another place.
+            let span = NSRange(location: position, length: name.utf16.count)
+            if known.contains(where: { $0.length > 0 && NSIntersectionRange(NSRange(location: $0.position, length: $0.length), span).length > 0 }) { return }
             // "Hi Lenny" is not a place: drop the little words at either end.
             var words = name.split(separator: " ").map(String.init)
             while let first = words.first, notPlaces.contains(fold(first)) { words.removeFirst() }
@@ -255,7 +285,7 @@ enum LennyRequestParser {
 
     /// "Chamonix to Zermatt": the first word is a place because "to" follows.
     private static func followsConnector(after range: Range<String.Index>, in text: String) -> Bool {
-        let after = fold(String(text[range.upperBound...].prefix(14))).trimmingCharacters(in: .whitespaces)
+        let after = LennyText.plainFold(String(text[range.upperBound...].prefix(14))).trimmingCharacters(in: .whitespaces)
         return ["to ", "a ", "vers ", "->", "→", "then", "puis", "and ", "et ", ","].contains { after.hasPrefix($0) }
     }
 
@@ -301,7 +331,7 @@ enum LennyRequestParser {
         let nights = firstNumber(in: folded, pattern: number + #"[\s-]*(?:nights?|nuits?|nacht|naechte|notti)\b"#)
         var days = firstNumber(in: folded, pattern: number + #"[\s-]*(?:days?|jours?|tage|giorni)\b"#)
         if days == nil, let weeks = firstNumber(in: folded, pattern: #"(\d{1,2}|a|an|one|two|three|four|une?|deux|trois|quatre)[\s-]*(?:weeks?|semaines?)\b"#) { days = weeks * 7 }
-        if days == nil, folded.range(of: #"\b(?:weekend|week-end)\b"#, options: .regularExpression) != nil { days = 2 }
+        if days == nil, folded.range(of: #"\b(?:weekend|week end)\b"#, options: .regularExpression) != nil { days = 2 }
         return (days.flatMap { (1...60).contains($0) ? $0 : nil }, nights.flatMap { (1...60).contains($0) ? $0 : nil })
     }
 
@@ -326,8 +356,6 @@ enum LennyRequestParser {
 
     // MARK: - Folding
 
-    /// Lower case, without accents: "Dôme" and "dome" are the same word.
-    private static func fold(_ string: String) -> String {
-        string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
-    }
+    /// Lower case, without accents or dashes: "Dôme" and "dome", "Haute-Savoie" and "Haute Savoie" are the same word.
+    private static func fold(_ string: String) -> String { LennyText.fold(string) }
 }
