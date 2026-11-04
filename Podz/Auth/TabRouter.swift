@@ -13,5 +13,8 @@ final class TabRouter: ObservableObject {
     /// Go to Home with Lenny's search open (the empty Reservations page).
     @Published var lennyRequested = false
 
+    /// Go to Home (an empty Likes folder: "Add huts?").
+    @Published var homeRequested = false
+
     private init() {}
 }

@@ -108,6 +108,12 @@ struct MainTabView: View {
         .onChange(of: tabRouter.lennyRequested) { _, requested in
             if requested { selectedTab = .feed }
         }
+        // An empty Likes folder asked for Home, to find huts to add.
+        .onChange(of: tabRouter.homeRequested) { _, requested in
+            guard requested else { return }
+            selectedTab = .feed
+            tabRouter.homeRequested = false
+        }
         .preferredColorScheme(selectedTab == .feed || selectedTab == .likes || appearance.followsSystem ? nil : .light)
     }
 }

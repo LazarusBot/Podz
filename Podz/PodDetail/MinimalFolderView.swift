@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Inside a Likes folder (Paper "LikesFolderView" frames): a two-column
 /// grid of the folder's pods. Tap a tile to select it (full strength, with
-/// a check; the rest dim), then "Open" goes to the selected pod. The grid
+/// a check; the rest dim), then "Open" goes to the selected pod (in an empty folder of yours the pill asks "Add huts?" and goes to Home). The grid
 /// scrolls under a fade into the ground and the back / share / Open pills.
 struct MinimalFolderView: View {
     /// The folder's own name, as the page's title.
@@ -20,6 +20,9 @@ struct MinimalFolderView: View {
     var onShare: (() -> Void)? = nil
     /// Nil for a folder that isn't yours: nothing to take out of it.
     var onRemovePod: ((Pod) -> Void)? = nil
+    /// Nil for a folder that isn't yours. While the folder is empty the last
+    /// pill asks "Add huts?" and this takes you to Home to find some.
+    var onAddHuts: (() -> Void)? = nil
 
     @State private var selectedID: UUID?
     /// Press and hold a tile: they wiggle and each gets a minus (yours only).
@@ -132,6 +135,12 @@ struct MinimalFolderView: View {
         }
     }
 
+    private var asksToAddHuts: Bool { pods.isEmpty && onAddHuts != nil }
+
+    private var pillTitle: String {
+        isEditing ? "Done" : asksToAddHuts ? "Add huts?" : "Open"
+    }
+
     private var actionRow: some View {
         HStack(spacing: 13) {
             DetailBackButton(action: onBack)
@@ -145,10 +154,14 @@ struct MinimalFolderView: View {
                 }
             }
 
-            // While editing, the pill is Done (highlighted); otherwise Open.
-            DetailTextButton(title: isEditing ? "Done" : "Open", isHighlighted: isEditing) {
+            // While editing, the pill is Done (highlighted); in an empty folder
+            // of yours it asks "Add huts?" (highlighted: it's the one move);
+            // otherwise Open.
+            DetailTextButton(title: pillTitle, isHighlighted: isEditing || asksToAddHuts) {
                 if isEditing {
                     withAnimation(.smooth(duration: 0.3)) { isEditing = false }
+                } else if asksToAddHuts {
+                    onAddHuts?()
                 } else if let selectedPod {
                     onOpenPod(selectedPod)
                 }
