@@ -29,13 +29,6 @@ extension Color {
     /// The highlighted pill ("Get started") — inverts the ground.
     static let onbHighlight = Color(light: .black, dark: .white)
     static let onbHighlightText = Color(light: .white, dark: .black)
-
-    /// Faint frames behind the welcome collage photos. Invisible in light
-    /// mode, where the design draws them white on white.
-    static let onbCollageOutline = Color(
-        light: .clear,
-        dark: Color.white.opacity(0.25)
-    )
 }
 
 /// Type for the onboarding — Inter throughout, per the Figma frames.

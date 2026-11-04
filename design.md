@@ -38,7 +38,6 @@ color, a button style or a pattern.** Check it before every commit/push.
 | Placeholder on the inverted (Lenny) search bar | `homeSubtitleOnInverse` | #A0A0A0 | #A0A0A0 |
 | Highlighted button ("Get started") | `onbHighlight` / `onbHighlightText` | #000000 / #FFFFFF | #FFFFFF / #000000 |
 | Pill border | `homeBackground` (the ground, so it reads as a gap) | | |
-| Welcome collage outline | `onbCollageOutline` | clear | white 25% |
 | Error text | `appBadgeRed` | | |
 | Closed hut chip: fill / ink | `alertFill` / `alertInk` | #FCE4E4 / #A31616 | #4A1E1E / #FF9C9C |
 
