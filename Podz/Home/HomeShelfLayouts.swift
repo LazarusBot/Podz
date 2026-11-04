@@ -27,7 +27,7 @@ struct HomeTallCard: View {
                     // taps, or it steals them from the next card.
                     .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate, pixelWidth: 480).allowsHitTesting(false) }
                     .overlay(alignment: .bottom) {
-                        LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(colors: [.clear, .photoScrim.opacity(0.5)], startPoint: .top, endPoint: .bottom)
                             .frame(height: 100)
                     }
                     .overlay(alignment: .bottomLeading) {
@@ -39,7 +39,7 @@ struct HomeTallCard: View {
                                 Text("m")
                                     .font(AppFont.regularLabel(14))
                             }
-                            .foregroundColor(.white)
+                            .foregroundColor(.onPhoto)
                             .padding(.leading, 16)
                             .padding(.bottom, 14)
                         }
@@ -115,7 +115,7 @@ struct HomeMosaic: View {
                 // taps, or it steals them from the tile next to it.
                 .overlay { PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate, pixelWidth: large ? 640 : 480).allowsHitTesting(false) }
                 .overlay(alignment: .bottom) {
-                    LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(colors: [.clear, .photoScrim.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                         .frame(height: large ? 110 : 70)
                 }
                 .overlay(alignment: .bottomLeading) {
@@ -129,7 +129,7 @@ struct HomeMosaic: View {
                                 .opacity(0.85)
                         }
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(.onPhoto)
                     .padding(.horizontal, large ? 18 : 14)
                     .padding(.bottom, large ? 18 : 12)
                 }

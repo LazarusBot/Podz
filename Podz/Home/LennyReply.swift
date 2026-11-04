@@ -38,7 +38,7 @@ struct LennyReply: View {
     private var avatar: some View {
         LennyMark(mood: mood)
             .frame(width: 15, height: 15)
-            .foregroundColor(isError ? .white : .homeBackground)
+            .foregroundColor(isError ? .onPhoto : .homeBackground)
             .frame(width: 30, height: 30)
             .background(isError ? Color.appBadgeRed : Color.homeText, in: Circle())
             .animation(.smooth(duration: 0.3), value: isError)
@@ -51,7 +51,7 @@ struct LennyReply: View {
             } else {
                 Text(typed)
                     .font(AppFont.regularLabel(15))
-                    .foregroundColor(isError ? .white : .homeText)
+                    .foregroundColor(isError ? .onPhoto : .homeText)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -40,8 +40,8 @@ struct AvatarView: View {
     /// a `Circle` here would leave a rounded square's corners visibly
     /// uncovered instead of relying on the outer clip to crop correctly.
     private var placeholder: some View {
-        Rectangle().fill(Color.gray.opacity(0.3))
-            .overlay(Image(systemName: "person.fill").foregroundColor(.white))
+        Rectangle().fill(Color.homePill)
+            .overlay(Image(systemName: "person.fill").foregroundColor(.homeSubtitle))
     }
 }
 
@@ -60,7 +60,7 @@ private struct AvatarClipStyle: ViewModifier {
                 .overlay {
                     if showsStroke {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                            .strokeBorder(Color.onPhoto.opacity(0.55), lineWidth: 1)
                     }
                 }
         } else {
@@ -68,7 +68,7 @@ private struct AvatarClipStyle: ViewModifier {
                 .clipShape(Circle())
                 .overlay {
                     if showsStroke {
-                        Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                        Circle().strokeBorder(Color.onPhoto.opacity(0.55), lineWidth: 1)
                     }
                 }
         }

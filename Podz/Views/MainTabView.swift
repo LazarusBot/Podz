@@ -69,7 +69,7 @@ struct MainTabView: View {
         }
         .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)
         .animation(.easeOut(duration: AppMotion.snappy), value: tabBarVisibility.isHidden)
-        .background(Color.appHomeBackground.ignoresSafeArea())
+        .background(Color.homeBackground.ignoresSafeArea())
         // Home and Likes follow the system appearance; the other tabs have
         // no dark palette yet, so they (and the tab bar over them) stay
         // light — except a screen that has opted in (Profile's main one).

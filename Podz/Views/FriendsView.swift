@@ -157,7 +157,7 @@ private struct SwipeToDeleteRow<Content: View>: View {
             } label: {
                 Image(systemName: "trash")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.onPhoto)
                     .frame(width: revealWidth)
                     .frame(maxHeight: .infinity)
                     .background(Color.appBadgeRed)

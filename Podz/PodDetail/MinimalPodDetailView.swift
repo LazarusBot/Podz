@@ -378,12 +378,12 @@ struct MinimalPodDetailView: View {
                 .font(AppFont.regularLabel(13))
                 .opacity(0.85)
         }
-        .foregroundColor(.white)
+        .foregroundColor(.onPhoto)
         .padding(.horizontal, 22)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .bottom) {
-            LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [.clear, .photoScrim.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                 .frame(height: 130)
         }
     }
