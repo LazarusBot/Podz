@@ -124,6 +124,7 @@ enum FrenchStrings {
         ("I couldn't upload your photo. {}", "Je n'ai pas pu envoyer ta photo. {1}"),
         ("I couldn't add the pass to Wallet. {}", "Je n'ai pas pu ajouter le billet à Wallet. {1}"),
         ("Delete “{}” and the likes inside it?", "Supprimer « {1} » et les favoris qu'il contient ?"),
+        ("Share", "Partager"), ("Shared", "Partagé"), ("Stop sharing", "Arrêter de partager"),
         ("Keep", "Garder"), ("Loading", "Chargement"),
         ("Cancel this trip? This cancels all {} stays and can't be undone.", "Annuler ce voyage ? Cela annule les {1} séjours, sans retour possible."),
         ("Remove this stay? This only removes it from your list. To cancel the stay itself, tell the hut.", "Retirer ce séjour ? Il disparaît seulement de ta liste. Pour annuler le séjour, préviens le refuge."),
