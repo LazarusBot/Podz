@@ -151,7 +151,7 @@ struct FolderBubble: View {
     /// The red minus on the rim. Always in the tree and scaled in and out from
     /// its own center (a transition applied after `.offset` scales around the
     /// bubble's center instead, so the badge used to fly in from the middle and
-    /// back), with its own animation so it doesn't borrow the wiggle's.
+    /// back), with its own short animation so it doesn't borrow the wiggle's.
     private var deleteBadge: some View {
         Button(action: onDelete) {
             Image(systemName: "minus")
@@ -163,12 +163,14 @@ struct FolderBubble: View {
         }
         .accessibilityLabel(tr("Remove folder"))
         .accessibilityHidden(!showDeleteBadge)
-        .scaleEffect(showDeleteBadge ? 1 : 0.01)
+        .scaleEffect(showDeleteBadge ? 1 : 0.55)
         .opacity(showDeleteBadge ? 1 : 0)
         .allowsHitTesting(showDeleteBadge)
         // On the rim, at about two o'clock.
         .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
-        .animation(.spring(response: 0.32, dampingFraction: 0.62), value: showDeleteBadge)
+        // Short and close to where it ends up: it fades and grows a little, no
+        // bounce, so it never seems to travel.
+        .animation(.easeOut(duration: 0.18), value: showDeleteBadge)
     }
 }
 
