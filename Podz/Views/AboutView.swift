@@ -49,6 +49,16 @@ struct AboutView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 24)
                         .padding(.top, 24)
+
+                    // Podz has no accessibility settings of its own, so there is
+                    // no page for them: it follows the phone's.
+                    T("Podz follows your iPhone's VoiceOver and Reduce Motion settings.")
+                        .font(AppFont.regularLabel(13))
+                        .lineSpacing(3)
+                        .foregroundColor(.homeSubtitle)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
                 }
             }
         }

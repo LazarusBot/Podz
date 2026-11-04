@@ -274,7 +274,7 @@ enum FrenchStrings {
         ("Add some friends first — nobody to share with yet.", "Ajoute d'abord des amis : personne avec qui partager pour l'instant."),
         ("Couldn't update sharing", "Impossible de mettre à jour le partage"), ("Someone", "Quelqu'un"),
         ("Edit profile", "Modifier le profil"), ("Friends", "Amis"), ("Login and security", "Connexion et sécurité"),
-        ("Accessibility", "Accessibilité"), ("Log out", "Se déconnecter"), ("Delete account", "Supprimer le compte"),
+        ("Log out", "Se déconnecter"), ("Delete account", "Supprimer le compte"),
         ("Delete your account?", "Supprimer ton compte ?"),
         ("This permanently deletes your account, profile, and liked pods. This can't be undone.", "Cela supprime définitivement ton compte, ton profil et tes favoris. Impossible de revenir en arrière."),
         ("Guest", "Invité"), ("{} friends · {} likes", "{1} amis · {2} favoris"),
@@ -325,8 +325,7 @@ enum FrenchStrings {
         // Login, accessibility, profile edit
         ("Sign-in method", "Méthode de connexion"), ("Send password reset email", "Envoyer un e-mail de réinitialisation"),
         ("Email sent", "E-mail envoyé"), ("Check {} for a link to reset your password.", "Vérifie {1} : tu y trouveras un lien pour réinitialiser ton mot de passe."),
-        ("Open Settings", "Ouvrir les Réglages"),
-        ("Podz follows your iOS accessibility settings, including VoiceOver, Dynamic Type, and Reduce Motion. There's nothing to configure here — manage them in Settings.", "Podz suit les réglages d'accessibilité d'iOS, dont VoiceOver, la taille du texte et la réduction des animations. Il n'y a rien à régler ici : gère-les dans les Réglages."),
+        ("Podz follows your iPhone's VoiceOver and Reduce Motion settings.", "Podz suit les réglages VoiceOver et Réduction des animations de ton iPhone."),
         ("Saving…", "Enregistrement…"), ("Save", "Enregistrer"), ("Username", "Nom d'utilisateur"), ("Name", "Nom"), ("Age", "Âge"), ("Location", "Lieu"),
         ("Your photo", "Ta photo"), ("Change photo", "Changer de photo"), ("Press and hold the photo to adjust it", "Maintiens la photo pour l'ajuster"),
         ("Profile photo. Double tap to change, press and hold to adjust", "Photo de profil. Touche deux fois pour changer, maintiens pour ajuster"),

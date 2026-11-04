@@ -21,7 +21,6 @@ struct ProfileView: View {
     @State private var showFriends = false
     @State private var showReservations = false
     @State private var showLoginSecurity = false
-    @State private var showAccessibility = false
     @State private var showAbout = false
     @State private var showDeleteAccountConfirmation = false
 
@@ -35,8 +34,6 @@ struct ProfileView: View {
                 MyReservationsView(onBack: { showReservations = false })
             } else if showLoginSecurity {
                 LoginSecurityView(onBack: { showLoginSecurity = false })
-            } else if showAccessibility {
-                AccessibilityView(onBack: { showAccessibility = false })
             } else if showAbout {
                 AboutView(onBack: { showAbout = false })
             } else {
@@ -69,7 +66,7 @@ struct ProfileView: View {
     }
 
     private var isShowingSection: Bool {
-        showEditProfile || showFriends || showReservations || showLoginSecurity || showAccessibility || showAbout
+        showEditProfile || showFriends || showReservations || showLoginSecurity || showAbout
     }
 
     // MARK: - Main screen
@@ -96,7 +93,6 @@ struct ProfileView: View {
                     ProfileListRow(title: "Friends") { showFriends = true }
                     ProfileListRow(title: "Reservations") { showReservations = true }
                     ProfileListRow(title: "Login and security") { showLoginSecurity = true }
-                    ProfileListRow(title: "Accessibility") { showAccessibility = true }
                     ProfileListRow(title: "About Podz") { showAbout = true }
                 }
                 .padding(.top, 36)
