@@ -84,20 +84,36 @@ struct ShareFolderSheet: View {
             }
             Spacer()
 
-            if pendingFriendId == friendId {
-                LennyDots()
-                    .frame(width: 51, height: 31)
-            } else {
-                Toggle("", isOn: Binding(
-                    get: { hasAccess },
-                    set: { newValue in toggleAccess(for: friendId, grant: newValue) }
-                ))
-                .labelsHidden()
-                .tint(.homeText)
+            sharePill(hasAccess: hasAccess, isPending: pendingFriendId == friendId) {
+                toggleAccess(for: friendId, grant: !hasAccess)
             }
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 10)
+    }
+
+    /// The small action pill, not a system switch: flat `homePill` "Share" while
+    /// the folder isn't shared with them, the highlighted one (ground and ink
+    /// swapped) "Shared" once it is; Lenny's dots while it's being changed.
+    /// One button that never swaps for another view, so a tap can't be lost.
+    private func sharePill(hasAccess: Bool, isPending: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Group {
+                if isPending {
+                    LennyDots(color: hasAccess ? .homeBackground : .homeText, size: 6)
+                } else {
+                    T(hasAccess ? "Shared" : "Share")
+                        .font(AppFont.semiBoldLabel(14))
+                }
+            }
+            .foregroundColor(hasAccess ? .homeBackground : .homeText)
+            .frame(width: 84, height: 38)
+            .background(Capsule().fill(hasAccess ? Color.homeText : Color.homePill))
+        }
+        .buttonStyle(TapScaleButtonStyle())
+        .disabled(isPending)
+        .animation(.smooth(duration: 0.25), value: hasAccess)
+        .accessibilityLabel(tr(hasAccess ? "Stop sharing" : "Share"))
     }
 
     private func toggleAccess(for friendId: UUID, grant: Bool) {
