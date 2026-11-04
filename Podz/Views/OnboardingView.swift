@@ -27,7 +27,8 @@ struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
     /// Lenny's line gets its moment even when the session resolves at once.
     @StateObject private var beat = LennyBeat()
-    /// The launch screen is left by its own caption, never on its own.
+    /// The launch screen (signed-in users only) is left by its own caption,
+    /// never on its own.
     @State private var launchDone = false
     /// The huts are in (fetched, or the wait ran out): Lenny won't say "all
     /// good" before, so Home opens with its cards.
@@ -38,10 +39,13 @@ struct OnboardingView: View {
 
     var body: some View {
         Group {
-            if !launchDone {
+            if auth.isInitializing {
+                // The session isn't known yet: a plain ground, so a signed-out
+                // user goes straight to the onboarding, with no Lenny.
+                Color.onbBackground.ignoresSafeArea()
+            } else if !launchDone {
                 LaunchWaitingView(
-                    isReady: !auth.isInitializing && !beat.isHolding && podsLoaded,
-                    goesHome: auth.isAuthenticated && !auth.justRegistered,
+                    isReady: !beat.isHolding && podsLoaded,
                     firstName: firstName.isEmpty ? nil : firstName,
                     onContinue: { launchDone = true }
                 )
@@ -58,7 +62,11 @@ struct OnboardingView: View {
         .onChange(of: auth.isAuthenticated) { _, signedIn in
             if !signedIn && !auth.isInitializing { firstName = "" }
         }
-        .task {
+        .onChange(of: auth.isInitializing, initial: true) { _, initializing in
+            guard !initializing else { return }
+            // Lenny's launch is for someone signed in; everyone else sees the
+            // classic onboarding at once.
+            guard auth.isAuthenticated else { launchDone = true; return }
             beat.start()
             // The pods load now, under Lenny's first line; a slow or failing
             // network gives up after 8 s so the screen is never stuck.
@@ -66,8 +74,10 @@ struct OnboardingView: View {
                 await PodsStore.shared.fetchPods()
                 podsLoaded = true
             }
-            try? await Task.sleep(for: .seconds(8))
-            podsLoaded = true
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                podsLoaded = true
+            }
         }
         // Appearance is decided per screen: the launch screen, the onboarding,
         // Home, Likes and the pod detail follow the system; everything else has no dark

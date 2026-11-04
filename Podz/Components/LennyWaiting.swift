@@ -27,12 +27,11 @@ final class LennyBeat: ObservableObject {
 /// the user's first name once Lenny knows it (kept from the last launch); once
 /// it's ready and the line has been said, Lenny hops, a second bubble says all
 /// is good, and a small caption beneath goes in. Nobody is let in before that
-/// tap.
+/// tap. Only for a signed-in user: a signed-out one goes straight to the
+/// onboarding.
 struct LaunchWaitingView: View {
     /// The session is known and the first line has had its moment.
     let isReady: Bool
-    /// Signed in: the caption says "Go to Home"; otherwise it starts the intro.
-    let goesHome: Bool
     /// Lenny uses it in the first line, when it's known.
     var firstName: String? = nil
     var onContinue: () -> Void
@@ -57,7 +56,7 @@ struct LaunchWaitingView: View {
             // caption arrives.
             Button(action: onContinue) {
                 HStack(spacing: 5) {
-                    T(goesHome ? "Go to Home" : "Let's start")
+                    T("Go to Home")
                         .font(AppFont.regularLabel(13))
                         .foregroundColor(.homeSubtitle)
                         .underline(color: Color.homeSubtitle.opacity(0.5))
