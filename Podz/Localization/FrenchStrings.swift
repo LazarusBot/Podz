@@ -278,7 +278,7 @@ enum FrenchStrings {
         ("Guest", "Invité"), ("{} friends · {} likes", "{1} amis · {2} favoris"),
         ("Switch to host mode", "Passer en mode hôte"), ("Coming soon", "Bientôt"),
         ("Switch to traveler mode", "Passer en mode voyageur"), ("Become a host", "Devenir hôte"),
-        ("Open", "Ouvrir"),
+        ("Open", "Ouvrir"), ("Add huts?", "Ajouter des refuges ?"),
         ("Booking request", "Demande de réservation"),
         ("Search by username", "Chercher par nom d'utilisateur"),
         ("Remove from folder", "Retirer du dossier"),

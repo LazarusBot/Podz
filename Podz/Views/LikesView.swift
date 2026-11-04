@@ -243,7 +243,9 @@ struct LikesView: View {
             // Opens ShareFolderSheet's per-friend access toggle list.
             onShare: { folderPendingShare = folder },
             // Press and hold a tile to take a pod out of the folder.
-            onRemovePod: { pod in Task { await likesStore.removeLike(pod) } }
+            onRemovePod: { pod in Task { await likesStore.removeLike(pod) } },
+            // An empty folder: the pill asks "Add huts?" and goes to Home.
+            onAddHuts: { TabRouter.shared.homeRequested = true }
         )
         .sheet(item: $folderPendingShare) { folder in
             ShareFolderSheet(folder: folder)
