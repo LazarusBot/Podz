@@ -304,21 +304,8 @@ struct MinimalHomeView: View {
     }
 
     private var loading: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ForEach(0..<2, id: \.self) { _ in
-                VStack(alignment: .leading, spacing: 12) {
-                    SkeletonShape(cornerRadius: 36)
-                        .aspectRatio(296.0 / 340.0, contentMode: .fit)
-                    SkeletonShape(cornerRadius: AppRadius.r4)
-                        .frame(width: 140, height: 16)
-                        .padding(.leading, 5)
-                }
-                .frame(width: Self.cardWidth)
-            }
-        }
-        .padding(.leading, 24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .clipped()
+        LennyWaiting()
+            .padding(.top, 60)
     }
 
     /// Search key: in Lenny mode the route goes to Lenny; in classic mode the

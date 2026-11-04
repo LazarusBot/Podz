@@ -112,6 +112,7 @@ enum FrenchStrings {
         ("Ask Lenny to find it", "Demande à Lenny de le trouver"),
         ("Describe your trip and Lenny finds the pods", "Décris ton séjour et Lenny trouve les refuges"),
         ("Chamonix to Zermatt in 5 days", "De Chamonix à Zermatt en 5 jours"),
+        ("One moment, I'm getting things ready.", "Un instant, je prépare tout."),
         ("No pods available yet.", "Aucun refuge disponible pour le moment."),
         ("No pods match “{}”.", "Aucun refuge ne correspond à « {1} »."),
         ("Hand-picked", "Sélection"), ("Highest", "Les plus hauts"), ("Room for groups", "Pour les groupes"),

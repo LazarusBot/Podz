@@ -45,7 +45,7 @@ final class AuthManager: ObservableObject {
                 // immediate sign-out, which flipped the UI to the auth
                 // screen for the split second before the refreshed session
                 // landed — the "login page appears and disappears" flash.
-                // Instead, stay on the launch skeleton and wait for that
+                // Instead, stay on the launch screen and wait for that
                 // resolved event, with a short timeout rather than hanging
                 // on the skeleton forever if the SDK's own background
                 // refresh never resolves.
