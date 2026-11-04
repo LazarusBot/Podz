@@ -12,6 +12,13 @@ enum ScreenInsets {
             .first ?? 393
     }
 
+    /// The height of the screen the app is on.
+    static var screenHeight: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.screen.bounds.height }
+            .first ?? 852
+    }
+
     static var bottom: CGFloat {
         UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.keyWindow }

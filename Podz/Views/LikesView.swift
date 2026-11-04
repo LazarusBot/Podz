@@ -193,6 +193,14 @@ struct LikesView: View {
 
                 Color.clear.frame(height: 100)
             }
+            // A tap on the empty ground ends delete mode, like Done: the bubbles
+            // and Done have taps of their own, which win over this one.
+            .frame(maxWidth: .infinity, minHeight: ScreenInsets.screenHeight - 100, alignment: .top)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard isEditMode else { return }
+                withAnimation { isEditMode = false }
+            }
         }
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
             geometry.contentOffset.y
