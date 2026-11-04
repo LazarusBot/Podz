@@ -115,7 +115,7 @@ enum FrenchStrings {
         ("One moment, I'm getting things ready.", "Un instant, je prépare tout."),
         ("One moment, {}. I'm getting things ready.", "Un instant, {1}, je prépare tout."),
         ("All good, you're all set.", "Tout est bon, c'est prêt."),
-        ("Go to Home", "Aller à l'accueil"), ("Let's start", "C'est parti"),
+        ("Go to Home", "Aller à l'accueil"),
         ("No pods available yet.", "Aucun refuge disponible pour le moment."),
         ("No pods match “{}”.", "Aucun refuge ne correspond à « {1} »."),
         ("Hand-picked", "Sélection"), ("Highest", "Les plus hauts"), ("Room for groups", "Pour les groupes"),
