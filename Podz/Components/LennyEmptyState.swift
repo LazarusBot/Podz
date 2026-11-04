@@ -1,0 +1,63 @@
+import SwiftUI
+
+/// Lenny's mark in a `homeText` disc: his avatar wherever he speaks outside a
+/// bubble.
+struct LennyAvatar: View {
+    var size: CGFloat = 30
+
+    var body: some View {
+        LennyMark(mood: .idle)
+            .frame(width: size / 2, height: size / 2)
+            .foregroundColor(.homeBackground)
+            .frame(width: size, height: size)
+            .background(Color.homeText, in: Circle())
+    }
+}
+
+/// The one empty page: a page with nothing in it is Lenny's invitation, never
+/// an illustration or a bare gray line. A 40 Lenny disc, a 20 semiBold title,
+/// one 14 `homeSubtitle` line and, when the page has no pill of its own to act
+/// with, a small caption (13 `homeSubtitle`, underlined, thin chevron) that
+/// does the one thing there is to do.
+struct LennyEmptyState: View {
+    let title: String
+    let line: String
+    /// The caption's words and what it does; both nil when the page's own pill
+    /// already acts (Plan with Lenny, Add friend).
+    var caption: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LennyAvatar(size: 40)
+                .accessibilityHidden(true)
+            T(title)
+                .font(AppFont.semiBoldLabel(20))
+                .foregroundColor(.homeText)
+            T(line)
+                .font(AppFont.regularLabel(14))
+                .foregroundColor(.homeSubtitle)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let caption, let action {
+                Button(action: action) {
+                    HStack(spacing: 5) {
+                        T(caption)
+                            .font(AppFont.regularLabel(13))
+                            .underline(color: Color.homeSubtitle.opacity(0.5))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                    .foregroundColor(.homeSubtitle)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+    }
+}

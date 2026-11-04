@@ -39,15 +39,14 @@ struct FriendsView: View {
                 }
             }
 
-            SectionHeading(title: friendsStore.friends.isEmpty ? "Friends" : "Friends (\(friendsStore.friends.count))")
-
             if friendsStore.friends.isEmpty {
-                T("No friends yet. Add someone to plan trips together.")
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(.homeSubtitle)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 8)
+                // The page's own pill (Add friend) is the action.
+                LennyEmptyState(
+                    title: "No friends yet",
+                    line: "Add someone to plan trips together."
+                )
             } else if let userId = auth.session?.user.id {
+                SectionHeading(title: "Friends (\(friendsStore.friends.count))")
                 ForEach(friendsStore.friends) { friendship in
                     SwipeToDeleteRow(onDelete: {
                         Task { await friendsStore.remove(friendship) }
