@@ -41,7 +41,6 @@ struct OnboardingView: View {
                     goesHome: auth.isAuthenticated && !auth.justRegistered,
                     onContinue: { launchDone = true }
                 )
-                    .preferredColorScheme(.light)
             } else if auth.isAuthenticated && !auth.justRegistered {
                 MainTabView()
             } else {
@@ -59,8 +58,8 @@ struct OnboardingView: View {
             try? await Task.sleep(for: .seconds(8))
             podsLoaded = true
         }
-        // Appearance is decided per screen: the onboarding, Home, Likes and
-        // the pod detail follow the system; everything else has no dark
+        // Appearance is decided per screen: the launch screen, the onboarding,
+        // Home, Likes and the pod detail follow the system; everything else has no dark
         // palette yet and stays light (this used to be a global
         // `UIUserInterfaceStyle = Light` in Info.plist).
     }
