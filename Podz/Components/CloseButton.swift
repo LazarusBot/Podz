@@ -26,9 +26,9 @@ struct CloseButton: View {
             Button(action: action) {
                 Image(systemName: "xmark")
                     .font(.system(size: size * 14 / 31, weight: .semibold))
-                    .foregroundColor(.appTextMuted)
+                    .foregroundColor(.homeSubtitle)
                     .frame(width: size, height: size)
-                    .background(Circle().fill(Color.appIconButtonBackground))
+                    .background(Circle().fill(Color.homePill))
             }
             .accessibilityLabel("Close")
         case .pill:

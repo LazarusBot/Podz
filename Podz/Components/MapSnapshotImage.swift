@@ -18,15 +18,15 @@ struct MapSnapshotImage: View {
                     .scaledToFill()
                     .transition(.opacity)
             } else {
-                Rectangle().fill(Color.gray.opacity(0.25))
+                Rectangle().fill(Color.homePill)
             }
 
             // The hut itself.
             Circle()
-                .fill(Color.white)
+                .fill(Color.onPhoto)
                 .frame(width: 12, height: 12)
-                .overlay(Circle().strokeBorder(Color.black.opacity(0.35), lineWidth: 1))
-                .shadow(color: .black.opacity(0.3), radius: 2)
+                .overlay(Circle().strokeBorder(Color.photoScrim.opacity(0.35), lineWidth: 1))
+                .shadow(color: Color.photoScrim.opacity(0.3), radius: 2)
                 .opacity(image == nil ? 0 : 1)
         }
         .animation(.easeOut(duration: 0.3), value: image == nil)

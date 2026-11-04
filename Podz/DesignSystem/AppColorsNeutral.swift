@@ -12,19 +12,3 @@ extension Color {
         })
     }
 }
-
-/// The app's gray scale, consolidated — every value here used to be a
-/// bare `Color(white: 0.NN)` invented fresh at its own call site, each
-/// with no name tying it to the others or to the rest of the design
-/// system. Light-mode values are unchanged (same numbers, just named);
-/// dark-mode values are new.
-extension Color {
-    /// Icon-button circle/capsule background (close buttons, the decline
-    /// button on friend requests, PodDetailView's altitude/beds capsule) —
-    /// was `Color(white: 0.93)`, identical at all 10 call sites.
-    static let appIconButtonBackground = Color(
-        light: Color(white: 0.93),
-        dark: Color(white: 0.22)
-    )
-
-}

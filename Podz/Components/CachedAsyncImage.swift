@@ -177,18 +177,6 @@ struct CachedAsyncImage<Placeholder: View>: View {
         Group {
             if let uiImage {
                 Image(uiImage: uiImage).resizable()
-            } else if let loadError {
-                VStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle")
-                    Text(loadError)
-                        .font(.system(size: 9))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                        .padding(.horizontal, 4)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.red.opacity(0.35))
             } else {
                 placeholder()
             }

@@ -23,7 +23,7 @@ struct PodPhotoDots: View {
         HStack(spacing: 7) {
             ForEach(0..<dotCount, id: \.self) { index in
                 Circle()
-                    .fill(Color.white)
+                    .fill(Color.onPhoto)
                     .frame(width: dotSize, height: dotSize)
                     .opacity(index == activeDot ? 1 : 0.45)
             }

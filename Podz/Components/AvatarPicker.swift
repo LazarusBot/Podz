@@ -80,9 +80,9 @@ struct AvatarPicker: View {
 
             if isUploading {
                 Circle()
-                    .fill(Color.black.opacity(0.4))
+                    .fill(Color.photoScrim.opacity(0.4))
                     .frame(width: size, height: size)
-                ProgressView().tint(.white).scaleEffect(0.6)
+                ProgressView().tint(.onPhoto).scaleEffect(0.6)
             } else if isInteractive {
                 // Small camera badge, bottom-right corner
                 CameraBadge(size: size)

@@ -61,7 +61,7 @@ struct FolderBubble: View {
                     PodPhoto(url: photoURLs[cover.id], coordinate: cover.coordinate)
                         .frame(width: cell.radius * 2.7, height: cell.radius * 2.7)
                         .clipped()
-                    Color.black.opacity(0.3)
+                    Color.photoScrim.opacity(0.3)
                 }
                 .frame(width: cell.radius * 2.7, height: cell.radius * 2.7)
                 .id(cover.id)
@@ -130,13 +130,13 @@ struct FolderBubble: View {
             VStack(spacing: 7) {
                 Text(name)
                     .font(AppFont.semiBoldLabel(15))
-                    .foregroundColor(hasCover ? .white : .homeText)
+                    .foregroundColor(hasCover ? .onPhoto : .homeText)
                     .lineLimit(1)
 
                 if let subtitle {
                     T(subtitle)
                         .font(AppFont.regularLabel(12))
-                        .foregroundColor(hasCover ? .white.opacity(0.85) : .homeSubtitle)
+                        .foregroundColor(hasCover ? .onPhoto.opacity(0.85) : .homeSubtitle)
                         .lineLimit(1)
                 }
 
@@ -154,9 +154,9 @@ struct FolderBubble: View {
             Button(action: onDelete) {
                 Image(systemName: "minus")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.onPhoto)
                     .frame(width: 26, height: 26)
-                    .background(Circle().fill(Color.red))
+                    .background(Circle().fill(Color.appBadgeRed))
                     .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
             }
             .accessibilityLabel(tr("Remove folder"))

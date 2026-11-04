@@ -21,13 +21,13 @@ struct FolderPodTile: View {
                 .aspectRatio(166.0 / 216.0, contentMode: .fit)
                 .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate) }
                 .overlay(alignment: .bottom) {
-                    LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(colors: [.clear, .photoScrim.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                         .frame(height: 90)
                 }
                 .overlay(alignment: .bottomLeading) {
                     Text(pod.name)
                         .font(AppFont.semiBoldLabel(15))
-                        .foregroundColor(.white)
+                        .foregroundColor(.onPhoto)
                         .lineLimit(1)
                         .padding(.leading, 18)
                         .padding(.trailing, 12)
@@ -36,10 +36,10 @@ struct FolderPodTile: View {
                 .overlay(alignment: .topTrailing) {
                     if isSelected && !isEditing {
                         CheckGlyphShape()
-                            .stroke(Color.black, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                            .stroke(Color.photoScrim, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
                             .frame(width: 12, height: 10)
                             .frame(width: 26, height: 26)
-                            .background(Color.white, in: Circle())
+                            .background(Color.onPhoto, in: Circle())
                             .padding(14)
                             .transition(.scale.combined(with: .opacity))
                     }
@@ -55,7 +55,7 @@ struct FolderPodTile: View {
             if isEditing {
                 Button(action: onRemove) {
                     Capsule()
-                        .fill(Color.white)
+                        .fill(Color.onPhoto)
                         .frame(width: 11, height: 1.6)
                         .frame(width: 26, height: 26)
                         .background(Color.appBadgeRed, in: Circle())

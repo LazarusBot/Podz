@@ -66,8 +66,8 @@ struct BarcodeView: View {
                 .resizable()
         } else {
             RoundedRectangle(cornerRadius: AppRadius.r8)
-                .fill(Color.gray.opacity(0.15))
-                .overlay(Image(systemName: "barcode").foregroundColor(.appTextMuted))
+                .fill(Color.homePill)
+                .overlay(Image(systemName: "barcode").foregroundColor(.homeSubtitle))
         }
     }
 

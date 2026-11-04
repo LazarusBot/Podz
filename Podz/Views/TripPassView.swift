@@ -180,7 +180,7 @@ struct TripPassView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
                 .frame(width: 300)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .background(Color.barcodePaper, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
                 .padding(.top, 20)
         }
     }

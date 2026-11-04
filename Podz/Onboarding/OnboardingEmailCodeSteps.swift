@@ -45,8 +45,8 @@ struct OnboardingEmailStep: View {
                 // Continuing is accepting: the two documents are one tap away.
                 Text(.init(tr("By continuing you accept the [Terms](podz-legal://terms) and the [Privacy Policy](podz-legal://privacy).")))
                     .font(OnboardingFont.caption)
-                    .foregroundColor(.white.opacity(0.6))
-                    .tint(.white)
+                    .foregroundColor(.onbSubtitle)
+                    .tint(.onbText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                     .environment(\.openURL, OpenURLAction { url in

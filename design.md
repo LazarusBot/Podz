@@ -39,6 +39,9 @@ color, a button style or a pattern.** Check it before every commit/push.
 | Highlighted button ("Get started") | `onbHighlight` / `onbHighlightText` | #000000 / #FFFFFF | #FFFFFF / #000000 |
 | Pill border | `homeBackground` (the ground, so it reads as a gap) | | |
 | Error text | `appBadgeRed` | | |
+| White on a photo (pager dots, a check on a tile, a name on a scrim) | `onPhoto` | #FFFFFF | #FFFFFF |
+| Scrim / veil on a photo, a pin's outline | `photoScrim` (at partial opacity) | #000000 | #000000 |
+| Barcode paper (the trip pass) | `barcodePaper` | #FFFFFF | #FFFFFF |
 | Closed hut chip: fill / ink | `alertFill` / `alertInk` | #FCE4E4 / #A31616 | #4A1E1E / #FF9C9C |
 
 `home*` tokens live in `Podz/Home/HomeTheme.swift`, `onb*` in

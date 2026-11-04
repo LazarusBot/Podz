@@ -26,7 +26,7 @@ struct PodPhoto: View {
     }
 
     private var placeholder: some View {
-        Rectangle().fill(Color.gray.opacity(0.25))
-            .overlay(Image(systemName: "photo").foregroundColor(.white))
+        Rectangle().fill(Color.homePill)
+            .overlay(Image(systemName: "photo").foregroundColor(.homeSubtitle))
     }
 }

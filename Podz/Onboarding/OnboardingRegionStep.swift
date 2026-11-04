@@ -86,13 +86,13 @@ private struct RegionTile: View {
                     .scaledToFill()
             }
             .overlay(alignment: .bottom) {
-                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: [.clear, .photoScrim.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                     .frame(height: 90)
             }
             .overlay(alignment: .bottomLeading) {
                 T(region.rawValue)
                     .font(AppFont.semiBoldLabel(15))
-                    .foregroundColor(.white)
+                    .foregroundColor(.onPhoto)
                     .padding(.leading, 18)
                     .padding(.bottom, 16)
             }
@@ -100,9 +100,9 @@ private struct RegionTile: View {
                 if isSelected {
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(.photoScrim)
                         .frame(width: 26, height: 26)
-                        .background(Color.white, in: Circle())
+                        .background(Color.onPhoto, in: Circle())
                         .padding(14)
                         .transition(.scale.combined(with: .opacity))
                 }

@@ -53,3 +53,18 @@ extension Color {
         dark: Color(red: 0xFF / 255, green: 0x9C / 255, blue: 0x9C / 255)
     )
 }
+
+extension Color {
+    /// Marks and text laid over a photo (the pager dots, a check on a tile,
+    /// the white name on a scrim): white in both modes, because a photo
+    /// doesn't change with the appearance.
+    static let onPhoto = Color.white
+
+    /// The soft veil under a name on a photo, a pin's outline, a dimmer over an
+    /// avatar while it uploads: black in both modes, used at partial opacity.
+    static let photoScrim = Color.black
+
+    /// A ticket's barcode paper: white in both modes, because dark bars on a
+    /// light ground are what scan.
+    static let barcodePaper = Color.white
+}
