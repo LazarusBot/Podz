@@ -33,8 +33,12 @@ struct LaunchWaitingView: View {
     /// The session is known and the first line has had its moment.
     let isReady: Bool
     /// Lenny uses it in the first line, when it's known.
+    /// The bubbles are on their way out: they fade and drift down.
+    var isLeaving = false
     var firstName: String? = nil
     var onContinue: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var waitingLine: String {
         guard let firstName else { return "One moment, I'm getting things ready." }
@@ -73,6 +77,8 @@ struct LaunchWaitingView: View {
             .disabled(!isReady)
             .accessibilityHidden(!isReady)
         }
+        .opacity(isLeaving ? 0 : 1)
+        .offset(y: isLeaving && !reduceMotion ? 14 : 0)
         .padding(.horizontal, 24)
         // At the bottom, where Lenny's bubbles sit on every other screen: the
         // caption is where the pill row would be.
