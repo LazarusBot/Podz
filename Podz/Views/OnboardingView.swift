@@ -25,6 +25,7 @@ import UIKit
 /// swap itself as plumbing, not something worth a second flourish on top).
 struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Lenny's line gets its moment even when the session resolves at once.
     @StateObject private var beat = LennyBeat()
     /// The launch screen (signed-in users only) is left by its own caption,
@@ -44,13 +45,18 @@ struct OnboardingView: View {
         !auth.isInitializing && !launchDone && auth.isAuthenticated && !auth.justRegistered
     }
 
-    /// The bubbles drift down and fade, then the ground dissolves onto Home.
+    /// Home is in place once Lenny's screen is gone (or was never there).
+    private var homeSettled: Bool { !showsLaunch }
+
+    /// The bubbles drift down and fade, then the ground dissolves while Home
+    /// settles in under it.
     private func leaveLaunch() {
         guard !launchLeaving else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.easeOut(duration: 0.3)) { launchLeaving = true }
         Task {
             try? await Task.sleep(for: .milliseconds(250))
-            withAnimation(.easeInOut(duration: 0.6)) { launchDone = true }
+            withAnimation(.easeInOut(duration: 0.8)) { launchDone = true }
         }
     }
 
@@ -64,6 +70,12 @@ struct OnboardingView: View {
                 // Already there under Lenny's screen, so leaving it is a fade
                 // onto Home rather than a cut.
                 MainTabView()
+                    // Under Lenny's screen it waits slightly too close and out
+                    // of focus; when the screen goes, it pulls back into place
+                    // and sharpens, so the arrival is felt.
+                    .scaleEffect(homeSettled || reduceMotion ? 1 : 1.07)
+                    .blur(radius: homeSettled ? 0 : 14)
+                    .animation(.easeOut(duration: 1.0), value: homeSettled)
             } else {
                 OnboardingFlow()
             }
