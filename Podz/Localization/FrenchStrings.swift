@@ -264,7 +264,9 @@ enum FrenchStrings {
         ("Likes", "Favoris"), ("Delete folder?", "Supprimer le dossier ?"), ("Delete", "Supprimer"),
         ("\"{}\" will be deleted, along with the likes inside it.", "« {1} » sera supprimé, ainsi que les favoris qu'il contient."),
         ("Shared by {}", "Partagé par {1}"), ("by {}", "par {1}"),
-        ("No likes yet — tap the heart on a pod in your feed.", "Pas encore de favoris : touche le cœur sur un refuge de ton fil."),
+        ("No likes yet", "Pas encore de favoris"),
+        ("Tap the heart on a hut and it lands here, in a folder.", "Touche le cœur sur un refuge et il atterrit ici, dans un dossier."),
+        ("Find huts", "Trouver des refuges"),
         ("Save to folder", "Enregistrer dans un dossier"), ("New folder", "Nouveau dossier"), ("Folder name", "Nom du dossier"),
         ("Remove folder", "Retirer le dossier"), ("Share folder", "Partager le dossier"),
         ("Share \"{}\"", "Partager « {1} »"),
@@ -343,7 +345,8 @@ enum FrenchStrings {
 
         // Friends
         ("Add friend", "Ajouter un ami"), ("Add a friend", "Ajouter un ami"), ("Requests", "Demandes"), ("Friends ({})", "Amis ({1})"),
-        ("No friends yet. Add someone to plan trips together.", "Pas encore d'amis. Ajoute quelqu'un pour planifier vos séjours ensemble."),
+        ("No friends yet", "Pas encore d'amis"),
+        ("Add someone to plan trips together.", "Ajoute quelqu'un pour planifier vos séjours ensemble."),
         ("Decline", "Refuser"), ("Accept", "Accepter"), ("Remove friend", "Retirer l'ami"), ("Remove this friend?", "Retirer cet ami ?"),
         ("Couldn't send request", "Envoi de la demande impossible"), ("Requested", "Demandé"), ("Respond in Friends", "Répondre dans Amis"), ("Add", "Ajouter"),
         ("Message", "Message"), ("Send message", "Envoyer le message"), ("Send", "Envoyer"), ("Cancel reply", "Annuler la réponse"),

@@ -191,20 +191,13 @@ struct MyReservationsView: View {
 
     // MARK: - Nothing yet
 
-    /// Lenny's invitation, in place of a bare "No reservations yet".
+    /// Lenny's invitation, in place of a bare "No reservations yet". The
+    /// page's own pill (Plan with Lenny) is the action.
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            LennyAvatar(size: 40)
-            T("No trips yet")
-                .font(AppFont.semiBoldLabel(20))
-                .foregroundColor(.homeText)
-            T("Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you.")
-                .font(AppFont.regularLabel(14))
-                .foregroundColor(.homeSubtitle)
-                .lineSpacing(3)
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 16)
+        LennyEmptyState(
+            title: "No trips yet",
+            line: "Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you."
+        )
     }
 
     // MARK: - Saved passes (offline)
@@ -354,18 +347,5 @@ struct MyReservationsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// Lenny's mark on a flat disc, the way it sits in the chat bubble.
-struct LennyAvatar: View {
-    var size: CGFloat = 30
-
-    var body: some View {
-        LennyMark(mood: .idle)
-            .frame(width: size / 2, height: size / 2)
-            .foregroundColor(.homeBackground)
-            .frame(width: size, height: size)
-            .background(Color.homeText, in: Circle())
     }
 }
