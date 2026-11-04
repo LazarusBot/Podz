@@ -30,6 +30,8 @@ struct OnboardingView: View {
     /// The launch screen (signed-in users only) is left by its own caption,
     /// never on its own.
     @State private var launchDone = false
+    /// Lenny's bubbles are leaving (a beat before the ground fades).
+    @State private var launchLeaving = false
     /// The huts are in (fetched, or the wait ran out): Lenny won't say "all
     /// good" before, so Home opens with its cards.
     @State private var podsLoaded = false
@@ -37,22 +39,43 @@ struct OnboardingView: View {
     /// can use it from the first frame (the profile arrives a moment later).
     @AppStorage("launchFirstName") private var firstName = ""
 
+    /// Lenny's screen is for a signed-in user, until they tap in.
+    private var showsLaunch: Bool {
+        !auth.isInitializing && !launchDone && auth.isAuthenticated && !auth.justRegistered
+    }
+
+    /// The bubbles drift down and fade, then the ground dissolves onto Home.
+    private func leaveLaunch() {
+        guard !launchLeaving else { return }
+        withAnimation(.easeOut(duration: 0.3)) { launchLeaving = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            withAnimation(.easeInOut(duration: 0.6)) { launchDone = true }
+        }
+    }
+
     var body: some View {
-        Group {
+        ZStack {
             if auth.isInitializing {
                 // The session isn't known yet: a plain ground, so a signed-out
                 // user goes straight to the onboarding, with no Lenny.
                 Color.onbBackground.ignoresSafeArea()
-            } else if !launchDone {
-                LaunchWaitingView(
-                    isReady: !beat.isHolding && podsLoaded,
-                    firstName: firstName.isEmpty ? nil : firstName,
-                    onContinue: { launchDone = true }
-                )
             } else if auth.isAuthenticated && !auth.justRegistered {
+                // Already there under Lenny's screen, so leaving it is a fade
+                // onto Home rather than a cut.
                 MainTabView()
             } else {
                 OnboardingFlow()
+            }
+
+            if showsLaunch {
+                LaunchWaitingView(
+                    isReady: !beat.isHolding && podsLoaded,
+                    isLeaving: launchLeaving,
+                    firstName: firstName.isEmpty ? nil : firstName,
+                    onContinue: leaveLaunch
+                )
+                .transition(.opacity)
             }
         }
         .onChange(of: auth.profile?.fullName, initial: true) { _, fullName in
