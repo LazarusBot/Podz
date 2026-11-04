@@ -81,6 +81,7 @@ private struct LennyAsksModifier: ViewModifier {
     var respectsSafeArea: Bool
     var bottom: CGFloat?
     let onConfirm: () -> Void
+    var onKeep: (() -> Void)?
 
     func body(content: Content) -> some View {
         content
@@ -90,7 +91,7 @@ private struct LennyAsksModifier: ViewModifier {
                         // The page steps back; a tap on it keeps things as they were.
                         Color.homeBackground.opacity(0.85)
                             .ignoresSafeArea()
-                            .onTapGesture { isPresented = false }
+                            .onTapGesture { keepThings() }
 
                         VStack(alignment: .leading, spacing: 4) {
                             LennyReply(message: question, mood: .idle)
@@ -99,7 +100,7 @@ private struct LennyAsksModifier: ViewModifier {
                                     isPresented = false
                                     onConfirm()
                                 }
-                                caption(keep, color: .homeSubtitle) { isPresented = false }
+                                caption(keep, color: .homeSubtitle) { keepThings() }
                             }
                             // Lined up with the bubble's text, past the avatar.
                             .padding(.leading, 38 + 18)
@@ -111,6 +112,12 @@ private struct LennyAsksModifier: ViewModifier {
                 }
             }
             .animation(.smooth(duration: 0.3), value: isPresented)
+    }
+
+    /// "Keep it": the question goes away and things stay as they were.
+    private func keepThings() {
+        isPresented = false
+        onKeep?()
     }
 
     private func caption(_ title: String, color: Color, action: @escaping () -> Void) -> some View {
@@ -152,12 +159,13 @@ extension View {
         abovePills: Bool = true,
         respectsSafeArea: Bool = false,
         bottom: CGFloat? = nil,
+        onKeep: (() -> Void)? = nil,
         onConfirm: @escaping () -> Void
     ) -> some View {
         modifier(LennyAsksModifier(
             isPresented: isPresented, question: question, confirm: confirm, keep: keep,
             isDestructive: isDestructive, abovePills: abovePills, respectsSafeArea: respectsSafeArea,
-            bottom: bottom, onConfirm: onConfirm
+            bottom: bottom, onConfirm: onConfirm, onKeep: onKeep
         ))
     }
 }

@@ -115,7 +115,9 @@ struct LikesView: View {
             question: "Delete \u{201C}\(folderPendingDeletion?.name ?? "")\u{201D} and the likes inside it?",
             confirm: "Delete",
             keep: "Keep it",
-            abovePills: false
+            abovePills: false,
+            // Keeping it ends delete mode too: the red minus goes with the question.
+            onKeep: { withAnimation { isEditMode = false } }
         ) {
             if let folder = folderPendingDeletion {
                 Task { await likesStore.deleteFolder(folder) }

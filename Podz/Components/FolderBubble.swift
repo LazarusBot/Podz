@@ -148,22 +148,29 @@ struct FolderBubble: View {
         }
     }
 
-    @ViewBuilder
+    /// The red minus on the rim. Always in the tree and scaled in and out from
+    /// its own center (a transition applied after `.offset` scales around the
+    /// bubble's center instead, so the badge used to fly in from the middle and
+    /// back), with its own short animation so it doesn't borrow the wiggle's.
     private var deleteBadge: some View {
-        if showDeleteBadge {
-            Button(action: onDelete) {
-                Image(systemName: "minus")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.onPhoto)
-                    .frame(width: 26, height: 26)
-                    .background(Circle().fill(Color.appBadgeRed))
-                    .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
-            }
-            .accessibilityLabel(tr("Remove folder"))
-            // On the rim, at about two o'clock.
-            .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
-            .transition(.scale.combined(with: .opacity))
+        Button(action: onDelete) {
+            Image(systemName: "minus")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.onPhoto)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(Color.appBadgeRed))
+                .overlay(Circle().strokeBorder(Color.homeBackground, lineWidth: 1.5))
         }
+        .accessibilityLabel(tr("Remove folder"))
+        .accessibilityHidden(!showDeleteBadge)
+        .scaleEffect(showDeleteBadge ? 1 : 0.55)
+        .opacity(showDeleteBadge ? 1 : 0)
+        .allowsHitTesting(showDeleteBadge)
+        // On the rim, at about two o'clock.
+        .offset(x: cell.radius * 0.707, y: -cell.radius * 0.707)
+        // Short and close to where it ends up: it fades and grows a little, no
+        // bounce, so it never seems to travel.
+        .animation(.easeOut(duration: 0.18), value: showDeleteBadge)
     }
 }
 
