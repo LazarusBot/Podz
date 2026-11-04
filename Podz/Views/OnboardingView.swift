@@ -32,6 +32,9 @@ struct OnboardingView: View {
     /// The huts are in (fetched, or the wait ran out): Lenny won't say "all
     /// good" before, so Home opens with its cards.
     @State private var podsLoaded = false
+    /// The signed-in user's first name, kept from the last launch so Lenny
+    /// can use it from the first frame (the profile arrives a moment later).
+    @AppStorage("launchFirstName") private var firstName = ""
 
     var body: some View {
         Group {
@@ -39,6 +42,7 @@ struct OnboardingView: View {
                 LaunchWaitingView(
                     isReady: !auth.isInitializing && !beat.isHolding && podsLoaded,
                     goesHome: auth.isAuthenticated && !auth.justRegistered,
+                    firstName: firstName.isEmpty ? nil : firstName,
                     onContinue: { launchDone = true }
                 )
             } else if auth.isAuthenticated && !auth.justRegistered {
@@ -46,6 +50,13 @@ struct OnboardingView: View {
             } else {
                 OnboardingFlow()
             }
+        }
+        .onChange(of: auth.profile?.fullName, initial: true) { _, fullName in
+            // The first word of the name; kept until the next launch.
+            if let first = fullName?.split(separator: " ").first { firstName = String(first) }
+        }
+        .onChange(of: auth.isAuthenticated) { _, signedIn in
+            if !signedIn && !auth.isInitializing { firstName = "" }
         }
         .task {
             beat.start()

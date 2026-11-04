@@ -23,7 +23,8 @@ final class LennyBeat: ObservableObject {
 
 /// The launch screen, in place of gray skeleton shapes: the `homeBackground`
 /// ground with Lenny's bubbles at the bottom (`LennyReply`, the bubble every
-/// Lenny line uses). The first asks for a moment while the session loads; once
+/// Lenny line uses). The first asks for a moment while the session loads, by
+/// the user's first name once Lenny knows it (kept from the last launch); once
 /// it's ready and the line has been said, Lenny hops, a second bubble says all
 /// is good, and a small caption beneath goes in. Nobody is let in before that
 /// tap.
@@ -32,11 +33,18 @@ struct LaunchWaitingView: View {
     let isReady: Bool
     /// Signed in: the caption says "Go to Home"; otherwise it starts the intro.
     let goesHome: Bool
+    /// Lenny uses it in the first line, when it's known.
+    var firstName: String? = nil
     var onContinue: () -> Void
+
+    private var waitingLine: String {
+        guard let firstName else { return "One moment, I'm getting things ready." }
+        return "One moment, \(firstName). I'm getting things ready."
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LennyReply(message: "One moment, I'm getting things ready.", mood: isReady ? .happy : .working)
+            LennyReply(message: waitingLine, mood: isReady ? .happy : .working)
 
             if isReady {
                 LennyReply(message: "All good, you're all set.", mood: .idle, showsAvatar: false)
