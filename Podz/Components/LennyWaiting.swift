@@ -22,7 +22,7 @@ final class LennyBeat: ObservableObject {
 }
 
 /// The launch screen, in place of gray skeleton shapes: the `homeBackground`
-/// ground with Lenny's bubbles in the middle (`LennyReply`, the bubble every
+/// ground with Lenny's bubbles at the bottom (`LennyReply`, the bubble every
 /// Lenny line uses). The first asks for a moment while the session loads; once
 /// it's ready and the line has been said, Lenny hops, a second bubble says all
 /// is good, and a small caption beneath goes in. Nobody is let in before that
@@ -43,27 +43,34 @@ struct LaunchWaitingView: View {
                     // Lined up with the first bubble's text, past the avatar.
                     .padding(.leading, 38)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
-
-                Button(action: onContinue) {
-                    HStack(spacing: 5) {
-                        T(goesHome ? "Go to Home" : "Let's start")
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, 38 + 18)
-                .transition(.opacity)
             }
+
+            // Always in the layout, so the first bubble doesn't move when the
+            // caption arrives.
+            Button(action: onContinue) {
+                HStack(spacing: 5) {
+                    T(goesHome ? "Go to Home" : "Let's start")
+                        .font(AppFont.regularLabel(13))
+                        .foregroundColor(.homeSubtitle)
+                        .underline(color: Color.homeSubtitle.opacity(0.5))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.homeSubtitle)
+                }
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 38 + 18)
+            .opacity(isReady ? 1 : 0)
+            .disabled(!isReady)
+            .accessibilityHidden(!isReady)
         }
         .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // At the bottom, where Lenny's bubbles sit on every other screen: the
+        // caption is where the pill row would be.
+        .padding(.bottom, DetailLayout.controlStackGap + 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .background(Color.homeBackground.ignoresSafeArea())
         .animation(.smooth(duration: 0.35), value: isReady)
     }

@@ -29,12 +29,15 @@ struct OnboardingView: View {
     @StateObject private var beat = LennyBeat()
     /// The launch screen is left by its own caption, never on its own.
     @State private var launchDone = false
+    /// The huts are in (fetched, or the wait ran out): Lenny won't say "all
+    /// good" before, so Home opens with its cards.
+    @State private var podsLoaded = false
 
     var body: some View {
         Group {
             if !launchDone {
                 LaunchWaitingView(
-                    isReady: !auth.isInitializing && !beat.isHolding,
+                    isReady: !auth.isInitializing && !beat.isHolding && podsLoaded,
                     goesHome: auth.isAuthenticated && !auth.justRegistered,
                     onContinue: { launchDone = true }
                 )
@@ -45,7 +48,17 @@ struct OnboardingView: View {
                 OnboardingFlow()
             }
         }
-        .task { beat.start() }
+        .task {
+            beat.start()
+            // The pods load now, under Lenny's first line; a slow or failing
+            // network gives up after 8 s so the screen is never stuck.
+            Task {
+                await PodsStore.shared.fetchPods()
+                podsLoaded = true
+            }
+            try? await Task.sleep(for: .seconds(8))
+            podsLoaded = true
+        }
         // Appearance is decided per screen: the onboarding, Home, Likes and
         // the pod detail follow the system; everything else has no dark
         // palette yet and stays light (this used to be a global
