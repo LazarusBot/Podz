@@ -270,7 +270,8 @@ struct MinimalHomeView: View {
     @ViewBuilder
     private var feed: some View {
         if podsStore.isLoading && podsStore.pods.isEmpty {
-            loading
+            // Nothing to show yet, and nothing to say: the cards arrive in place.
+            Color.clear.frame(height: 1)
         } else if visiblePods.isEmpty {
             VStack(spacing: 6) {
                 T(query.isEmpty ? "No pods available yet." : "No pods match “\(query)”.")
@@ -301,11 +302,6 @@ struct MinimalHomeView: View {
         } else {
             cardsRow(visiblePods, idPrefix: "tonight", subtitle: nil)
         }
-    }
-
-    private var loading: some View {
-        LennyWaiting()
-            .padding(.top, 60)
     }
 
     /// Search key: in Lenny mode the route goes to Lenny; in classic mode the

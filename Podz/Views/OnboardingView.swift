@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// OnboardingView.swift — the app's root view. It routes between the launch
-/// screen (Lenny asking for a moment), the onboarding flow (see Onboarding/OnboardingFlow.swift,
+/// screen (Lenny asking for a moment, then "all good" and a way in), the onboarding flow (see Onboarding/OnboardingFlow.swift,
 /// email-code sign-in) and the signed-in app, driven by
 /// `AuthManager.isAuthenticated` which stays in sync automatically with
 /// the real Supabase session. A brand-new account stays in the onboarding
@@ -27,11 +27,17 @@ struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
     /// Lenny's line gets its moment even when the session resolves at once.
     @StateObject private var beat = LennyBeat()
+    /// The launch screen is left by its own caption, never on its own.
+    @State private var launchDone = false
 
     var body: some View {
         Group {
-            if auth.isInitializing || beat.isHolding {
-                LaunchWaitingView()
+            if !launchDone {
+                LaunchWaitingView(
+                    isReady: !auth.isInitializing && !beat.isHolding,
+                    goesHome: auth.isAuthenticated && !auth.justRegistered,
+                    onContinue: { launchDone = true }
+                )
                     .preferredColorScheme(.light)
             } else if auth.isAuthenticated && !auth.justRegistered {
                 MainTabView()
