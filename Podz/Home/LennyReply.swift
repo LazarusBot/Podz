@@ -65,19 +65,8 @@ struct LennyReply: View {
 
     /// Three dots passing a bounce along.
     private var typingDots: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
-            let time = context.date.timeIntervalSinceReferenceDate
-            HStack(spacing: 5) {
-                ForEach(0..<3, id: \.self) { index in
-                    let wave = reduceMotion ? 0.6 : max(0, sin(time * 7 - Double(index) * 0.9))
-                    Circle()
-                        .fill(Color.homeText.opacity(0.3 + 0.5 * wave))
-                        .frame(width: 7, height: 7)
-                        .offset(y: -3 * wave)
-                }
-            }
-        }
-        .frame(height: 18)
+        LennyDots()
+            .frame(height: 18)
     }
 
     private func type() async {

@@ -10,7 +10,8 @@ struct LoginSecurityView: View {
     var onBack: () -> Void
 
     @StateObject private var auth = AuthManager.shared
-    @State private var showResetConfirmation = false
+    /// Lenny's note once the reset email is on its way.
+    @State private var resetNote: String?
 
     private var email: String {
         auth.session?.user.email ?? "—"
@@ -34,17 +35,13 @@ struct LoginSecurityView: View {
                 ProfileMenuRow(icon: "envelope", title: "Send password reset email", showsChevron: false) {
                     Task {
                         guard await auth.resetPassword(email: email) else { return }
-                        showResetConfirmation = true
+                        resetNote = "Check \(email) for a link to reset your password."
                     }
                 }
             }
         }
-        .alert(tr("Email sent"), isPresented: $showResetConfirmation) {
-            Button(tr("OK")) {}
-        } message: {
-            T("Check \(email) for a link to reset your password.")
-        }
-        .errorAlert($auth.lastError)
+        .lennyNote($resetNote, mood: .happy)
+        .lennyNote($auth.lastError, prefix: "Sorry, that didn't work.")
     }
 }
 

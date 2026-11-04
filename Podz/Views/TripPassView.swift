@@ -122,14 +122,7 @@ struct TripPassView: View {
         }
         .ignoresSafeArea()
         .background(Color.homeBackground.ignoresSafeArea())
-        .alert(tr("Couldn't add to Wallet"), isPresented: Binding(
-            get: { passFetchError != nil },
-            set: { if !$0 { passFetchError = nil } }
-        )) {
-            Button(tr("OK"), role: .cancel) {}
-        } message: {
-            Text(passFetchError ?? "")
-        }
+        .lennyNote($passFetchError, prefix: "I couldn't add the pass to Wallet.")
     }
 
     // MARK: - The stay and its code

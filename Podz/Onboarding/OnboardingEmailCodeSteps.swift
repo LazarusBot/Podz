@@ -31,7 +31,7 @@ struct OnboardingEmailStep: View {
                     submitLabel: .continue,
                     focusOnAppear: true,
                     onSubmit: submit,
-                    trailing: { if auth.isLoading { ProgressView() } }
+                    trailing: { if auth.isLoading { LennyDots(color: .onbText, size: 6) } }
                 )
 
                 // Reserved height so an error appearing doesn't push the
@@ -101,7 +101,7 @@ struct OnboardingCodeStep: View {
                     focusOnAppear: true,
                     // Labelled, not a trailing closure: that would bind to
                     // the `onSubmit` parameter before it.
-                    trailing: { if auth.isLoading { ProgressView() } }
+                    trailing: { if auth.isLoading { LennyDots(color: .onbText, size: 6) } }
                 )
 
                 footer

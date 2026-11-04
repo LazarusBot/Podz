@@ -74,7 +74,7 @@ struct AddFriendSheet: View {
             Spacer(minLength: 0)
         }
         .background(Color.homeBackground)
-        .errorAlert($errorMessage, title: "Couldn't send request")
+        .lennyNote($errorMessage, prefix: "I couldn't send that request.", abovePills: false, respectsSafeArea: true)
     }
 
     private func resultRow(for profile: Profile) -> some View {
@@ -138,8 +138,7 @@ struct AddFriendSheet: View {
                 // The highlighted pill: ground and ink swapped.
                 Group {
                     if sendingUserId == profile.id {
-                        ProgressView()
-                            .tint(.homeBackground)
+                        LennyDots(color: .homeBackground, size: 6)
                     } else {
                         T("Add")
                             .font(AppFont.semiBoldLabel(14))

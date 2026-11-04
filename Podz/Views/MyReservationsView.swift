@@ -111,25 +111,31 @@ struct MyReservationsView: View {
         .fullScreenCover(item: $selectedPass) { pass in
             TripPassView(pass: pass, onBack: { selectedPass = nil })
         }
-        .alert(
-            tr(pendingCancellation.count > 1 ? "Cancel this trip?" : (pendingCancellation.first?.isExternal == true ? "Remove this stay?" : "Cancel this reservation?")),
+        // Lenny asks before a stay goes.
+        .lennyAsks(
             isPresented: Binding(
                 get: { !pendingCancellation.isEmpty },
                 set: { if !$0 { pendingCancellation = [] } }
-            )
+            ),
+            question: cancellationQuestion,
+            confirm: pendingCancellation.count > 1 ? "Cancel trip" : (pendingCancellation.first?.isExternal == true ? "Remove" : "Cancel reservation"),
+            keep: "Keep it"
         ) {
-            Button(tr("Keep it"), role: .cancel) {}
-            Button(tr(pendingCancellation.count > 1 ? "Cancel trip" : (pendingCancellation.first?.isExternal == true ? "Remove" : "Cancel reservation")), role: .destructive) {
-                let stays = pendingCancellation
-                Task { for stay in stays { await reservationsStore.cancel(stay) } }
-            }
-        } message: {
-            T(pendingCancellation.count > 1
-                 ? "This cancels all \(pendingCancellation.count) stays and can't be undone."
-                 : (pendingCancellation.first?.isExternal == true
-                    ? "This only removes it from your list. To cancel the stay itself, tell the hut."
-                    : "This can't be undone — you'll need to reserve again if you change your mind."))
+            let stays = pendingCancellation
+            pendingCancellation = []
+            Task { for stay in stays { await reservationsStore.cancel(stay) } }
         }
+    }
+
+    /// What Lenny asks, from what is about to go.
+    private var cancellationQuestion: String {
+        if pendingCancellation.count > 1 {
+            return "Cancel this trip? This cancels all \(pendingCancellation.count) stays and can't be undone."
+        }
+        if pendingCancellation.first?.isExternal == true {
+            return "Remove this stay? This only removes it from your list. To cancel the stay itself, tell the hut."
+        }
+        return "Cancel this reservation? You'll need to reserve again if you change your mind."
     }
 
     // MARK: - A new stay

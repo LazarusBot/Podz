@@ -38,11 +38,13 @@ struct AvatarPicker: View {
     /// tapping the avatar directly. True (default) matches every call
     /// site this had before the parameter existed.
     var isInteractive: Bool = true
+    /// Said by whoever hosts the picker (Lenny's note), since a small avatar is
+    /// no place for a message.
+    var onError: ((String) -> Void)? = nil
 
     @State private var internalPickerPresented = false
     @State private var selectedItem: PhotosPickerItem?
     @State private var isUploading = false
-    @State private var errorMessage: String?
 
     private var pickerPresented: Binding<Bool> {
         isPickerPresented ?? $internalPickerPresented
@@ -67,11 +69,6 @@ struct AvatarPicker: View {
             guard let newItem else { return }
             Task { await upload(item: newItem) }
         }
-        .alert("Upload failed", isPresented: .constant(errorMessage != nil), actions: {
-            Button("OK") { errorMessage = nil }
-        }, message: {
-            Text(errorMessage ?? "")
-        })
     }
 
     private var avatarContent: some View {
@@ -82,7 +79,7 @@ struct AvatarPicker: View {
                 Circle()
                     .fill(Color.photoScrim.opacity(0.4))
                     .frame(width: size, height: size)
-                ProgressView().tint(.onPhoto).scaleEffect(0.6)
+                LennyDots(color: .onPhoto, size: max(3, size * 0.06))
             } else if isInteractive {
                 // Small camera badge, bottom-right corner
                 CameraBadge(size: size)
@@ -99,12 +96,12 @@ struct AvatarPicker: View {
             guard let data = try await item.loadTransferable(type: Data.self),
                   let uiImage = UIImage(data: data),
                   let jpegData = uiImage.jpegData(compressionQuality: 0.8) else {
-                errorMessage = "Couldn't read that image."
+                onError?("Couldn't read that image.")
                 return
             }
             try await AvatarUploader.upload(jpeg: jpegData)
         } catch {
-            errorMessage = error.localizedDescription
+            onError?(error.localizedDescription)
         }
     }
 }

@@ -17,6 +17,8 @@ struct FriendsView: View {
     @StateObject private var friendsStore = FriendsStore.shared
     @StateObject private var auth = AuthManager.shared
     @State private var showAddFriend = false
+    /// The friend Lenny is asking about before removing.
+    @State private var pendingRemoval: Friendship?
 
     var body: some View {
         SectionPage(
@@ -49,7 +51,7 @@ struct FriendsView: View {
                 SectionHeading(title: "Friends (\(friendsStore.friends.count))")
                 ForEach(friendsStore.friends) { friendship in
                     SwipeToDeleteRow(onDelete: {
-                        Task { await friendsStore.remove(friendship) }
+                        pendingRemoval = friendship
                     }) {
                         FriendRow(profile: friendsStore.profilesById[friendship.otherUserId(currentUserId: userId)])
                     }
@@ -62,7 +64,16 @@ struct FriendsView: View {
         .task { await friendsStore.fetchAll() }
         // Accept/decline/remove all set `friendsStore.lastError` on failure;
         // surface it so a failed action doesn't look like a dead button.
-        .errorAlert($friendsStore.lastError)
+        .lennyNote($friendsStore.lastError, prefix: "Sorry, that didn't work.")
+        .lennyAsks(
+            isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
+            question: "Remove this friend?",
+            confirm: "Remove",
+            keep: "Keep"
+        ) {
+            if let friendship = pendingRemoval { Task { await friendsStore.remove(friendship) } }
+            pendingRemoval = nil
+        }
     }
 }
 
@@ -145,7 +156,6 @@ private struct SwipeToDeleteRow<Content: View>: View {
 
     @State private var offset: CGFloat = 0
     @State private var isRevealed = false
-    @State private var showConfirmation = false
 
     private let revealWidth: CGFloat = 84
 
@@ -153,7 +163,12 @@ private struct SwipeToDeleteRow<Content: View>: View {
         ZStack(alignment: .trailing) {
             // Full-bleed rectangle exactly matching revealWidth.
             Button {
-                showConfirmation = true
+                // The page asks (Lenny); the row closes meanwhile.
+                withAnimation(.easeOut(duration: AppMotion.snappy)) {
+                    offset = 0
+                    isRevealed = false
+                }
+                onDelete()
             } label: {
                 Image(systemName: "trash")
                     .font(.system(size: 13, weight: .semibold))
@@ -197,21 +212,6 @@ private struct SwipeToDeleteRow<Content: View>: View {
                 }
         )
         .clipped()
-        .alert(tr("Remove this friend?"), isPresented: $showConfirmation) {
-            Button(tr("Remove"), role: .destructive) {
-                withAnimation(.easeOut(duration: AppMotion.snappy)) {
-                    offset = 0
-                    isRevealed = false
-                }
-                onDelete()
-            }
-            Button(tr("Cancel"), role: .cancel) {
-                withAnimation(.easeOut(duration: AppMotion.snappy)) {
-                    offset = 0
-                    isRevealed = false
-                }
-            }
-        }
     }
 }
 

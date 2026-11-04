@@ -71,11 +71,7 @@ struct AvatarEditorView: View {
         }
         .background(Color.homeBackground.ignoresSafeArea())
         .task { await load() }
-        .alert(tr("Couldn't save"), isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
-            Button(tr("OK")) { errorMessage = nil }
-        } message: {
-            T(errorMessage ?? "")
-        }
+        .lennyNote($errorMessage, prefix: "I couldn't save your photo.", respectsSafeArea: true)
     }
 
     // MARK: - The window
@@ -121,7 +117,7 @@ struct AvatarEditorView: View {
                     .foregroundColor(.homeSubtitle)
                     .frame(width: diameter, height: diameter)
             } else {
-                ProgressView().frame(width: diameter, height: diameter)
+                LennyDots().frame(width: diameter, height: diameter)
             }
         }
     }
