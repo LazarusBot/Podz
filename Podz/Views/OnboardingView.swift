@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// OnboardingView.swift — the app's root view. It routes between the launch
-/// placeholder, the onboarding flow (see Onboarding/OnboardingFlow.swift,
+/// screen (Lenny asking for a moment, then "all good" and a way in), the onboarding flow (see Onboarding/OnboardingFlow.swift,
 /// email-code sign-in) and the signed-in app, driven by
 /// `AuthManager.isAuthenticated` which stays in sync automatically with
 /// the real Supabase session. A brand-new account stays in the onboarding
@@ -25,11 +25,22 @@ import UIKit
 /// swap itself as plumbing, not something worth a second flourish on top).
 struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
+    /// Lenny's line gets its moment even when the session resolves at once.
+    @StateObject private var beat = LennyBeat()
+    /// The launch screen is left by its own caption, never on its own.
+    @State private var launchDone = false
+    /// The huts are in (fetched, or the wait ran out): Lenny won't say "all
+    /// good" before, so Home opens with its cards.
+    @State private var podsLoaded = false
 
     var body: some View {
         Group {
-            if auth.isInitializing {
-                LaunchLoadingView()
+            if !launchDone {
+                LaunchWaitingView(
+                    isReady: !auth.isInitializing && !beat.isHolding && podsLoaded,
+                    goesHome: auth.isAuthenticated && !auth.justRegistered,
+                    onContinue: { launchDone = true }
+                )
                     .preferredColorScheme(.light)
             } else if auth.isAuthenticated && !auth.justRegistered {
                 MainTabView()
@@ -37,62 +48,20 @@ struct OnboardingView: View {
                 OnboardingFlow()
             }
         }
+        .task {
+            beat.start()
+            // The pods load now, under Lenny's first line; a slow or failing
+            // network gives up after 8 s so the screen is never stuck.
+            Task {
+                await PodsStore.shared.fetchPods()
+                podsLoaded = true
+            }
+            try? await Task.sleep(for: .seconds(8))
+            podsLoaded = true
+        }
         // Appearance is decided per screen: the onboarding, Home, Likes and
         // the pod detail follow the system; everything else has no dark
         // palette yet and stays light (this used to be a global
         // `UIUserInterfaceStyle = Light` in Info.plist).
-    }
-}
-
-/// Shown for the brief moment between app launch and the auth state
-/// resolving — replaces what was previously a blank white flash while
-/// `session` sat at its default `nil` before authStateChanges emitted
-/// anything. Echoes HomeView's own layout (header, search pill, a row of
-/// pod cards) as gray placeholder shapes, so launch reads as "your feed is
-/// arriving" rather than a generic spinner.
-private struct LaunchLoadingView: View {
-    /// Same sizing as `PodSection.cardSize` — two cards on screen plus a
-    /// sliver of a third peeking at the trailing edge.
-    private var cardSize: CGFloat {
-        (ScreenInsets.screenWidth - 24 - 2 * 12 - 24) / 2
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    SkeletonShape(cornerRadius: AppRadius.r4).frame(width: 90, height: 12)
-                    SkeletonShape(cornerRadius: AppRadius.r5).frame(width: 130, height: 20)
-                }
-                Spacer()
-                SkeletonShape(cornerRadius: AppRadius.r21).frame(width: 42, height: 42)
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-
-            SkeletonShape(cornerRadius: AppRadius.r26)
-                .frame(height: 52)
-                .padding(.horizontal, 24)
-
-            SkeletonShape(cornerRadius: AppRadius.r5)
-                .frame(width: 170, height: 18)
-                .padding(.leading, 24)
-                .padding(.top, 28)
-                .padding(.bottom, 12)
-
-            HStack(spacing: 12) {
-                ForEach(0..<2, id: \.self) { _ in
-                    VStack(alignment: .leading, spacing: 6) {
-                        SkeletonShape(cornerRadius: AppRadius.r18).frame(width: cardSize, height: cardSize)
-                        SkeletonShape(cornerRadius: AppRadius.r4).frame(width: cardSize * 0.55, height: 14)
-                            .padding(.leading, 5)
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
-        }
-        .background(Color.appHomeBackground.ignoresSafeArea())
     }
 }

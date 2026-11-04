@@ -270,7 +270,8 @@ struct MinimalHomeView: View {
     @ViewBuilder
     private var feed: some View {
         if podsStore.isLoading && podsStore.pods.isEmpty {
-            loading
+            // Nothing to show yet, and nothing to say: the cards arrive in place.
+            Color.clear.frame(height: 1)
         } else if visiblePods.isEmpty {
             VStack(spacing: 6) {
                 T(query.isEmpty ? "No pods available yet." : "No pods match “\(query)”.")
@@ -301,24 +302,6 @@ struct MinimalHomeView: View {
         } else {
             cardsRow(visiblePods, idPrefix: "tonight", subtitle: nil)
         }
-    }
-
-    private var loading: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ForEach(0..<2, id: \.self) { _ in
-                VStack(alignment: .leading, spacing: 12) {
-                    SkeletonShape(cornerRadius: 36)
-                        .aspectRatio(296.0 / 340.0, contentMode: .fit)
-                    SkeletonShape(cornerRadius: AppRadius.r4)
-                        .frame(width: 140, height: 16)
-                        .padding(.leading, 5)
-                }
-                .frame(width: Self.cardWidth)
-            }
-        }
-        .padding(.leading, 24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .clipped()
     }
 
     /// Search key: in Lenny mode the route goes to Lenny; in classic mode the
