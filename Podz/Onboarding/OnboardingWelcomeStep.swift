@@ -96,17 +96,6 @@ private struct OnboardingCollage: View {
 
     private func wall(at time: TimeInterval) -> some View {
         ZStack(alignment: .topLeading) {
-            // The outlines drift less than the photos, so the two layers
-            // slide against each other like frames at different depths.
-            ForEach(Self.outlines.indices, id: \.self) { index in
-                let frame = Self.outlines[index]
-                let drift = Self.drift(at: time, index: index + 3, amplitude: 6)
-                Rectangle()
-                    .strokeBorder(Color.onbCollageOutline, lineWidth: 0.5)
-                    .frame(width: frame.width, height: frame.height)
-                    .offset(x: frame.minX + drift.width, y: frame.minY + drift.height)
-            }
-
             ForEach(Self.photos.indices, id: \.self) { index in
                 let photo = Self.photos[index]
                 let drift = Self.drift(at: time, index: index, amplitude: 14)
@@ -145,14 +134,6 @@ private struct OnboardingCollage: View {
         Photo(name: "ObRocks", frame: CGRect(x: -44, y: 532, width: 200, height: 143)),
         Photo(name: "ObRidge", frame: CGRect(x: 235, y: -49, width: 200, height: 112)),
         Photo(name: "ObTerrace", frame: CGRect(x: -21, y: 286, width: 100, height: 150)),
-    ]
-
-    private static let outlines: [CGRect] = [
-        CGRect(x: 181, y: 100, width: 265, height: 204),
-        CGRect(x: 129, y: 328, width: 247, height: 187),
-        CGRect(x: -145, y: 266, width: 247, height: 187),
-        CGRect(x: -74, y: 47, width: 247, height: 187),
-        CGRect(x: 213, y: -105, width: 247, height: 187),
     ]
 }
 
