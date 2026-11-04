@@ -63,14 +63,7 @@ struct ShareFolderSheet: View {
         }
         .background(Color.homeBackground)
         .task { await friendsStore.fetchAll() }
-        .alert(tr("Couldn't update sharing"), isPresented: Binding(
-            get: { errorMessage != nil },
-            set: { if !$0 { errorMessage = nil } }
-        )) {
-            Button(tr("OK"), role: .cancel) {}
-        } message: {
-            Text(errorMessage ?? "")
-        }
+        .lennyNote($errorMessage, prefix: "I couldn't update the sharing.", abovePills: false, respectsSafeArea: true)
     }
 
     private func friendRow(friendId: UUID) -> some View {
@@ -92,7 +85,7 @@ struct ShareFolderSheet: View {
             Spacer()
 
             if pendingFriendId == friendId {
-                ProgressView()
+                LennyDots()
                     .frame(width: 51, height: 31)
             } else {
                 Toggle("", isOn: Binding(

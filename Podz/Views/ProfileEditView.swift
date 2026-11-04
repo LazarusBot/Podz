@@ -20,6 +20,8 @@ struct ProfileEditView: View {
     @State private var showsAvatarEditor = false
     @State private var username = ""
     @State private var fullName = ""
+    /// Lenny's note when the photo upload fails.
+    @State private var photoNote: String?
     @State private var age = ""
     @State private var location = ""
     @State private var isSaving = false
@@ -83,7 +85,8 @@ struct ProfileEditView: View {
                 field(.location, label: "Location", text: $location, submit: .done)
             }
         )
-        .errorAlert($auth.lastError)
+        .lennyNote($auth.lastError, prefix: "Sorry, that didn't work.")
+        .lennyNote($photoNote, prefix: "I couldn't upload your photo.")
         .onAppear(perform: load)
         .onChange(of: auth.profile?.username) { _, _ in load() }
         .onSubmit(of: .text) { advance() }
@@ -101,7 +104,8 @@ struct ProfileEditView: View {
                 cornerRadius: nil,
                 showsStroke: false,
                 isPickerPresented: $showsPhotoPicker,
-                isInteractive: false
+                isInteractive: false,
+                onError: { photoNote = $0 }
             )
             .contentShape(Circle())
             // A tap picks another photo; press and hold adjusts the current one.

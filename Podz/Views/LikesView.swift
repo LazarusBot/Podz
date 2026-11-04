@@ -105,6 +105,26 @@ struct LikesView: View {
             BottomFade()
         }
         .background(Color.homeBackground)
+        // Lenny asks before a folder goes. Here, on the whole overview, so the
+        // fade at the bottom stays under his bubble; the tab bar steps aside.
+        .lennyAsks(
+            isPresented: Binding(
+                get: { folderPendingDeletion != nil },
+                set: { if !$0 { folderPendingDeletion = nil } }
+            ),
+            question: "Delete \u{201C}\(folderPendingDeletion?.name ?? "")\u{201D} and the likes inside it?",
+            confirm: "Delete",
+            keep: "Keep it",
+            abovePills: false
+        ) {
+            if let folder = folderPendingDeletion {
+                Task { await likesStore.deleteFolder(folder) }
+            }
+            folderPendingDeletion = nil
+        }
+        .onChange(of: folderPendingDeletion?.id) { _, id in
+            TabBarVisibilityState.shared.isHidden = id != nil
+        }
     }
 
     private var foldersScroll: some View {
@@ -198,26 +218,8 @@ struct LikesView: View {
                 withAnimation { isEditMode = false }
             }
         }
-        .alert(
-            tr("Delete folder?"),
-            isPresented: Binding(
-                get: { folderPendingDeletion != nil },
-                set: { if !$0 { folderPendingDeletion = nil } }
-            )
-        ) {
-            Button(tr("Cancel"), role: .cancel) { folderPendingDeletion = nil }
-            Button(tr("Delete"), role: .destructive) {
-                if let folder = folderPendingDeletion {
-                    Task { await likesStore.deleteFolder(folder) }
-                }
-                folderPendingDeletion = nil
-            }
-        } message: {
-            if let folder = folderPendingDeletion {
-                T("\"\(folder.name)\" will be deleted, along with the likes inside it.")
-            }
-        }
     }
+
     private func podCount(of item: LikesItem) -> Int {
         switch item {
         case .own(let folder): pods(in: folder).count
