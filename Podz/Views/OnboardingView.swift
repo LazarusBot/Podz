@@ -25,10 +25,12 @@ import UIKit
 /// swap itself as plumbing, not something worth a second flourish on top).
 struct OnboardingView: View {
     @StateObject private var auth = AuthManager.shared
+    /// Lenny's line gets its moment even when the session resolves at once.
+    @StateObject private var beat = LennyBeat()
 
     var body: some View {
         Group {
-            if auth.isInitializing {
+            if auth.isInitializing || beat.isHolding {
                 LaunchWaitingView()
                     .preferredColorScheme(.light)
             } else if auth.isAuthenticated && !auth.justRegistered {
@@ -37,6 +39,7 @@ struct OnboardingView: View {
                 OnboardingFlow()
             }
         }
+        .task { beat.start() }
         // Appearance is decided per screen: the onboarding, Home, Likes and
         // the pod detail follow the system; everything else has no dark
         // palette yet and stays light (this used to be a global

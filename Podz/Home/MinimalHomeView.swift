@@ -4,6 +4,8 @@ import SwiftUI
 /// pill, and a row of large pod cards on a pure black / white ground.
 struct MinimalHomeView: View {
     @StateObject private var podsStore = PodsStore.shared
+    /// Lenny's "one moment" gets its beat even when the pods arrive at once.
+    @StateObject private var loadingBeat = LennyBeat()
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var homeSearch = HomeSearchState.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
@@ -133,6 +135,9 @@ struct MinimalHomeView: View {
             LennySearchScreen(onClose: closeLenny)
         }
         .task { await podsStore.fetchPods() }
+        .onChange(of: podsStore.isLoading) { _, isLoading in
+            if isLoading && podsStore.pods.isEmpty { loadingBeat.start() }
+        }
         .task { await likesStore.fetchAll() }
         .onChange(of: homeSearch.feedReselected) { _, _ in
             // Home tapped again while already on Home: back to the root.
@@ -269,7 +274,7 @@ struct MinimalHomeView: View {
 
     @ViewBuilder
     private var feed: some View {
-        if podsStore.isLoading && podsStore.pods.isEmpty {
+        if (podsStore.isLoading && podsStore.pods.isEmpty) || loadingBeat.isHolding {
             loading
         } else if visiblePods.isEmpty {
             VStack(spacing: 6) {
