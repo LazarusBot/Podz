@@ -97,8 +97,10 @@ private struct LennyAsksModifier: ViewModifier {
                             LennyReply(message: question, mood: .idle)
                             HStack(spacing: 22) {
                                 caption(confirm, color: isDestructive ? .appBadgeRed : .homeText) {
-                                    isPresented = false
+                                    // Act first: dismissing clears what callers keep as
+                                    // "pending" in their binding's setter.
                                     onConfirm()
+                                    isPresented = false
                                 }
                                 caption(keep, color: .homeSubtitle) { keepThings() }
                             }

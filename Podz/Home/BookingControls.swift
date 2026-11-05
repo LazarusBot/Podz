@@ -6,6 +6,10 @@ import SwiftUI
 /// minus, the answer, a round plus and the continue button.
 struct BookingControlStack: View {
     @ObservedObject var flow: BookingFlow
+    /// The listed hut whose contact choices are open ("Book through the hut").
+    @State private var contactPod: Pod?
+    /// With several listed stops: which hut to book through.
+    @State private var choosingHut = false
     /// Leaves the flow: from the first question, or once it's booked.
     var onLeave: () -> Void
     /// After booking: go look at the reservations.
@@ -33,6 +37,20 @@ struct BookingControlStack: View {
         .animation(.smooth(duration: 0.35), value: flow.dateConfirmed)
         .animation(.smooth(duration: 0.35), value: flow.nightsConfirmed)
         .bookingDateSheet(flow)
+        .confirmationDialog(tr("Which hut?"), isPresented: $choosingHut, titleVisibility: .visible) {
+            ForEach(flow.entries) { entry in
+                Button(entry.pod.name) { contactPod = entry.pod }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        }
+        .background {
+            if let pod = contactPod {
+                Color.clear.hutContactDialog(for: pod, isPresented: Binding(
+                    get: { contactPod != nil },
+                    set: { if !$0 { contactPod = nil } }
+                ))
+            }
+        }
     }
 
     /// The right-hand pill at rest: the question as a plain button, then
@@ -49,8 +67,11 @@ struct BookingControlStack: View {
     private var primary: (title: String, isHighlighted: Bool, isEnabled: Bool, action: () -> Void) {
         switch (flow.status, flow.stage) {
         case _ where flow.bookableCount == 0:
-            // All listed: nothing to reserve; the rows open each hut.
-            return ("Back to plan", false, true, { flow.back(onLeave: onLeave) })
+            // All listed: nothing to reserve here, so the pill books through
+            // the hut (the rows still open each one).
+            return ("Book through the hut", true, true, {
+                if flow.entries.count == 1 { contactPod = flow.entries[0].pod } else { choosingHut = true }
+            })
         case (.booked, _):
             return ("View reservations", true, true, onViewReservations)
         case (.booking, _):
