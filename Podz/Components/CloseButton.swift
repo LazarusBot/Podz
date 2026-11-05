@@ -7,11 +7,16 @@ struct CloseButton: View {
     var size: CGFloat = 44
     var action: () -> Void
 
+    /// In a control stack (83 round, beside the back pill) the "x" is drawn like
+    /// the back chevron: 9 tall, at 35%. In a sheet's 44 it stays 12 at 45%.
+    private var inStack: Bool { size > 60 }
+    private var glyph: CGFloat { inStack ? 9 : 12 }
+
     var body: some View {
         Button(action: action) {
             CloseCross()
-                .stroke(Color.homeText.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-                .frame(width: 12, height: 12)
+                .stroke(Color.homeText.opacity(inStack ? 0.35 : 0.45), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                .frame(width: glyph, height: glyph)
                 .frame(width: size, height: size)
                 .background(
                     Circle()
