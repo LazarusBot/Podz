@@ -16,6 +16,7 @@ struct ProfileView: View {
     @StateObject private var friendsStore = FriendsStore.shared
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var router = TabRouter.shared
+    @StateObject private var reservationsStore = ReservationsStore.shared
     @State private var showEditProfile = false
     @State private var showsAvatarEditor = false
     @State private var showFriends = false
@@ -71,6 +72,20 @@ struct ProfileView: View {
 
     // MARK: - Main screen
 
+    /// When the next stay starts, beside Reservations ("In 5 days"), so the
+    /// trip is one glance away instead of behind a row. Nil with nothing ahead.
+    private var nextTripCaption: String? {
+        let starts = reservationsStore.reservations.filter(\.isUpcoming).compactMap { Reservation.date(from: $0.checkIn) }
+        guard let next = starts.min() else { return nil }
+        let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: next).day ?? 0
+        switch days {
+        case ..<0: return "Under way"
+        case 0: return "Today"
+        case 1: return "Tomorrow"
+        default: return "In \(days) days"
+        }
+    }
+
     private var main: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -91,7 +106,7 @@ struct ProfileView: View {
 
                 VStack(spacing: 0) {
                     ProfileListRow(title: "Friends") { showFriends = true }
-                    ProfileListRow(title: "Reservations") { showReservations = true }
+                    ProfileListRow(title: "Reservations", caption: nextTripCaption) { showReservations = true }
                     ProfileListRow(title: "Login and security") { showLoginSecurity = true }
                     ProfileListRow(title: "About Podz") { showAbout = true }
                 }
