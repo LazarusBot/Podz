@@ -187,7 +187,7 @@ struct MyReservationsView: View {
                                 .foregroundColor(.homeSubtitle)
                         }
                         .padding(.vertical, 8)
-                        .contentShape(Rectangle())
+                        .captionTapArea()
                     }
                     .buttonStyle(.plain)
                     // Lined up with the bubble's text, past the avatar.

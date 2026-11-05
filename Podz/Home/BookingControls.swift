@@ -237,7 +237,7 @@ struct BookingQuickReply: View {
             }
             // A comfortable tap area for a small caption.
             .padding(.vertical, 8)
-            .contentShape(Rectangle())
+            .captionTapArea()
         }
         .buttonStyle(.plain)
     }

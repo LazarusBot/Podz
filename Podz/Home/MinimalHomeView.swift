@@ -191,10 +191,14 @@ struct MinimalHomeView: View {
                 .font(AppFont.semiBoldLabel(16))
                 .foregroundColor(.homeText)
             Spacer()
-            Button(tr("See all")) { seeAll = all ?? HomeSection(id: id, title: title, pods: pods) }
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
-                .disabled(pods.isEmpty)
+            Button { seeAll = all ?? HomeSection(id: id, title: title, pods: pods) } label: {
+                T("See all")
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .captionTapArea(outset: 14)
+            }
+            .buttonStyle(.plain)
+            .disabled(pods.isEmpty)
         }
         .padding(.horizontal, 24)
         .padding(.top, 40)
@@ -292,7 +296,7 @@ struct MinimalHomeView: View {
                                 .foregroundColor(.homeSubtitle)
                         }
                         .padding(.vertical, 8)
-                        .contentShape(Rectangle())
+                        .captionTapArea()
                     }
                     .buttonStyle(.plain)
                 }

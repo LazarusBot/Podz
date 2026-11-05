@@ -24,20 +24,34 @@ struct OnboardingView: View {
     /// The signed-in user's first name, kept from the last launch so Lenny
     /// can use it from the first frame (the profile arrives a moment later).
     @AppStorage("launchFirstName") private var firstName = ""
+    /// The day (its start, as seconds) Lenny's launch last waited for a tap:
+    /// the first launch of each day keeps the whole ritual, the others let
+    /// Home through by themselves a beat after "all good".
+    @AppStorage("launchTappedOnDay") private var tappedOnDay = 0.0
+    /// This launch is the first of the day: it waits for "Go to Home".
+    @State private var asksToContinue = true
 
     /// Lenny's screen is for a signed-in user, until they tap in.
     private var showsLaunch: Bool {
         !auth.isInitializing && !launchDone && auth.isAuthenticated && !auth.justRegistered
     }
 
+    private static var today: Double { Calendar.current.startOfDay(for: Date()).timeIntervalSince1970 }
+
+    /// Lenny has said "all good" (the line had its beat, the huts are in).
+    private var launchReady: Bool { showsLaunch && !beat.isHolding && podsLoaded }
+
     /// Home is in place once Lenny's screen is gone (or was never there).
     private var homeSettled: Bool { !showsLaunch }
 
     /// The bubbles drift down and fade, then the ground dissolves while Home
     /// settles in under it.
-    private func leaveLaunch() {
+    private func leaveLaunch(byTap: Bool = true) {
         guard !launchLeaving else { return }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        if byTap {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            tappedOnDay = Self.today
+        }
         withAnimation(.easeOut(duration: 0.3)) { launchLeaving = true }
         Task {
             try? await Task.sleep(for: .milliseconds(250))
@@ -70,7 +84,8 @@ struct OnboardingView: View {
                     isReady: !beat.isHolding && podsLoaded,
                     isLeaving: launchLeaving,
                     firstName: firstName.isEmpty ? nil : firstName,
-                    onContinue: leaveLaunch
+                    asksToContinue: asksToContinue,
+                    onContinue: { leaveLaunch() }
                 )
                 .transition(.opacity)
             }
@@ -78,6 +93,15 @@ struct OnboardingView: View {
         .onChange(of: auth.profile?.fullName, initial: true) { _, fullName in
             // The first word of the name; kept until the next launch.
             if let first = fullName?.split(separator: " ").first { firstName = String(first) }
+        }
+        .onChange(of: launchReady) { _, ready in
+            // A later launch of the day: "all good" shows for a moment, then
+            // Home comes through without a tap.
+            guard ready, !asksToContinue else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(800))
+                leaveLaunch(byTap: false)
+            }
         }
         .onChange(of: auth.isAuthenticated) { _, signedIn in
             if !signedIn && !auth.isInitializing { firstName = "" }
@@ -87,6 +111,7 @@ struct OnboardingView: View {
             // Lenny's launch is for someone signed in; everyone else sees the
             // classic onboarding at once.
             guard auth.isAuthenticated else { launchDone = true; return }
+            asksToContinue = tappedOnDay != Self.today
             beat.start()
             // The pods load now, under Lenny's first line; a slow or failing
             // network gives up after 8 s so the screen is never stuck.

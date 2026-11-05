@@ -27,7 +27,9 @@ final class LennyBeat: ObservableObject {
 /// the user's first name once Lenny knows it (kept from the last launch); once
 /// it's ready and the line has been said, Lenny hops, a second bubble says all
 /// is good, and a small caption beneath goes in. Nobody is let in before that
-/// tap. Only for a signed-in user: a signed-out one goes straight to the
+/// tap, the first launch of the day; the other launches that day Lenny says
+/// "all good" and lets Home through by itself (`asksToContinue` off: no
+/// caption). Only for a signed-in user: a signed-out one goes straight to the
 /// onboarding.
 struct LaunchWaitingView: View {
     /// The session is known and the first line has had its moment.
@@ -36,6 +38,9 @@ struct LaunchWaitingView: View {
     /// The bubbles are on their way out: they fade and drift down.
     var isLeaving = false
     var firstName: String? = nil
+    /// The caption that goes in. Off for a later launch of the day: nothing to
+    /// tap, Lenny's line is the whole screen.
+    var asksToContinue = true
     var onContinue: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -57,7 +62,7 @@ struct LaunchWaitingView: View {
             }
 
             // Always in the layout, so the first bubble doesn't move when the
-            // caption arrives.
+            // caption arrives (and doesn't jump when there's none).
             Button(action: onContinue) {
                 HStack(spacing: 5) {
                     T("Go to Home")
@@ -69,13 +74,13 @@ struct LaunchWaitingView: View {
                         .foregroundColor(.homeSubtitle)
                 }
                 .padding(.vertical, 8)
-                .contentShape(Rectangle())
+                .captionTapArea()
             }
             .buttonStyle(.plain)
             .padding(.leading, 38 + 18)
-            .opacity(isReady ? 1 : 0)
-            .disabled(!isReady)
-            .accessibilityHidden(!isReady)
+            .opacity(isReady && asksToContinue ? 1 : 0)
+            .disabled(!isReady || !asksToContinue)
+            .accessibilityHidden(!isReady || !asksToContinue)
         }
         .opacity(isLeaving ? 0 : 1)
         .offset(y: isLeaving && !reduceMotion ? 14 : 0)
