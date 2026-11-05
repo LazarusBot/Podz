@@ -117,7 +117,7 @@ struct LennyPlanView: View {
             .id(stop.id)
 
             // Fade into the ground behind the buttons.
-            BottomFade()
+            SectionFadeLayer(fade: .photos)
 
             HStack(spacing: 13) {
                 DetailBackButton(action: back)

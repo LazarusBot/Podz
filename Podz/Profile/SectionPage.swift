@@ -53,6 +53,28 @@ struct SectionFade {
     static let photos = SectionFade(start: 0.66, solid: 0.86)
 }
 
+/// The fade into the ground over the whole screen, edge to edge, from where
+/// `fade` starts to where it is solid. Any page whose rows scroll under the
+/// pills uses this one (`SectionPage`, the Lenny plan and summary).
+struct SectionFadeLayer: View {
+    var fade: SectionFade = .standard
+
+    var body: some View {
+        LinearGradient(
+            stops: [
+                .init(color: Color.homeBackground.opacity(0), location: fade.start),
+                .init(color: Color.homeBackground, location: fade.solid),
+                .init(color: Color.homeBackground, location: 1)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        // The whole screen, edge to edge: nothing shows below it.
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
 /// The page every screen Profile opens is built on (`design.md`): a big
 /// title at the top, no navigation bar, and at the bottom the same pill row
 /// as the pod detail: the round back pill, plus whatever action the page has
@@ -92,18 +114,7 @@ struct SectionPage<Content: View, Trailing: View>: View {
             .scrollDismissesKeyboard(.interactively)
 
             // Fade into the ground behind the pills.
-            LinearGradient(
-                stops: [
-                    .init(color: Color.homeBackground.opacity(0), location: fade.start),
-                    .init(color: Color.homeBackground, location: fade.solid),
-                    .init(color: Color.homeBackground, location: 1)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            // The whole screen, edge to edge: nothing shows below it.
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            SectionFadeLayer(fade: fade)
 
             HStack(spacing: 13) {
                 DetailBackButton(action: onBack)
