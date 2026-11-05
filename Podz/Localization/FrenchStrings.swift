@@ -14,12 +14,21 @@ enum FrenchStrings {
 
     /// The French for `text`, or `text` itself (another language, or nothing to
     /// say for it).
-    static func translate(_ text: String) -> String {
+    static func translate(_ text: String) -> String { translate(text, depth: 0) }
+
+    /// Names typed by people (a folder, a profile) pass through here too: a
+    /// very long one, or one built to nest templates ("Shared with Shared
+    /// with…"), is left as it is instead of being matched over and over.
+    private static let templateMaxLength = 1_000
+    private static let templateMaxDepth = 6
+
+    private static func translate(_ text: String, depth: Int) -> String {
         guard isActive, !text.isEmpty else { return text }
         if let hit = exact[text] { return hit }
+        guard depth < templateMaxDepth, text.utf16.count <= templateMaxLength else { return text }
         for template in templates {
             guard let captures = template.match(text) else { continue }
-            return template.fill(captures.map { translate($0) })
+            return template.fill(captures.map { translate($0, depth: depth + 1) })
         }
         return text
     }

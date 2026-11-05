@@ -95,7 +95,7 @@ struct AvatarPicker: View {
         do {
             guard let data = try await item.loadTransferable(type: Data.self),
                   let uiImage = UIImage(data: data),
-                  let jpegData = uiImage.jpegData(compressionQuality: 0.8) else {
+                  let jpegData = AvatarUploader.jpeg(from: uiImage) else {
                 onError?("Couldn't read that image.")
                 return
             }

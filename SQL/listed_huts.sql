@@ -22,6 +22,7 @@ alter table pods add column if not exists source_id text;
 create unique index if not exists pods_source_unique
     on pods (source, source_id) where source is not null;
 
+-- (The current version of this function is in SQL/security_hardening.sql.)
 -- Only a partner can be reserved: the capacity trigger and the app must not
 -- accept a reservation on a listed hut.
 create or replace function reject_reservation_on_listed_pod()

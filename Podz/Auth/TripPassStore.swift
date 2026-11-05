@@ -91,6 +91,13 @@ final class TripPassStore: ObservableObject {
             .sorted { $0.checkIn < $1.checkIn }
 
         guard let data = try? JSONEncoder().encode(passes) else { return }
-        try? data.write(to: cacheURL, options: .atomic)
+        try? data.write(to: cacheURL, options: [.atomic, .completeFileProtectionUnlessOpen])
+    }
+
+    /// Signing out removes the passes: they are one account's stays, and the
+    /// file isn't per account.
+    func clear() {
+        passes = []
+        try? FileManager.default.removeItem(at: cacheURL)
     }
 }

@@ -15,6 +15,9 @@
 -- a reservation almost never starts today (ReservationSheet defaults to
 -- tomorrow), so a strict "today" check barely ever moved regardless of
 -- what got booked. This reflects any near-term reservation instead.
+-- Replaced by SQL/security_hardening.sql, which only counts Podz bookings
+-- (source = 'podz'): a stay added from "Did you book it?" no longer lowers
+-- the beds every traveler sees.
 create or replace function beds_available_now(p_pod_id uuid)
 returns int
 language plpgsql

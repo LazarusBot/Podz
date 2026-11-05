@@ -1,3 +1,7 @@
+-- LEGACY: the host side was removed from the app. The pods insert policy
+-- below trusts profiles.is_host, which a user may be able to set on their own
+-- profile: see section C of SQL/security_hardening.sql before keeping it.
+--
 -- Host accounts: any signed-in user can become a host (no separate host
 -- account type — see the "how should host accounts work" discussion this
 -- came out of) and, once they are, create their own pods. No migration

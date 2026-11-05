@@ -31,16 +31,20 @@ drop policy if exists "Users can insert their own reservations" on reservations;
 create policy "Users can insert their own reservations" on reservations
     for insert with check (user_id = auth.uid());
 
+-- Superseded by SQL/security_hardening.sql: the policy there only lets a
+-- confirmed row become cancelled, and a BEFORE UPDATE trigger freezes every
+-- other column (this one let a user change guests, dates or the pod after
+-- booking, with no check).
 drop policy if exists "Users can cancel their own reservations" on reservations;
 create policy "Users can cancel their own reservations" on reservations
     for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- Booking against the shelter's overall beds_total (not a specific room —
 -- pod_rooms has no per-room capacity yet). This runs server-side, not
--- just as a client-side estimate, so two people booking the last beds at
--- the same moment can't both succeed: whichever insert lands second sees
--- its capacity check include the first's now-committed row and fails
--- cleanly instead of silently overbooking.
+-- just as a client-side estimate. On its own it is NOT safe for two
+-- bookings at the same moment (under READ COMMITTED neither sees the
+-- other's uncommitted row): the current version, in
+-- SQL/security_hardening.sql, takes a per-pod advisory lock first.
 create or replace function enforce_reservation_capacity()
 returns trigger
 language plpgsql

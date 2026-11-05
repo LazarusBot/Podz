@@ -1,3 +1,7 @@
+-- The two functions below are replaced by SQL/security_hardening.sql (same
+-- rules, plus a per-pod lock and a fixed search_path); the `source` column
+-- here is still the live schema.
+--
 -- A stay booked through the hut itself (a listed hut takes bookings by phone,
 -- email or its website), which the traveler then adds to their list in the app
 -- ("Did you book it?" -> Lenny asks the dates). Such a row has source =
