@@ -29,6 +29,15 @@ final class ReservationsStore: ObservableObject {
 
     private init() {}
 
+    /// Forgets the signed-out account's stays, so the next one on this phone
+    /// never sees them.
+    func clear() {
+        reservations = []
+        profilesById = [:]
+        lastAddedId = nil
+        lastError = nil
+    }
+
     /// Returns whether it succeeded — `TripPassStore` uses this to tell a
     /// real fetch failure (leaves `reservations` untouched, same as
     /// always) apart from a genuinely empty result, so it doesn't wipe
@@ -44,7 +53,7 @@ final class ReservationsStore: ObservableObject {
                 .order("check_in")
                 .execute()
                 .value
-            OfflineStorage.save(reservations, as: "reservations-\(userId.uuidString)")
+            OfflineStorage.save(reservations, as: "reservations-\(userId.uuidString)", personal: true)
             return true
         } catch {
             lastError = error.localizedDescription

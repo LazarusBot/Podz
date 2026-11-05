@@ -234,11 +234,21 @@ final class AuthManager: ObservableObject {
     // MARK: - Delete / sign out
     
     func signOut() async {
+        let userId = session?.user.id
         do {
             try await supabase.auth.signOut()
+            forgetLocalData(of: userId)
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    /// What this phone kept for the account that just left (passes, stays,
+    /// likes), so whoever signs in next starts clean.
+    private func forgetLocalData(of userId: UUID?) {
+        TripPassStore.shared.clear()
+        ReservationsStore.shared.clear()
+        if let userId { OfflineStorage.removeFiles(of: userId) }
     }
     
     func deleteAccount() async {
@@ -246,8 +256,10 @@ final class AuthManager: ObservableObject {
         defer { isLoading = false }
 
         do {
+            let userId = session?.user.id
             try await supabase.rpc("delete_own_account").execute()
             try await supabase.auth.signOut()
+            forgetLocalData(of: userId)
         } catch {
             lastError = error.localizedDescription
         }

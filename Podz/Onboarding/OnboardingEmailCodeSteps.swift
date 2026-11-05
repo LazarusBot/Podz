@@ -50,7 +50,13 @@ struct OnboardingEmailStep: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
                     .environment(\.openURL, OpenURLAction { url in
-                        legal = url.host == "privacy" ? .privacy : .terms
+                        // Only our two documents; any other link is dropped.
+                        guard url.scheme == "podz-legal" else { return .discarded }
+                        switch url.host {
+                        case "privacy": legal = .privacy
+                        case "terms": legal = .terms
+                        default: return .discarded
+                        }
                         return .handled
                     })
             }

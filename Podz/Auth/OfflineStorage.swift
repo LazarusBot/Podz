@@ -20,9 +20,21 @@ enum OfflineStorage {
         return url
     }
 
-    nonisolated static func save<T: Encodable>(_ value: T, as name: String) {
+    /// `personal` (your reservations, likes, folders, passes) also asks iOS
+    /// to keep the file encrypted while the phone is locked, unless the app
+    /// already has it open.
+    nonisolated static func save<T: Encodable>(_ value: T, as name: String, personal: Bool = false) {
         guard let data = try? JSONEncoder().encode(value) else { return }
-        try? data.write(to: directory.appendingPathComponent(name + ".json"))
+        var options: Data.WritingOptions = [.atomic]
+        if personal { options.insert(.completeFileProtectionUnlessOpen) }
+        try? data.write(to: directory.appendingPathComponent(name + ".json"), options: options)
+    }
+
+    /// What was kept for one account, removed when it signs out on this phone.
+    nonisolated static func removeFiles(of userId: UUID) {
+        for prefix in ["reservations", "likes", "folders"] {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent("\(prefix)-\(userId.uuidString).json"))
+        }
     }
 
     nonisolated static func load<T: Decodable>(_ type: T.Type, named name: String) -> T? {

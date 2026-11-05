@@ -28,6 +28,9 @@ final class DiagnosticsReporter: NSObject, MXMetricManagerSubscriber {
     }
 
     private nonisolated static let pendingFile = "diagnostics_pending"
+    /// The table refuses a bigger payload (`SQL/security_hardening.sql`); the
+    /// start of a report is where the crash is.
+    private nonisolated static let maxPayload = 200_000
     private let lock = NSLock()
 
     /// Called once at launch.
@@ -46,7 +49,7 @@ final class DiagnosticsReporter: NSObject, MXMetricManagerSubscriber {
                 build: info?["CFBundleVersion"] as? String ?? "?",
                 os: ProcessInfo.processInfo.operatingSystemVersionString,
                 summary: "crashes \(payload.crashDiagnostics?.count ?? 0), hangs \(payload.hangDiagnostics?.count ?? 0), cpu \(payload.cpuExceptionDiagnostics?.count ?? 0), disk \(payload.diskWriteExceptionDiagnostics?.count ?? 0)",
-                payload: String(data: payload.jsonRepresentation(), encoding: .utf8) ?? ""
+                payload: String(decoding: payload.jsonRepresentation().prefix(Self.maxPayload), as: UTF8.self)
             )
         }
         lock.withLock {
@@ -62,6 +65,12 @@ final class DiagnosticsReporter: NSObject, MXMetricManagerSubscriber {
         do {
             try await supabase.from("app_diagnostics").insert(rows).execute()
             // Keep anything that arrived while this was going.
+            lock.withLock {
+                let now = OfflineStorage.load([Row].self, named: Self.pendingFile) ?? []
+                OfflineStorage.save(Array(now.dropFirst(rows.count)), as: Self.pendingFile)
+            }
+        } catch is PostgrestError {
+            // Refused by the server, not lost to the network: it never fits.
             lock.withLock {
                 let now = OfflineStorage.load([Row].self, named: Self.pendingFile) ?? []
                 OfflineStorage.save(Array(now.dropFirst(rows.count)), as: Self.pendingFile)

@@ -9,10 +9,10 @@ struct HutContactDialog: ViewModifier {
 
     func body(content: Content) -> some View {
         content.confirmationDialog(tr("Book through \(pod.name)"), isPresented: $isPresented, titleVisibility: .visible) {
-            if let phone = clean(pod.phone), let url = URL(string: "tel:\(phone.filter { !$0.isWhitespace })") {
+            if let phone = clean(pod.phone), let url = hutPhoneURL(phone) {
                 Button(tr("Call \(phone)")) { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
-            if let email = clean(pod.email), let url = URL(string: "mailto:\(email)?subject=Booking%20request") {
+            if let email = clean(pod.email), let url = hutMailURL(email, subject: "Booking request") {
                 Button(tr("Email \(email)")) { HutContactTracker.shared.didContact(pod); openURL(url) }
             }
             if let link = clean(pod.bookingURL) ?? clean(pod.website), let url = Self.webURL(link) {
@@ -43,9 +43,48 @@ func hutClean(_ value: String?) -> String? {
     return trimmed.isEmpty ? nil : trimmed
 }
 
-/// A website without its scheme ("refuge.com") still opens.
+/// The hut's data comes from OpenStreetMap or a host, so it is never trusted
+/// as a URL: each builder below only ever makes its own scheme, and anything
+/// that doesn't fit gives no link (the row is then shown without a chevron).
+private let hutFieldLimit = 320
+
+/// A website without its scheme ("refuge.com") still opens. Only http and
+/// https with a real host; any other scheme ("javascript:", "sms:",
+/// another app's) is refused.
 func hutWebURL(_ link: String) -> URL? {
-    URL(string: link.hasPrefix("http") ? link : "https://\(link)")
+    guard link.count <= 2_000 else { return nil }
+    let lower = link.lowercased()
+    let hasScheme = lower.hasPrefix("http://") || lower.hasPrefix("https://")
+    if !hasScheme, link.contains("://") { return nil }
+    guard let components = URLComponents(string: hasScheme ? link : "https://\(link)"),
+          let scheme = components.scheme?.lowercased(), scheme == "http" || scheme == "https",
+          let host = components.host, !host.isEmpty, host.contains("."),
+          components.user == nil, components.password == nil
+    else { return nil }
+    return components.url
+}
+
+/// `tel:` with only what a dialler understands: digits and a leading +.
+/// Pauses, USSD codes (* #) and anything else are dropped.
+func hutPhoneURL(_ phone: String) -> URL? {
+    guard phone.count <= hutFieldLimit else { return nil }
+    var digits = phone.filter { $0.isASCII && $0.isNumber }
+    if phone.trimmingCharacters(in: .whitespaces).hasPrefix("+") { digits = "+" + digits }
+    guard digits.filter(\.isNumber).count >= 4 else { return nil }
+    return URL(string: "tel:\(digits)")
+}
+
+/// `mailto:` for one plain address: no extra recipients, headers or body
+/// smuggled in through "?" or "&", and the subject is encoded by us.
+func hutMailURL(_ email: String, subject: String? = nil) -> URL? {
+    guard email.count <= hutFieldLimit,
+          email.range(of: #"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"#, options: .regularExpression) != nil
+    else { return nil }
+    var components = URLComponents()
+    components.scheme = "mailto"
+    components.path = email
+    if let subject { components.queryItems = [URLQueryItem(name: "subject", value: subject)] }
+    return components.url
 }
 
 struct HutContactLink {
@@ -58,10 +97,10 @@ extension Pod {
     /// Phone, email and website, whichever the hut has, ready to open.
     var contactLinks: [HutContactLink] {
         var links: [HutContactLink] = []
-        if let phone = hutClean(phone), let url = URL(string: "tel:\(phone.filter { !$0.isWhitespace })") {
+        if let phone = hutClean(phone), let url = hutPhoneURL(phone) {
             links.append(HutContactLink(label: "Phone", value: phone, url: url))
         }
-        if let email = hutClean(email), let url = URL(string: "mailto:\(email)") {
+        if let email = hutClean(email), let url = hutMailURL(email) {
             links.append(HutContactLink(label: "Email", value: email, url: url))
         }
         if let site = hutClean(bookingURL) ?? hutClean(website), let url = hutWebURL(site) {

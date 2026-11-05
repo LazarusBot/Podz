@@ -26,9 +26,16 @@ final class DeepLinkRouter: ObservableObject {
 
     private init() {}
 
+    /// Only exactly `podz://pod/<uuid>` is taken (any app or web page can
+    /// open a `podz://` link): one path part, a well-formed UUID, nothing
+    /// else. Anything unknown is ignored.
     func handle(_ url: URL) {
-        guard url.scheme == "podz", url.host == "pod" else { return }
-        guard let id = UUID(uuidString: url.lastPathComponent) else { return }
+        guard url.absoluteString.count <= 200,
+              url.scheme?.lowercased() == "podz", url.host?.lowercased() == "pod",
+              url.query == nil, url.fragment == nil, url.user == nil
+        else { return }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count == 1, let id = UUID(uuidString: parts[0]) else { return }
         pendingPodId = id
     }
 }

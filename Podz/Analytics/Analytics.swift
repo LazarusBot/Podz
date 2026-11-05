@@ -134,6 +134,11 @@ final class Analytics {
             try await supabase.from("app_events").insert(batch).execute()
             queue.removeFirst(min(batch.count, queue.count))
             if !queue.isEmpty { Task { await flush() } }
+        } catch is PostgrestError {
+            // The server read the batch and refused it (a row over the limits
+            // in SQL/security_hardening.sql): sending it again never works,
+            // so it goes instead of blocking the queue.
+            queue.removeFirst(min(batch.count, queue.count))
         } catch {
             // No signal, or the table isn't there yet: keep them for later.
         }

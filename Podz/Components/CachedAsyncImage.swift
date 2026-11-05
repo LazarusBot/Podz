@@ -51,7 +51,7 @@ final class ImageCache {
     func keepForOffline(urlString: String) async -> Bool {
         let path = packPath(for: urlString)
         if FileManager.default.fileExists(atPath: path.path) { return true }
-        guard let url = URL(string: urlString), urlString.hasPrefix("http"),
+        guard let url = ImageLoader.secureURL(urlString),
               let (data, response) = try? await URLSession.shared.data(from: url),
               (response as? HTTPURLResponse).map({ (200...299).contains($0.statusCode) }) ?? true,
               ImageLoader.decodeImage(from: data) != nil else { return false }
@@ -98,13 +98,30 @@ enum ImageLoader {
         case decodeFailed(mime: String, byteCount: Int)
     }
 
+    /// Photo URLs come from the database (and from OpenStreetMap or Wikimedia
+    /// before that): only https with a host is ever fetched.
+    static func secureURL(_ urlString: String) -> URL? {
+        guard let url = URL(string: urlString), url.scheme?.lowercased() == "https",
+              let host = url.host, !host.isEmpty else { return nil }
+        return url
+    }
+
+    /// A photo bigger than this is refused rather than held in memory.
+    private static let maxBytes = 25_000_000
+    /// Nor is one that would decode into more pixels than this (a tiny file
+    /// can claim a huge size).
+    private static let maxPixels = 50_000_000
+
     static func load(urlString: String) async throws -> UIImage {
-        guard let url = URL(string: urlString), urlString.hasPrefix("http") else {
+        guard let url = secureURL(urlString) else {
             throw LoadError.badURL
         }
         let (data, response) = try await URLSession.shared.data(from: url)
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             throw LoadError.httpStatus(http.statusCode)
+        }
+        guard data.count <= maxBytes else {
+            throw LoadError.decodeFailed(mime: "too large", byteCount: data.count)
         }
         guard let image = decodeImage(from: data) else {
             let mime = (response as? HTTPURLResponse)?.mimeType ?? "unknown"
@@ -120,11 +137,12 @@ enum ImageLoader {
     /// actually recovers WebP (static frames; animated WebP still only
     /// decodes its first frame here, same as this app treats GIFs/APNGs).
     static func decodeImage(from data: Data) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              fitsInMemory(source) else { return nil }
         if let image = UIImage(data: data) {
             return image
         }
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+        guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             return nil
         }
         // UIImage(cgImage:) alone ignores EXIF orientation — unlike
@@ -133,6 +151,15 @@ enum ImageLoader {
         // (rotated) pixel dimensions as its "ideal size," throwing off
         // any .aspectRatio(.fill) computed from it.
         return UIImage(cgImage: cgImage, scale: 1, orientation: exifOrientation(from: source))
+    }
+
+    /// Reads the size from the header only, before anything is decoded.
+    private static func fitsInMemory(_ source: CGImageSource) -> Bool {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int else { return true }
+        let (pixels, overflow) = width.multipliedReportingOverflow(by: height)
+        return width > 0 && height > 0 && !overflow && pixels <= maxPixels
     }
 
     private static func exifOrientation(from source: CGImageSource) -> UIImage.Orientation {

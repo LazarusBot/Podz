@@ -62,7 +62,7 @@ final class LikesStore: ObservableObject {
                 .execute()
                 .value
             likes = Dictionary(uniqueKeysWithValues: rows.map { ($0.podId, $0.folderId) })
-            OfflineStorage.save(rows.map { CachedLike(podId: $0.podId, folderId: $0.folderId) }, as: "likes-\(userId.uuidString)")
+            OfflineStorage.save(rows.map { CachedLike(podId: $0.podId, folderId: $0.folderId) }, as: "likes-\(userId.uuidString)", personal: true)
         } catch {
             lastError = error.localizedDescription
             // No signal: the likes from the last time, so the page isn't empty.
@@ -82,7 +82,7 @@ final class LikesStore: ObservableObject {
                 .order("created_at")
                 .execute()
                 .value
-            OfflineStorage.save(folders, as: "folders-\(userId.uuidString)")
+            OfflineStorage.save(folders, as: "folders-\(userId.uuidString)", personal: true)
         } catch {
             lastError = error.localizedDescription
             if folders.isEmpty, let kept = OfflineStorage.load([LikeFolder].self, named: "folders-\(userId.uuidString)") {
