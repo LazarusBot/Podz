@@ -40,6 +40,8 @@ struct LennySummaryView: View {
     var isLoop = false
     /// What the plan is called when saved ("Across the Alps").
     var planTitle: String?
+    /// Leaves the whole plan flow at once (back only steps back).
+    var onExit: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The booking questions, answers and the booking itself (`BookingFlow`,
@@ -51,6 +53,9 @@ struct LennySummaryView: View {
     @ObservedObject private var savedPlans = SavedPlansStore.shared
     /// List (the stops) or Map (the trace of the route).
     @State private var showsMap = false
+    @State private var asksToLeave = false
+    /// The listed hut whose Call / Email / website choices are open.
+    @State private var contactPod: Pod?
 
     private let dotSize: CGFloat = 24
     private let photoSize: CGFloat = 88
@@ -66,8 +71,10 @@ struct LennySummaryView: View {
         onViewReservations: @escaping () -> Void,
         request: LennyRequest? = nil,
         isLoop: Bool = false,
-        planTitle: String? = nil
+        planTitle: String? = nil,
+        onExit: (() -> Void)? = nil
     ) {
+        self.onExit = onExit
         self.isLoop = isLoop
         self.planTitle = planTitle
         self.entries = entries
@@ -79,82 +86,128 @@ struct LennySummaryView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    T("Your plan")
-                        .font(AppFont.semiBoldLabel(30))
-                        .tracking(-0.6)
-                        .foregroundColor(.homeText)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 25)
+        page
+            .background(Color.homeBackground.ignoresSafeArea())
+            .animation(.smooth(duration: 0.35), value: animationKey)
+            .onAppear { appeared = true }
+            .task { await trails.load(legs: legs) }
+            .lennyAsksToLeave($asksToLeave) { onExit?() }
+            .background(contactDialog)
+    }
 
-                    T(subtitle)
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.homeSubtitle)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 6)
-                        .padding(.bottom, 16)
+    /// Everything about the booking that changes the layout, in one value to animate.
+    private struct AnimationKey: Equatable {
+        let stage: BookingFlow.Stage
+        let nightsScope: Int?
+        let status: BookingFlow.Status
+        let answers: [Bool]
+    }
 
-                    // List or Map, and keep the plan without booking it.
-                    HStack {
-                        if hasPath { PlanModeToggle(showsMap: $showsMap) }
-                        Spacer(minLength: 0)
-                        SavePlanCaption(isSaved: savedPlan != nil, action: toggleSaved)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, flow.hasChoices ? 14 : 20)
+    private var animationKey: AnimationKey {
+        AnimationKey(
+            stage: flow.stage, nightsScope: flow.nightsScope, status: flow.status,
+            answers: [flow.guestsConfirmed, flow.dateConfirmed, flow.nightsConfirmed]
+        )
+    }
 
-                    if flow.hasChoices {
-                        BookingChips(flow: flow)
-                            .padding(.bottom, 24)
-                    }
-
-                    if showsMap && hasPath {
-                        routeMap
-                    } else {
-                        stopsList
-                    }
-
-                    // Room under the list for the pills and Lenny's bubble.
-                    Color.clear.frame(height: 212 + (flow.quickReply != nil ? 36 : 0))
-                }
-            }
-
-            // Lenny's bubble floats above the pills: the fade rises with it
-            // (the whole-screen fade, a little higher with a quick reply).
-            SectionFadeLayer(fade: flow.quickReply == nil ? .tall : SectionFade(start: 0.60, solid: 0.81))
-
-            // Lenny's line, and under it, when there's one, a quick reply.
-            VStack(alignment: .leading, spacing: 8) {
-                LennyReply(message: flow.replyMessage, mood: flow.mood)
-                if let reply = flow.quickReply {
-                    BookingQuickReply(reply: reply)
-                        // Lined up with the bubble's text, past the avatar.
-                        .padding(.leading, 38 + 18)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-            }
-            .padding(.horizontal, 24)
-            // Just above the control stack.
-            .padding(.bottom, DetailLayout.controlStackGap + 83 + 20)
-
-            // The control stack (`BookingControlStack`). The cover respects the
-            // safe area, so 40 here is the 74 from the bottom edge every
-            // control stack uses.
-            BookingControlStack(flow: flow, onLeave: onBack, onViewReservations: onViewReservations)
-                .padding(.horizontal, 24)
-                .padding(.bottom, DetailLayout.controlStackGap)
+    /// The Call / Email / website choices of the listed hut whose caption was tapped.
+    @ViewBuilder
+    private var contactDialog: some View {
+        if let pod = contactPod {
+            Color.clear.hutContactDialog(for: pod, isPresented: contactIsPresented)
         }
-        .background(Color.homeBackground.ignoresSafeArea())
-        .animation(.smooth(duration: 0.35), value: flow.stage)
-        .animation(.smooth(duration: 0.35), value: flow.nightsScope)
-        .animation(.smooth(duration: 0.35), value: flow.status)
-        .animation(.smooth(duration: 0.35), value: flow.guestsConfirmed)
-        .animation(.smooth(duration: 0.35), value: flow.dateConfirmed)
-        .animation(.smooth(duration: 0.35), value: flow.nightsConfirmed)
-        .onAppear { appeared = true }
-        .task { await trails.load(legs: legs) }
+    }
+
+    private var contactIsPresented: Binding<Bool> {
+        Binding(get: { contactPod != nil }, set: { if !$0 { contactPod = nil } })
+    }
+
+    private var page: some View {
+        ZStack(alignment: .bottom) {
+            scrollContent
+            fade
+            lennyLine
+            controlStack
+        }
+    }
+
+    private var scrollContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                T("Your plan")
+                    .font(AppFont.semiBoldLabel(30))
+                    .tracking(-0.6)
+                    .foregroundColor(.homeText)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 25)
+
+                T(subtitle)
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 6)
+                    .padding(.bottom, 16)
+
+                // List or Map, and keep the plan without booking it.
+                HStack {
+                    if hasPath { PlanModeToggle(showsMap: $showsMap) }
+                    Spacer(minLength: 0)
+                    SavePlanCaption(isSaved: savedPlan != nil, action: toggleSaved)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, flow.hasChoices ? 14 : 20)
+
+                if flow.hasChoices {
+                    BookingChips(flow: flow)
+                        .padding(.bottom, 24)
+                }
+
+                if showsMap && hasPath {
+                    routeMap
+                } else {
+                    stopsList
+                }
+
+                // Room under the list for the pills and Lenny's bubble.
+                Color.clear.frame(height: 212 + (flow.quickReply != nil ? 36 : 0))
+            }
+    }
+    }
+
+    private var fade: some View {
+        // Lenny's bubble floats above the pills: the fade rises with it
+        // (the whole-screen fade, a little higher with a quick reply).
+        SectionFadeLayer(fade: flow.quickReply == nil ? .tall : SectionFade(start: 0.57, solid: 0.78))
+    }
+
+    private var lennyLine: some View {
+        // Lenny's line, and under it, when there's one, a quick reply.
+        VStack(alignment: .leading, spacing: 8) {
+            LennyReply(message: flow.replyMessage, mood: flow.mood)
+            if let reply = flow.quickReply {
+                BookingQuickReply(reply: reply)
+                    // Lined up with the bubble's text, past the avatar.
+                    .padding(.leading, 38 + 18)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+    }
+    .padding(.horizontal, 24)
+    // Just above the control stack.
+    .padding(.bottom, DetailLayout.controlStackGap + 83 + 20)
+    }
+
+    /// Leaving the flow, when the page has a flow to leave.
+    private var exitAction: (() -> Void)? {
+        guard onExit != nil else { return nil }
+        return { leave() }
+    }
+
+    private var controlStack: some View {
+        // The control stack (`BookingControlStack`); the cover respects the
+        // safe area, so the usual gap puts it where every control stack is.
+        BookingControlStack(flow: flow, onLeave: onBack, onViewReservations: onViewReservations, onExit: exitAction, onBookListed: { contactPod = $0 })
+            .padding(.horizontal, 24)
+            .padding(.bottom, DetailLayout.controlStackGap)
     }
 
     /// The pairs of huts a trail is looked for between (and the way back, for a loop).
@@ -229,6 +282,15 @@ struct LennySummaryView: View {
         .padding(.bottom, 28)
     }
 
+    /// Out of the whole flow; Lenny asks first when the plan would be lost.
+    private func leave() {
+        if savedPlan != nil || flow.status == .booked {
+            onExit?()
+        } else {
+            asksToLeave = true
+        }
+    }
+
     // MARK: - Saving
 
     /// The saved plan with these huts, when this one was saved.
@@ -286,91 +348,90 @@ struct LennySummaryView: View {
 
     /// A numbered dot on the line, then the stop, the pod and its photo.
     private func row(_ entry: Entry, stage: LennyStage?, number: Int, isLast: Bool, date: Date?, nights: Int) -> some View {
-        Button { onOpenPod(entry.pod) } label: {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(spacing: 0) {
-                    T("\(number)")
-                        .font(AppFont.semiBoldLabel(12))
-                        .foregroundColor(.homeBackground)
-                        .frame(width: dotSize, height: dotSize)
-                        .background(Color.homeText, in: Circle())
-                    if !isLast {
-                        Rectangle()
-                            .fill(Color.homeText.opacity(0.25))
-                            .frame(width: 1)
-                            .mask {
-                                // The dotted line the search's steps use.
-                                VStack(spacing: 3) {
-                                    ForEach(0..<60, id: \.self) { _ in Rectangle().frame(height: 2) }
-                                }
-                            }
-                            .frame(maxHeight: .infinity)
-                            .padding(.top, 6)
-                    }
-                }
-                .frame(width: dotSize)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    T(stopCaption(entry, from: date, nights: nights))
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.homeSubtitle)
-                        .lineLimit(1)
-                        .frame(height: dotSize, alignment: .leading)
-
-                    HStack(alignment: .center, spacing: 16) {
-                        Color.clear
-                            .frame(width: photoSize, height: photoSize)
-                            .overlay { PodPhoto(url: photoURLs[entry.pod.id], coordinate: entry.pod.coordinate) }
-                            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(entry.pod.name)
-                                .font(AppFont.semiBoldLabel(17))
-                                .foregroundColor(.homeText)
-                                .lineLimit(2)
-                            if !entry.detail.isEmpty {
-                                T(entry.detail)
-                                    .font(AppFont.regularLabel(13))
-                                    .foregroundColor(.homeSubtitle)
-                                    .lineLimit(1)
-                            }
-                            if let stage {
-                                T(stage.text)
-                                    .font(AppFont.regularLabel(12))
-                                    .foregroundColor(.homeSubtitle)
-                                    .lineLimit(1)
-                            }
-                            if !entry.pod.isBookable {
-                                T("Listed  ·  book through the hut")
-                                    .font(AppFont.regularLabel(12))
-                                    .foregroundColor(.homeSubtitle)
-                                    .lineLimit(1)
-                            }
-                            if entry.isLennysPick {
-                                HStack(spacing: 6) {
-                                    Image("lenny")
-                                        .renderingMode(.template)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 10, height: 10)
-                                        .foregroundColor(.homeBackground)
-                                        .frame(width: 18, height: 18)
-                                        .background(Color.homeText, in: Circle())
-                                    T("Lenny's pick")
-                                        .font(AppFont.semiBoldLabel(12))
-                                        .foregroundColor(.homeText)
-                                }
-                                .padding(.top, 3)
+        HStack(alignment: .top, spacing: 14) {
+            VStack(spacing: 0) {
+                T("\(number)")
+                    .font(AppFont.semiBoldLabel(12))
+                    .foregroundColor(.homeBackground)
+                    .frame(width: dotSize, height: dotSize)
+                    .background(Color.homeText, in: Circle())
+                if !isLast {
+                    Rectangle()
+                        .fill(Color.homeText.opacity(0.25))
+                        .frame(width: 1)
+                        .mask {
+                            // The dotted line the search's steps use.
+                            VStack(spacing: 3) {
+                                ForEach(0..<60, id: \.self) { _ in Rectangle().frame(height: 2) }
                             }
                         }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.bottom, isLast ? 0 : 28)
+                        .frame(maxHeight: .infinity)
+                        .padding(.top, 6)
                 }
             }
-            .padding(.horizontal, 24)
-            .contentShape(Rectangle())
+            .frame(width: dotSize)
+
+            VStack(alignment: .leading, spacing: 10) {
+                T(stopCaption(entry, from: date, nights: nights))
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .lineLimit(1)
+                    .frame(height: dotSize, alignment: .leading)
+
+                HStack(alignment: .center, spacing: 16) {
+                    Color.clear
+                        .frame(width: photoSize, height: photoSize)
+                        .overlay { PodPhoto(url: photoURLs[entry.pod.id], coordinate: entry.pod.coordinate) }
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(entry.pod.name)
+                            .font(AppFont.semiBoldLabel(17))
+                            .foregroundColor(.homeText)
+                            .lineLimit(2)
+                        if !entry.detail.isEmpty {
+                            T(entry.detail)
+                                .font(AppFont.regularLabel(13))
+                                .foregroundColor(.homeSubtitle)
+                                .lineLimit(1)
+                        }
+                        if let stage {
+                            T(stage.text)
+                                .font(AppFont.regularLabel(12))
+                                .foregroundColor(.homeSubtitle)
+                                .lineLimit(1)
+                        }
+                        if !entry.pod.isBookable {
+                            // A listed hut is booked through the hut itself: a caption right here.
+                            BookingQuickReply(reply: .init(title: "Book through the hut") { contactPod = entry.pod })
+                        }
+                        if entry.isLennysPick {
+                            HStack(spacing: 6) {
+                                Image("lenny")
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 10, height: 10)
+                                    .foregroundColor(.homeBackground)
+                                    .frame(width: 18, height: 18)
+                                    .background(Color.homeText, in: Circle())
+                                T("Lenny's pick")
+                                    .font(AppFont.semiBoldLabel(12))
+                                    .foregroundColor(.homeText)
+                            }
+                            .padding(.top, 3)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.bottom, isLast ? 0 : 28)
+            }
         }
-        .buttonStyle(.plain)
+
+        .padding(.horizontal, 24)
+        .contentShape(Rectangle())
+        .onTapGesture { onOpenPod(entry.pod) }
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isButton)
     }
 }

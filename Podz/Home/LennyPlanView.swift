@@ -14,6 +14,8 @@ struct LennyPlanView: View {
     var isLoop = false
     /// What the plan is called when saved.
     var planTitle: String?
+    /// Leaves the whole plan flow at once (back only steps back).
+    var onExit: (() -> Void)?
     /// Back from the first stop leaves the plan.
     var onLeave: () -> Void
     var onOpenPod: (Pod) -> Void
@@ -22,6 +24,7 @@ struct LennyPlanView: View {
 
     @State private var stopIndex = 0
     @State private var showsSummary = false
+    @State private var asksToLeave = false
     /// The pod picked for each stop (by stop id).
     @State private var picks: [UUID: UUID] = [:]
 
@@ -44,7 +47,8 @@ struct LennyPlanView: View {
                 onViewReservations: onFinish,
                 request: request,
                 isLoop: isLoop,
-                planTitle: planTitle
+                planTitle: planTitle,
+                onExit: onExit
             )
             .transition(.opacity)
         } else {
@@ -121,6 +125,7 @@ struct LennyPlanView: View {
 
             HStack(spacing: 13) {
                 DetailBackButton(action: back)
+                if onExit != nil { CloseButton(size: 83) { asksToLeave = true } }
                 DetailTextButton(title: isLastStop ? "See summary" : "Next stop: \(stops[stopIndex + 1].name)", action: next)
             }
             .padding(.horizontal, 24)
@@ -129,6 +134,7 @@ struct LennyPlanView: View {
             .padding(.bottom, DetailLayout.controlStackGap)
         }
         .background(Color.homeBackground.ignoresSafeArea())
+        .lennyAsksToLeave($asksToLeave) { onExit?() }
     }
 
     /// Why the picked pod is there: Lenny's own pick says so and gives the

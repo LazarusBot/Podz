@@ -344,7 +344,7 @@ final class BookingFlow: ObservableObject {
     /// it books.
     var replyMessage: String? {
         if bookableCount == 0 {
-            return "These huts take their bookings themselves. Tap Book through the hut to call, email or visit their site."
+            return "These huts take their bookings themselves. Tap Book through the hut to call, email or visit its site."
         }
         return switch status {
         case .booking: nil

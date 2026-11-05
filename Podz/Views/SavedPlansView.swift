@@ -92,7 +92,8 @@ struct SavedPlansView: View {
             },
             request: request(of: plan),
             isLoop: plan.isLoop,
-            planTitle: plan.title
+            planTitle: plan.title,
+            onExit: { opened = nil }
         )
         .fullScreenCover(item: $selectedPod) { pod in
             MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })

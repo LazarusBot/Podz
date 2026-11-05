@@ -230,7 +230,7 @@ enum FrenchStrings {
         ("I couldn't book {} for {}. It may be full, so try other dates.", "Je n'ai pas pu réserver {1} pour le {2}. Il est peut-être complet, essaie d'autres dates."),
         ("{} is listed only, so book it through the hut.", "{1} est seulement référencé : réserve auprès du refuge."),
         ("{} of the huts are listed only, so book them through the huts.", "{1} des refuges sont seulement référencés : réserve auprès des refuges."),
-        ("These huts take their bookings themselves. Tap Book through the hut to call, email or visit their site.", "Ces refuges prennent eux-mêmes leurs réservations. Touche Réserver auprès du refuge pour appeler, écrire ou voir leur site."), ("Which hut?", "Quel refuge ?"),
+        ("These huts take their bookings themselves. Tap Book through the hut to call, email or visit its site.", "Ces refuges prennent eux-mêmes leurs réservations. Touche Réserver auprès du refuge pour appeler, écrire ou voir son site."), ("Which hut?", "Quel refuge ?"), 
 
         // Lenny plan and search
         ("Your plan", "Ton plan"), ("Check your plan", "Vérifie ton plan"), ("{} stops, one hut each", "{1} étapes, un refuge chacune"),
@@ -320,6 +320,8 @@ enum FrenchStrings {
         ("Saved. Tap to remove", "Enregistré. Touche pour retirer"), ("Plans", "Plans"), ("No plans yet", "Aucun plan"),
         ("Plan a trip with Lenny, then save it here to book later.", "Prépare un voyage avec Lenny, puis enregistre-le ici pour réserver plus tard."),
         ("Delete this plan?", "Supprimer ce plan ?"), ("Across {}", "À travers {1}"),
+        ("Leave", "Quitter"), ("Leave the plan", "Quitter le plan"), ("Stay", "Rester"),
+        ("Leave this plan? It isn't saved yet.", "Quitter ce plan ? Il n'est pas enregistré."),
         ("Make it a loop", "En faire une boucle"), ("Make it one way", "En faire un aller simple"),
         ("Beginner hiker", "Randonneur débutant"), ("Regular hiker", "Randonneur régulier"), ("Expert hiker", "Randonneur expert"),
         ("Easy days, then: huts closer together, less climbing, and a stop where a day was long.", "Des étapes faciles, alors : des refuges plus proches, moins de dénivelé, et une halte là où la journée était longue."),

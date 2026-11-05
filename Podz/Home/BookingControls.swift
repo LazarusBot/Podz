@@ -6,14 +6,17 @@ import SwiftUI
 /// minus, the answer, a round plus and the continue button.
 struct BookingControlStack: View {
     @ObservedObject var flow: BookingFlow
-    /// The listed hut whose contact choices are open ("Book through the hut").
-    @State private var contactPod: Pod?
-    /// With several listed stops: which hut to book through.
-    @State private var choosingHut = false
     /// Leaves the flow: from the first question, or once it's booked.
     var onLeave: () -> Void
     /// After booking: go look at the reservations.
     var onViewReservations: () -> Void
+    /// Leaves the whole plan flow at once (a small close button beside back);
+    /// nil where there is nothing to leave (the pod detail).
+    var onExit: (() -> Void)?
+    /// Opens the Call / Email / website choices of a listed hut.
+    var onBookListed: ((Pod) -> Void)?
+    /// With several listed stops: which hut to book through.
+    @State private var choosingHut = false
 
     var body: some View {
         HStack(spacing: 13) {
@@ -26,6 +29,11 @@ struct BookingControlStack: View {
                 DetailBackButton { flow.back(onLeave: onLeave) }
                     .disabled(flow.status == .booking)
                     .opacity(flow.status == .booking ? 0.45 : 1)
+                // A small close button: out of the whole flow in one tap.
+                if let onExit, flow.status != .booking {
+                    CloseButton(size: 83, action: onExit)
+                        .transition(.opacity)
+                }
                 primaryPill
             }
         }
@@ -39,17 +47,9 @@ struct BookingControlStack: View {
         .bookingDateSheet(flow)
         .confirmationDialog(tr("Which hut?"), isPresented: $choosingHut, titleVisibility: .visible) {
             ForEach(flow.entries) { entry in
-                Button(entry.pod.name) { contactPod = entry.pod }
+                Button(entry.pod.name) { onBookListed?(entry.pod) }
             }
             Button(tr("Cancel"), role: .cancel) {}
-        }
-        .background {
-            if let pod = contactPod {
-                Color.clear.hutContactDialog(for: pod, isPresented: Binding(
-                    get: { contactPod != nil },
-                    set: { if !$0 { contactPod = nil } }
-                ))
-            }
         }
     }
 
@@ -67,10 +67,10 @@ struct BookingControlStack: View {
     private var primary: (title: String, isHighlighted: Bool, isEnabled: Bool, action: () -> Void) {
         switch (flow.status, flow.stage) {
         case _ where flow.bookableCount == 0:
-            // All listed: nothing to reserve here, so the pill books through
-            // the hut (the rows still open each one).
-            return ("Book through the hut", true, true, {
-                if flow.entries.count == 1 { contactPod = flow.entries[0].pod } else { choosingHut = true }
+            // All listed: nothing to reserve here, so the classic pill books
+            // through the hut (each row has its own caption too).
+            return ("e-Book", true, true, {
+                if flow.entries.count == 1 { onBookListed?(flow.entries[0].pod) } else { choosingHut = true }
             })
         case (.booked, _):
             return ("View reservations", true, true, onViewReservations)
