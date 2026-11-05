@@ -134,17 +134,36 @@ final class LennySearchViewModel: ObservableObject {
         steps[0].subtitle = request.mentions.map(\.name).joined(separator: ", ") + (request.understood.map { "  ·  \($0)" } ?? "")
         steps[0].isDone = true
 
-        // 2 - Place every stop at once (pods and regions already know where
-        // they are; the rest are geocoded side by side).
-        async let located = Self.locate(request.mentions)
-        try? await Task.sleep(nanoseconds: 450_000_000)
-        let stops = await located
-        guard !Task.isCancelled else { return }
-        steps[1].subtitle = "Around each stop"
-        steps[1].isDone = true
+        // An area on its own ("Alps", "Scotland"): Lenny plans a route across
+        // it, a day's walk between huts, instead of one stop.
+        var areaStops: [JourneyStop] = []
+        var areaName: String?
+        if let area = LennyAreaRoute.area(for: request, pods: allPods) {
+            let photoIDs = Set(PodsStore.shared.primaryPhotoByPodId.filter { !$0.value.isEmpty }.keys)
+            areaStops = LennyAreaRoute.stops(in: area, count: LennyAreaRoute.stopCount(for: request), wants: request.facilities, photoIDs: photoIDs)
+            areaName = area.name
+        }
 
-        // 3 - Pods around each stop, nearest first, and some along the way.
-        journeyStops = Self.journey(from: stops, pods: allPods, wants: request.facilities)
+        if let areaName, !areaStops.isEmpty {
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            guard !Task.isCancelled else { return }
+            steps[0].title = "Planning \(Self.stopCount(areaStops.count)) across \(areaName)."
+            steps[1].subtitle = "A day's walk apart"
+            steps[1].isDone = true
+            journeyStops = areaStops
+        } else {
+            // 2 - Place every stop at once (pods and regions already know where
+            // they are; the rest are geocoded side by side).
+            async let located = Self.locate(request.mentions)
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            let stops = await located
+            guard !Task.isCancelled else { return }
+            steps[1].subtitle = "Around each stop"
+            steps[1].isDone = true
+
+            // 3 - Pods around each stop, nearest first, and some along the way.
+            journeyStops = Self.journey(from: stops, pods: allPods, wants: request.facilities)
+        }
         try? await Task.sleep(nanoseconds: 350_000_000)
         guard !Task.isCancelled else { return }
         let nothing = journeyStops.allSatisfy { $0.pods.isEmpty }
