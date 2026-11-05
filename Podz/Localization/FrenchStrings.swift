@@ -104,6 +104,7 @@ enum FrenchStrings {
         ("May", "mai"), ("June", "juin"), ("July", "juillet"), ("August", "août"),
         ("September", "septembre"), ("October", "octobre"), ("November", "novembre"), ("December", "décembre"),
         ("Open now", "Ouvert"), ("Closed until {}", "Fermé jusqu'en {1}"),
+        ("Listed", "Référencé"),
 
         // Tabs, titles
         ("Home", "Accueil"), ("Likes", "Favoris"), ("Profile", "Profil"),

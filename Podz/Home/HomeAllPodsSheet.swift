@@ -87,7 +87,7 @@ struct HomeAllPodsSheet: View {
                             photoURL: photoURLs[pod.id],
                             zoomNamespace: zoomNamespace,
                             subtitleOverride: subtitle(for: pod),
-                            detailLine: detail(for: pod),
+                            detailLine: HomePodCard.detailLine(for: pod),
                             onTap: { selectedPod = pod }
                         )
                     }
@@ -147,13 +147,5 @@ struct HomeAllPodsSheet: View {
         case .best, .name:
             return nil
         }
-    }
-
-    /// What a traveler weighs: the price and whether it's open.
-    private func detail(for pod: Pod) -> String? {
-        var parts: [String] = []
-        if let price = pod.priceText { parts.append(price) }
-        if let status = OpeningStatus.evaluate(pod.openingHours) { parts.append(status.label) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }

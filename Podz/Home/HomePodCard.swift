@@ -27,6 +27,21 @@ struct HomePodCard: View {
         return parts.joined(separator: " · ")
     }
 
+    /// What a traveler weighs, under the name: the price and whether it's open
+    /// ("45 € / night · Open now"). Nil when neither is known.
+    static func detailLine(for pod: Pod) -> String? {
+        var parts: [String] = []
+        if let price = pod.priceText { parts.append(price) }
+        if let status = OpeningStatus.evaluate(pod.openingHours) { parts.append(status.label) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// A " · " line in the app's language, piece by piece (the French table
+    /// knows "24 beds" and "Open now", not the whole line).
+    private static func translated(_ line: String) -> String {
+        line.components(separatedBy: " · ").map(tr).joined(separator: " · ")
+    }
+
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 12) {
@@ -44,12 +59,12 @@ struct HomePodCard: View {
                         .font(AppFont.semiBoldLabel(16))
                         .foregroundColor(.homeText)
                         .lineLimit(1)
-                    Text(subtitle)
+                    Text(Self.translated(subtitle))
                         .font(AppFont.regularLabel(14))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)
                     if let detailLine {
-                        T(detailLine)
+                        Text(Self.translated(detailLine))
                             .font(AppFont.regularLabel(12))
                             .foregroundColor(.homeSubtitle.opacity(0.8))
                             .lineLimit(1)

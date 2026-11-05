@@ -253,6 +253,9 @@ struct MinimalHomeView: View {
                         zoomNamespace: zoomNamespace,
                         zoomID: zoomID,
                         subtitleOverride: subtitle?(pod),
+                        // The price and whether it's open, as in See all:
+                        // what a traveler weighs before opening a card.
+                        detailLine: HomePodCard.detailLine(for: pod),
                         onTap: {
                             selectedZoomID = zoomID
                             selectedPod = pod
