@@ -64,10 +64,17 @@ func hutWebURL(_ link: String) -> URL? {
     return components.url
 }
 
+/// OpenStreetMap often puts several values in one field ("+33 4…; +39 0…"):
+/// the first one is used.
+private func firstValue(_ value: String) -> String {
+    value.split(whereSeparator: { ";,/|".contains($0) }).first.map(String.init)?.trimmingCharacters(in: .whitespaces) ?? value
+}
+
 /// `tel:` with only what a dialler understands: digits and a leading +.
 /// Pauses, USSD codes (* #) and anything else are dropped.
-func hutPhoneURL(_ phone: String) -> URL? {
-    guard phone.count <= hutFieldLimit else { return nil }
+func hutPhoneURL(_ value: String) -> URL? {
+    guard value.count <= hutFieldLimit else { return nil }
+    let phone = firstValue(value)
     var digits = phone.filter { $0.isASCII && $0.isNumber }
     if phone.trimmingCharacters(in: .whitespaces).hasPrefix("+") { digits = "+" + digits }
     guard digits.filter(\.isNumber).count >= 4 else { return nil }
@@ -76,8 +83,9 @@ func hutPhoneURL(_ phone: String) -> URL? {
 
 /// `mailto:` for one plain address: no extra recipients, headers or body
 /// smuggled in through "?" or "&", and the subject is encoded by us.
-func hutMailURL(_ email: String, subject: String? = nil) -> URL? {
-    guard email.count <= hutFieldLimit,
+func hutMailURL(_ value: String, subject: String? = nil) -> URL? {
+    let email = firstValue(value)
+    guard value.count <= hutFieldLimit,
           email.range(of: #"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"#, options: .regularExpression) != nil
     else { return nil }
     var components = URLComponents()
