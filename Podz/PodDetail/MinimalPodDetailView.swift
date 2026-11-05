@@ -30,6 +30,9 @@ struct MinimalPodDetailView: View {
     @StateObject private var externalBooking: BookingFlow
     @State private var isExternalFlow = false
     @ObservedObject private var contactTracker = HutContactTracker.shared
+    /// Lenny asking how a finished stay went (same card layout).
+    @ObservedObject private var feedbackStore = StayFeedbackStore.shared
+    @StateObject private var feedback = StayFeedbackFlow()
     @State private var showHutContact = false
     @State private var showFolderPicker = false
     @ObservedObject private var likesStore = LikesStore.shared
@@ -85,8 +88,8 @@ struct MinimalPodDetailView: View {
                             VStack(spacing: 0) {
                                 // Back from the hut, the page empties: only the
                                 // pod's photo and Lenny's question remain.
-                                if !asksIfBooked && !isBooking { titleBlock }
-                                if asksIfBooked {
+                                if !asksSomething && !isBooking { titleBlock }
+                                if asksSomething {
                                     EmptyView()
                                 } else if isBooking {
                                     // What's been decided so far, to change on its own.
@@ -100,7 +103,7 @@ struct MinimalPodDetailView: View {
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .contentShape(Rectangle())
-                            .onTapGesture { if !isBooking && !asksIfBooked { toggleExtended() } }
+                            .onTapGesture { if !isBooking && !asksSomething { toggleExtended() } }
                             .transition(Self.fadeIn)
 
                             // The buttons float over the page: keep their room.
@@ -193,6 +196,13 @@ struct MinimalPodDetailView: View {
         // spring in, with a tap.
         .animation(.smooth(duration: 0.6), value: asksIfBooked)
         .sensoryFeedback(.impact(weight: .medium), trigger: asksIfBooked) { _, asks in asks }
+        .animation(.smooth(duration: 0.6), value: asksHowItWent)
+        .sensoryFeedback(.impact(weight: .medium), trigger: asksHowItWent) { _, asks in asks }
+        .onChange(of: asksHowItWent) { _, asks in
+            guard asks else { return }
+            feedback.restart()
+            withAnimation(.smooth(duration: 0.45)) { isExtended = false }
+        }
         // Back from the hut: the prompt is on the stack, so the page closes.
         .onChange(of: asksIfBooked) { _, asks in
             if asks { withAnimation(.smooth(duration: 0.45)) { isExtended = false } }
@@ -301,6 +311,9 @@ struct MinimalPodDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             if isBooking {
                 LennyReply(message: activeBooking.replyMessage, mood: activeBooking.mood)
+            } else if asksHowItWent {
+                StayFeedbackLenny(flow: feedback, podName: pod.name)
+                    .transition(.risesIn(after: 0.3))
             } else if asksIfBooked {
                 // Back from the hut: the question rises into place a beat after
                 // the photo has settled into its card.
@@ -391,7 +404,15 @@ struct MinimalPodDetailView: View {
     /// The prompt's layout, and the booking's, in the app or through the hut: the
     /// photo as a card, nothing else but Lenny, so the whole moment looks the same
     /// from the question to "Booked!".
-    private var showsCard: Bool { (asksIfBooked || isBooking) && !isExtended }
+    private var showsCard: Bool { (asksSomething || isBooking) && !isExtended }
+
+    /// Lenny has a question on the page (back from the hut, or the stay is over).
+    private var asksSomething: Bool { asksIfBooked || asksHowItWent }
+
+    /// This hut's stay has ended and Lenny asks how it went.
+    private var asksHowItWent: Bool {
+        !isBooking && !asksIfBooked && feedbackStore.askNow && feedbackStore.pendingStay?.podId == pod.id
+    }
 
     /// The old content leaves quickly, the new arrives a beat later, so the
     /// photo's move is the thing you see.
@@ -443,6 +464,20 @@ struct MinimalPodDetailView: View {
             )
             .padding(.horizontal, Self.cardMargin)
             .padding(.top, 24)
+        } else if asksHowItWent {
+            // The stay is over: how did it go. Leaving counts as "not now".
+            StayFeedbackControls(
+                flow: feedback,
+                onLeave: { feedback.skip(); onBack() },
+                onViewReservations: {
+                    TabRouter.shared.showsReservationsRequested = true
+                    feedback.finish()
+                    onBack()
+                }
+            )
+            .padding(.horizontal, Self.cardMargin)
+            .padding(.top, 24)
+            .transition(.risesIn(after: 0.45))
         } else if asksIfBooked {
             // Back from the hut: one answer to give. (Not yet is a caption under
             // Lenny's question.)

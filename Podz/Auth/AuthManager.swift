@@ -247,6 +247,7 @@ final class AuthManager: ObservableObject {
     private func forgetLocalData(of userId: UUID?) {
         TripPassStore.shared.clear()
         ReservationsStore.shared.clear()
+        StayFeedbackStore.shared.clear()
         if let userId { OfflineStorage.removeFiles(of: userId) }
     }
     
