@@ -24,16 +24,16 @@ struct BookingControlStack: View {
                 picker
                     .transition(.opacity)
             } else {
+                // The close button comes first: out of the whole flow in one tap.
+                if let onExit, flow.status != .booking {
+                    CloseButton(size: 83, action: onExit)
+                        .transition(.opacity)
+                }
                 // While it books there's nothing to step back to: the pill
                 // rests instead of taking a tap that does nothing.
                 DetailBackButton { flow.back(onLeave: onLeave) }
                     .disabled(flow.status == .booking)
                     .opacity(flow.status == .booking ? 0.45 : 1)
-                // A small close button: out of the whole flow in one tap.
-                if let onExit, flow.status != .booking {
-                    CloseButton(size: 83, action: onExit)
-                        .transition(.opacity)
-                }
                 primaryPill
             }
         }
