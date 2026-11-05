@@ -124,7 +124,7 @@ struct HomeMosaic: View {
                             .font(AppFont.semiBoldLabel(large ? 17 : 13))
                             .lineLimit(large ? 2 : 1)
                         if large, let beds = pod.bedsTotal {
-                            Text("\(beds) \(beds == 1 ? "bed" : "beds")")
+                            T("\(beds) \(beds == 1 ? "bed" : "beds")")
                                 .font(AppFont.regularLabel(13))
                                 .opacity(0.85)
                         }

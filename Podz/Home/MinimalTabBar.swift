@@ -27,7 +27,7 @@ struct MinimalTabBar: View {
                     tabIcon(tab)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(tab.rawValue)
+                .accessibilityLabel(tr(tab.rawValue))
                 .accessibilityAddTraits(tab == selected ? .isSelected : [])
             }
         }

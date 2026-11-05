@@ -26,14 +26,14 @@ struct ShareFolderSheet: View {
                 CloseButton(action: { dismiss() })
                 Spacer()
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 24)
             .padding(.top, 16)
 
             VStack(spacing: 4) {
                 T("Share \"\(folder.name)\"")
                     .font(AppFont.semiBoldLabel(20))
                     .foregroundColor(.homeText)
-                T("Friends you turn on can view this folder, read-only.")
+                T("Friends you share it with can view this folder, read-only.")
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .multilineTextAlignment(.center)
@@ -43,11 +43,11 @@ struct ShareFolderSheet: View {
             .padding(.bottom, 16)
 
             if friendsStore.friends.isEmpty {
-                T("Add some friends first — nobody to share with yet.")
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(.homeSubtitle)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 20)
+                // The empty-page recipe; no caption, the friends are in Profile.
+                LennyEmptyState(
+                    title: "No friends yet",
+                    line: "Add friends in Profile, then share this folder with them."
+                )
                 Spacer()
             } else if let userId = auth.session?.user.id {
                 ScrollView {

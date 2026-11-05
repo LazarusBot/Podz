@@ -41,16 +41,13 @@ struct ProfileView: View {
             }
         }
         .background(Color.homeBackground.ignoresSafeArea())
-        // Everything under Profile follows the system appearance, and the
-        // pages it opens have their own bottom bar, so the tab bar steps
-        // aside while one is showing.
+        // The pages Profile opens have their own bottom bar, so the tab bar
+        // steps aside while one is showing.
         .onAppear {
-            AppearanceState.shared.followsSystem = true
             openRequestedPage()
         }
         .onChange(of: router.showsReservationsRequested) { _, _ in openRequestedPage() }
         .onDisappear {
-            AppearanceState.shared.followsSystem = false
             TabBarVisibilityState.shared.isHidden = false
         }
         .onChange(of: isShowingSection) { _, showing in

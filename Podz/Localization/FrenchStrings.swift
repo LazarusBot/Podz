@@ -341,6 +341,10 @@ enum FrenchStrings {
         ("Couldn't open your photo.", "Impossible d'ouvrir ta photo."), ("Couldn't prepare the photo.", "Impossible de préparer la photo."),
 
         ("Expanded", "Déplié"), ("Collapsed", "Replié"),
+        ("Close", "Fermer"), ("Change profile photo", "Changer la photo de profil"), ("Lenny is typing", "Lenny écrit"),
+        ("Listed", "Référencé"),
+        ("Friends you share it with can view this folder, read-only.", "Les amis avec qui tu le partages peuvent voir ce dossier, en lecture seule."),
+        ("Add friends in Profile, then share this folder with them.", "Ajoute des amis dans ton profil, puis partage ce dossier avec eux."),
 
         // About, legal, sign-up
         ("About Podz", "À propos de Podz"), ("Version {}", "Version {1}"), ("Terms of Service", "Conditions d'utilisation"),

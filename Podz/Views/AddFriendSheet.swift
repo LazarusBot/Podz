@@ -33,7 +33,7 @@ struct AddFriendSheet: View {
                 CloseButton(action: { dismiss() })
                 Spacer()
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 24)
             .padding(.top, 16)
 
             T("Add a friend")
@@ -52,7 +52,7 @@ struct AddFriendSheet: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Capsule().fill(Color.homePill))
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 24)
             // Debounced via .task(id:) — every keystroke cancels the
             // previous in-flight search and starts a fresh one after a
             // short pause, instead of firing a request per character.
@@ -95,7 +95,7 @@ struct AddFriendSheet: View {
             Spacer()
             statusButton(for: profile)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .padding(.vertical, 8)
     }
 

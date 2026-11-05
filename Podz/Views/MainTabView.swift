@@ -4,7 +4,6 @@ struct MainTabView: View {
     @StateObject private var auth = AuthManager.shared
     @StateObject private var scrollState = ScrollTrackingState.shared
     @StateObject private var tabBarVisibility = TabBarVisibilityState.shared
-    @StateObject private var appearance = AppearanceState.shared
     @State private var selectedTab: TravelerTab = .feed
     @StateObject private var tabRouter = TabRouter.shared
     @StateObject private var contactTracker = HutContactTracker.shared
@@ -114,7 +113,6 @@ struct MainTabView: View {
             selectedTab = .feed
             tabRouter.homeRequested = false
         }
-        .preferredColorScheme(selectedTab == .feed || selectedTab == .likes || appearance.followsSystem ? nil : .light)
     }
 }
 
