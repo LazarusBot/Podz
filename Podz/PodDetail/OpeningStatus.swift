@@ -14,14 +14,17 @@ enum OpeningStatus {
     private static let monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     private static let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 
+    /// Built once: cards ask for every hut each time they draw.
+    private static let regex: NSRegularExpression = {
+        let names = months.joined(separator: "|")
+        return try! NSRegularExpression(pattern: "\\b(\(names))[a-z]*\\.?\\s*(?:\\d{1,2})?\\s*[-–]\\s*(\(names))[a-z]*\\.?(.{0,14})")
+    }()
+
     static func evaluate(_ raw: String?, today: Date = Date()) -> Result? {
         guard let text = hutClean(raw)?.lowercased() else { return nil }
         if text.contains("24/7") { return Result(isOpen: true, label: "Open now") }
 
-        let names = months.joined(separator: "|")
-        let pattern = "\\b(\(names))[a-z]*\\.?\\s*(?:\\d{1,2})?\\s*[-–]\\s*(\(names))[a-z]*\\.?(.{0,14})"
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+        guard let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
               let startRange = Range(match.range(at: 1), in: text),
               let endRange = Range(match.range(at: 2), in: text),
               let start = months.firstIndex(of: String(text[startRange])),
