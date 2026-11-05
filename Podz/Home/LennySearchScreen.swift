@@ -33,6 +33,8 @@ struct LennySearchScreen: View {
                     stops: planStops,
                     photoURLs: podsStore.primaryPhotoByPodId,
                     request: lenny.request,
+                    isLoop: lenny.routeIsLoop,
+                    planTitle: lenny.planTitle,
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
                     onOpenPod: { selectedPod = $0 },
                     onFinish: {
@@ -54,8 +56,17 @@ struct LennySearchScreen: View {
 
                 // Lenny's answer to the route: typing, then the result.
                 if !isEditingRoute {
-                    LennyReply(message: replyMessage, mood: mood)
-                        .padding(.horizontal, 24)
+                    VStack(alignment: .leading, spacing: 4) {
+                        LennyReply(message: replyMessage, mood: mood)
+                        if lenny.phase == .results, lenny.canRefine, !failed {
+                            ForEach(refinements, id: \.title) { reply in
+                                BookingQuickReply(reply: reply)
+                                    // Lined up with the bubble's text, past the avatar.
+                                    .padding(.leading, 38 + 18)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
                         // Just above the pill row (83 high, 40 + safe area up).
                         .padding(.bottom, 40 + 83 + 20)
                         .transition(.opacity)
@@ -154,7 +165,37 @@ struct LennySearchScreen: View {
     private var mood: LennyMood {
         guard lenny.phase == .results else { return .working }
         if isEditingRoute { return .idle }
-        return failed ? .sorry : .happy
+        return failed || lenny.refineFailed ? .sorry : .happy
+    }
+
+    /// What Lenny offers to change on a route across an area, one tap each.
+    private var refinements: [BookingFlow.QuickReply] {
+        let options = lenny.routeOptions
+        var replies: [BookingFlow.QuickReply] = []
+        replies.append(.init(title: options.loop ? "Make it one way" : "Make it a loop") {
+            lenny.refine(
+                done: options.loop ? "One way again." : "Done, it comes back to where it starts.",
+                failed: "I can't close a loop with the huts around there."
+            ) { $0.loop.toggle() }
+        })
+        // The two other walkers: closer huts and a stop in a long day, or longer days.
+        let levels: [(LennyAreaRoute.Options.Level, String, String)] = [
+            (.beginner, "Beginner hiker", "Easy days, then: huts closer together, less climbing, and a stop where a day was long."),
+            (.regular, "Regular hiker", "Regular days again."),
+            (.expert, "Expert hiker", "Long days for an expert, then.")
+        ]
+        for (level, title, done) in levels where level != options.level {
+            replies.append(.init(title: title) {
+                lenny.refine(done: done, failed: "I can't find a route with that.") { $0.level = level }
+            })
+        }
+        replies.append(.init(title: options.bookableOnly ? "Include listed huts" : "Only huts I can book") {
+            lenny.refine(
+                done: options.bookableOnly ? "Listed huts are back in." : "Only huts you can book here.",
+                failed: "There aren't enough huts you can book there."
+            ) { $0.bookableOnly.toggle() }
+        })
+        return replies
     }
 
     /// "(3 guests · from Sat 31 Oct · 5 days)": what Lenny picked up besides
@@ -167,6 +208,7 @@ struct LennySearchScreen: View {
     private var replyMessage: String? {
         guard lenny.phase == .results else { return nil }
         if let error = lenny.errorMessage { return error }
+        if let note = lenny.refineNote { return note }
         switch foundCount {
         case 0: return "I couldn't find any huts on that route."
         case 1: return "I found 1 hut along your route\(understoodNote). Want to take a look?"

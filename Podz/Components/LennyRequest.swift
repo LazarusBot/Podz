@@ -28,6 +28,8 @@ struct LennyRequest {
     /// Facilities asked for ("showers", "drinking water"), as the labels pods
     /// store them. Huts that have them lead each stop.
     var facilities: [String] = []
+    /// The walker, when the sentence says ("a beginner hike", "for experts").
+    var level: LennyAreaRoute.Options.Level?
 
     /// How many nights each stop probably gets, from the stay the user gave.
     func suggestedNightsPerStop(stops: Int, maximum: Int) -> Int? {
@@ -43,6 +45,7 @@ struct LennyRequest {
         if let nights { parts.append("\(nights) \(nights == 1 ? "night" : "nights")") }
         else if let days { parts.append("\(days) \(days == 1 ? "day" : "days")") }
         if !facilities.isEmpty { parts.append("with \(LennyFacilities.phrase(facilities))") }
+        if let level, level != .regular { parts.append(level == .beginner ? "beginner pace" : "expert pace") }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
@@ -84,9 +87,21 @@ enum LennyRequestParser {
 
         request.guests = guests(in: folded)
         request.facilities = LennyFacilities.wanted(in: foldedWithoutNames(folded, known: known))
+        request.level = hikerLevel(in: folded)
         (request.days, request.nights) = stay(in: folded)
         request.startDate = startDate(in: text)
         return request
+    }
+
+    /// "beginner", "easy", "with kids" (and "débutant", "facile", "enfants") or
+    /// "expert", "experienced", "sporty" ("confirmé", "sportif").
+    private static func hikerLevel(in folded: String) -> LennyAreaRoute.Options.Level? {
+        func has(_ words: [String]) -> Bool {
+            words.contains { folded.range(of: "(?<![a-z])\($0)", options: .regularExpression) != nil }
+        }
+        if has(["beginner", "novice", "easy", "gentle", "kids", "children", "family", "debutant", "facile", "tranquille", "enfants", "famille"]) { return .beginner }
+        if has(["expert", "experienced", "advanced", "sporty", "athletic", "fit ", "confirme", "sportif", "experimente"]) { return .expert }
+        return nil
     }
 
     /// The sentence without the pods and regions it names, so a hut called

@@ -38,6 +38,8 @@ final class LennySearchViewModel: ObservableObject {
         var distancesKm: [UUID: Double] = [:]
         /// Why the first pod leads ("Closest to Lake Braies").
         var pickReason: String?
+        /// A stage of a walking route across an area: the picks are a day's walk apart.
+        var isStage = false
 
         /// "3.2 km" / "Under 1 km", when the pod's distance is known.
         func distanceText(for pod: Pod) -> String? {
@@ -59,6 +61,24 @@ final class LennySearchViewModel: ObservableObject {
     /// What Lenny understood from the sentence (places, guests, dates, stay).
     @Published var request: LennyRequest?
     private var searchTask: Task<Void, Never>?
+    /// The area a route was made across (Alps, Scotland), to reshape it.
+    private var area: LennyAreaRoute.Area?
+    private var areaStopCount = 4
+    @Published private(set) var routeOptions = LennyAreaRoute.Options()
+    @Published private(set) var routeIsLoop = false
+    /// Lenny's line after reshaping the route, and whether it didn't work.
+    @Published private(set) var refineNote: String?
+    @Published private(set) var refineFailed = false
+
+    /// What the plan is called when saved: "Across the Alps", or the places in order.
+    var planTitle: String? {
+        if let area { return tr("Across \(area.name)") }
+        let names = request?.mentions.map(\.name) ?? []
+        return names.isEmpty ? nil : names.joined(separator: " → ")
+    }
+
+    /// A route across an area can be reshaped (loop, shorter days, bookable huts only).
+    var canRefine: Bool { area != nil && !journeyStops.isEmpty }
 
     /// Leaves the search: stops whatever is still running and clears it all.
     func forceReset() {
@@ -69,6 +89,41 @@ final class LennySearchViewModel: ObservableObject {
         journeyStops = []
         request = nil
         errorMessage = nil
+        resetRoute()
+    }
+
+    private func resetRoute() {
+        area = nil
+        routeOptions = LennyAreaRoute.Options()
+        routeIsLoop = false
+        refineNote = nil
+        refineFailed = false
+    }
+
+    /// Reshapes the route across the area: `change` edits the options; Lenny
+    /// says `done`, or `failed` when no route fits (the route then stays as it was).
+    func refine(done: String, failed: String, _ change: (inout LennyAreaRoute.Options) -> Void) {
+        guard let area else { return }
+        var options = routeOptions
+        change(&options)
+        let route = LennyAreaRoute.stops(
+            in: area, count: areaStopCount, wants: request?.facilities ?? [],
+            photoIDs: Self.photoIDs, options: options
+        )
+        if route.stops.isEmpty || (options.loop && !route.isLoop) {
+            refineNote = failed
+            refineFailed = true
+            return
+        }
+        routeOptions = options
+        routeIsLoop = route.isLoop
+        journeyStops = route.stops
+        refineNote = done
+        refineFailed = false
+    }
+
+    private static var photoIDs: Set<UUID> {
+        Set(PodsStore.shared.primaryPhotoByPodId.filter { !$0.value.isEmpty }.keys)
     }
     
     /// Starts a search for `text` in a task the view model owns, so leaving
@@ -80,6 +135,7 @@ final class LennySearchViewModel: ObservableObject {
         errorMessage = nil
         journeyStops = []
         request = nil
+        resetRoute()
         // The steps are on screen from the first frame, all still to do.
         steps = Self.initialSteps()
         phase = .searching
@@ -138,10 +194,17 @@ final class LennySearchViewModel: ObservableObject {
         // it, a day's walk between huts, instead of one stop.
         var areaStops: [JourneyStop] = []
         var areaName: String?
-        if let area = LennyAreaRoute.area(for: request, pods: allPods) {
-            let photoIDs = Set(PodsStore.shared.primaryPhotoByPodId.filter { !$0.value.isEmpty }.keys)
-            areaStops = LennyAreaRoute.stops(in: area, count: LennyAreaRoute.stopCount(for: request), wants: request.facilities, photoIDs: photoIDs)
-            areaName = area.name
+        if let found = LennyAreaRoute.area(for: request, pods: allPods) {
+            let count = LennyAreaRoute.stopCount(for: request)
+            var options = LennyAreaRoute.Options()
+            options.level = request.level ?? .regular
+            areaStops = LennyAreaRoute.stops(in: found, count: count, wants: request.facilities, photoIDs: Self.photoIDs, options: options).stops
+            areaName = found.name
+            if !areaStops.isEmpty {
+                area = found
+                areaStopCount = count
+                routeOptions.level = request.level ?? .regular
+            }
         }
 
         if let areaName, !areaStops.isEmpty {
