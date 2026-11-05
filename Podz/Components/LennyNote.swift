@@ -89,7 +89,7 @@ private struct LennyAsksModifier: ViewModifier {
                 if isPresented {
                     ZStack(alignment: .bottom) {
                         // The page steps back; a tap on it keeps things as they were.
-                        Color.homeBackground.opacity(0.85)
+                        Color.homeBackground.opacity(0.97)
                             .ignoresSafeArea()
                             .onTapGesture { keepThings() }
 
