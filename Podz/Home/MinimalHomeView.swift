@@ -71,9 +71,7 @@ struct MinimalHomeView: View {
             return
         }
         let found = podsStore.pods.filter { pod in
-            pod.name.localizedCaseInsensitiveContains(text)
-                || pod.country.localizedCaseInsensitiveContains(text)
-                || (pod.region?.localizedCaseInsensitiveContains(text) ?? false)
+            LennyText.matches(text, in: [pod.name, pod.country, pod.region])
         }
         searchResults = PodQuality.ranked(found, photoIDs: photoIDs)
     }
