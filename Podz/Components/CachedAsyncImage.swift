@@ -85,12 +85,9 @@ final class ImageCache {
     }
 }
 
-/// Shared download + decode pipeline — used by `CachedAsyncImage` and by
-/// anywhere else that needs a `UIImage` off a URL without the view-level
-/// placeholder/fade machinery (PodDetailView's share card). Checking the
-/// cache is left to each caller, since what "already have it" should do
-/// differs (CachedAsyncImage avoids a placeholder flash; the share card
-/// just skips straight to using it).
+/// Shared download + decode pipeline, used by `CachedAsyncImage` and the
+/// offline pack (`ImageCache.keepForOffline`). Checking the cache is left to
+/// each caller.
 enum ImageLoader {
     enum LoadError: Error {
         case badURL

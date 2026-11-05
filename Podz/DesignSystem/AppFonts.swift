@@ -2,48 +2,16 @@ import SwiftUI
 import UIKit
 import CoreText
 
-/// Typography tokens extracted from Figma.
-///
-/// The design uses two font families:
-/// - "Darker Grotesque" (Black weight) — pill labels and large numbers
-/// - "Inter" (Bold/Medium) — list titles and helper text
-///
-/// **Custom Fonts Setup (Optional for pixel-perfect design):**
-/// 1. Download "Darker Grotesque" and "Inter" from fonts.google.com
-/// 2. Drag the .ttf files into Xcode (check "Copy items if needed")
-/// 3. Add them to Info.plist under "Fonts provided by application" (`UIAppFonts`)
-/// 4. These functions automatically detect and use custom fonts with fallbacks to SF Pro
-///
-/// The app works perfectly fine with system fonts alone—custom fonts are purely optional.
+/// The app's type: Inter (`design.md`, Type), shipped as one variable font
+/// (`Podz/Fonts`, listed in Info.plist's `UIAppFonts`), with the system font
+/// as the fallback.
 enum AppFont {
-    static let darkerGrotesqueAvailable = UIFont.familyNames.contains { $0.contains("Darker Grotesque") }
-
-    /// Big pill labels ("Slovenia", "Filters", stepper values) — 14pt Black
-    static func pillLabel(_ size: CGFloat = 14) -> Font {
-        darkerGrotesqueAvailable
-            ? .custom("DarkerGrotesque-Black", size: size)
-            : .system(size: size, weight: .black)
-    }
-
-    static func mediumLabel(_ size: CGFloat = 14) -> Font {
-        interVariable(size: size, weight: 500)
-    }
-
-    /// Real Inter at SemiBold (600) — one step up from `mediumLabel`'s
-    /// 500, for a name that needs to read as clearly bolder than the
-    /// regular-weight text next to it (e.g. a comment's author name
-    /// above its own body) without going as heavy as a genuine Bold.
+    /// Inter at SemiBold (600): titles, names, highlighted labels.
     static func semiBoldLabel(_ size: CGFloat = 14) -> Font {
         interVariable(size: size, weight: 600)
     }
 
-    /// Real Inter, but at Regular (400) — for spots that had been
-    /// silently rendering as plain SF Pro this whole time (Profile's
-    /// rows, `SectionLabel`) thanks to the `.custom("Inter-X", ...)` bug
-    /// `interVariable` fixes elsewhere. That accidental system-font look
-    /// read as lighter/more elegant than genuine Inter at Medium/Bold, so
-    /// this is the closer match — real Inter, just a lighter weight,
-    /// rather than falling back to the system font outright.
+    /// Inter at Regular (400): body copy, captions, pill labels.
     static func regularLabel(_ size: CGFloat = 14) -> Font {
         interVariable(size: size, weight: 400)
     }

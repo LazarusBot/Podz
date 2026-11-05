@@ -169,7 +169,6 @@ enum FrenchStrings {
 
         // Lenny on the pod
         ("{} free tonight. Tell me your dates and I'll book it.", "{1} libres ce soir. Dis-moi tes dates et je réserve."),
-        ("{} bed", "{1} lit"),
         ("Full tonight. Another date may work: tell me when and I'll check.", "Complet ce soir. Une autre date peut marcher : dis-moi quand et je regarde."),
         ("You can book this hut right here. Tell me your dates.", "Tu peux réserver ce refuge ici. Dis-moi tes dates."),
         ("Open {}. Call ahead, as huts fill up.", "Ouvert {1}. Appelle avant, les refuges se remplissent vite."),
@@ -217,7 +216,6 @@ enum FrenchStrings {
         ("{} is listed only, so book it through the hut.", "{1} est seulement référencé : réserve auprès du refuge."),
         ("{} of the huts are listed only, so book them through the huts.", "{1} des refuges sont seulement référencés : réserve auprès des refuges."),
         ("These huts take their bookings themselves. Open one to call, email or visit its site.", "Ces refuges prennent eux-mêmes leurs réservations. Ouvre-en un pour appeler, écrire ou voir son site."),
-        ("{} beds free tonight. Tap for the details.", "{1} lits libres ce soir. Touche pour les détails."),
 
         // Lenny plan and search
         ("Your plan", "Ton plan"), ("Check your plan", "Vérifie ton plan"), ("{} stops, one pod each", "{1} étapes, un refuge chacune"),
@@ -242,7 +240,6 @@ enum FrenchStrings {
         ("Remove", "Retirer"), ("Cancel reservation", "Annuler la réservation"),
         ("This cancels all {} stays and can't be undone.", "Cela annule les {1} séjours, sans retour possible."),
         ("This only removes it from your list. To cancel the stay itself, tell the hut.", "Cela ne fait que le retirer de ta liste. Pour annuler le séjour, préviens le refuge."),
-        ("This can't be undone — you'll need to reserve again if you change your mind.", "Impossible de revenir en arrière : il faudra réserver à nouveau si tu changes d'avis."),
         ("Another tip", "Un autre conseil"), ("No trips yet", "Pas encore de voyage"),
         ("Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you.", "Dis à Lenny où tu veux aller et pour combien de temps. Il trouve les refuges et planifie les séjours."),
         ("Planned with Lenny", "Planifié avec Lenny"), ("Pod", "Refuge"), ("cancelled", "annulé"),
@@ -250,7 +247,6 @@ enum FrenchStrings {
         ("{}  ·  {}", "{1}  ·  {2}"), ("{}  ·  {}  ·  {}", "{1}  ·  {2}  ·  {3}"),
         ("Booked with the hut", "Réservé auprès du refuge"), ("Cancelled", "Annulé"),
         ("Starts today", "Commence aujourd'hui"), ("Starts tomorrow", "Commence demain"), ("Starts in {} days", "Commence dans {1} jours"),
-        ("Couldn't add to Wallet", "Impossible d'ajouter à Wallet"),
         ("Copied", "Copié"), ("Confirmation code", "Code de confirmation"),
         ("Saved on this phone. It opens without signal.", "Enregistré sur ce téléphone. Il s'ouvre sans réseau."),
         ("View pod", "Voir le refuge"), ("Wallet isn't available on this device.", "Wallet n'est pas disponible sur cet appareil."),
@@ -274,7 +270,7 @@ enum FrenchStrings {
         ("Tap a stay to see its pod again, and you can cancel the whole trip from here if plans change.", "Touche un séjour pour revoir son refuge, et annule tout le voyage d'ici si les plans changent."),
 
         // Likes, folders, profile
-        ("Likes", "Favoris"), ("Delete folder?", "Supprimer le dossier ?"), ("Delete", "Supprimer"),
+        ("Delete", "Supprimer"),
         ("\"{}\" will be deleted, along with the likes inside it.", "« {1} » sera supprimé, ainsi que les favoris qu'il contient."),
         ("Shared by {}", "Partagé par {1}"), ("by {}", "par {1}"),
         ("No likes yet", "Pas encore de favoris"),
@@ -285,16 +281,14 @@ enum FrenchStrings {
         ("Share \"{}\"", "Partager « {1} »"),
         ("Friends you turn on can view this folder, read-only.", "Les amis que tu actives peuvent voir ce dossier, en lecture seule."),
         ("Add some friends first — nobody to share with yet.", "Ajoute d'abord des amis : personne avec qui partager pour l'instant."),
-        ("Couldn't update sharing", "Impossible de mettre à jour le partage"), ("Someone", "Quelqu'un"),
+        ("Someone", "Quelqu'un"),
         ("Edit profile", "Modifier le profil"), ("Friends", "Amis"), ("Login and security", "Connexion et sécurité"),
         ("Log out", "Se déconnecter"), ("Delete account", "Supprimer le compte"),
         ("Delete your account?", "Supprimer ton compte ?"),
         ("This permanently deletes your account, profile, and liked pods. This can't be undone.", "Cela supprime définitivement ton compte, ton profil et tes favoris. Impossible de revenir en arrière."),
         ("Guest", "Invité"), ("{} friends · {} likes", "{1} amis · {2} favoris"),
-        ("Switch to host mode", "Passer en mode hôte"), ("Coming soon", "Bientôt"),
-        ("Switch to traveler mode", "Passer en mode voyageur"), ("Become a host", "Devenir hôte"),
+        ("Coming soon", "Bientôt"),
         ("Open", "Ouvrir"), ("Add huts?", "Ajouter des refuges ?"),
-        ("Booking request", "Demande de réservation"),
         ("Search by username", "Chercher par nom d'utilisateur"),
         ("Remove from folder", "Retirer du dossier"),
         ("Shared with {}", "Partagé avec {1}"), ("Shared with {} and {}", "Partagé avec {1} et {2}"), ("Shared with {} and {} others", "Partagé avec {1} et {2} autres"),
@@ -337,13 +331,13 @@ enum FrenchStrings {
 
         // Login, accessibility, profile edit
         ("Sign-in method", "Méthode de connexion"), ("Send password reset email", "Envoyer un e-mail de réinitialisation"),
-        ("Email sent", "E-mail envoyé"), ("Check {} for a link to reset your password.", "Vérifie {1} : tu y trouveras un lien pour réinitialiser ton mot de passe."),
+        ("Check {} for a link to reset your password.", "Vérifie {1} : tu y trouveras un lien pour réinitialiser ton mot de passe."),
         ("Podz follows your iPhone's VoiceOver and Reduce Motion settings.", "Podz suit les réglages VoiceOver et Réduction des animations de ton iPhone."),
         ("Saving…", "Enregistrement…"), ("Save", "Enregistrer"), ("Username", "Nom d'utilisateur"), ("Name", "Nom"), ("Age", "Âge"), ("Location", "Lieu"),
         ("Your photo", "Ta photo"), ("Change photo", "Changer de photo"), ("Press and hold the photo to adjust it", "Maintiens la photo pour l'ajuster"),
         ("Profile photo. Double tap to change, press and hold to adjust", "Photo de profil. Touche deux fois pour changer, maintiens pour ajuster"),
         ("Adjust photo", "Ajuster la photo"), ("Pinch to zoom, drag to move", "Pince pour zoomer, glisse pour déplacer"),
-        ("Rotate", "Pivoter"), ("Reset", "Réinitialiser"), ("Couldn't save", "Enregistrement impossible"),
+        ("Rotate", "Pivoter"), ("Reset", "Réinitialiser"),
         ("Couldn't open your photo.", "Impossible d'ouvrir ta photo."), ("Couldn't prepare the photo.", "Impossible de préparer la photo."),
 
         ("Expanded", "Déplié"), ("Collapsed", "Replié"),
@@ -360,8 +354,7 @@ enum FrenchStrings {
         ("No friends yet", "Pas encore d'amis"),
         ("Add someone to plan trips together.", "Ajoute quelqu'un pour planifier vos séjours ensemble."),
         ("Decline", "Refuser"), ("Accept", "Accepter"), ("Remove friend", "Retirer l'ami"), ("Remove this friend?", "Retirer cet ami ?"),
-        ("Couldn't send request", "Envoi de la demande impossible"), ("Requested", "Demandé"), ("Respond in Friends", "Répondre dans Amis"), ("Add", "Ajouter"),
-        ("Message", "Message"), ("Send message", "Envoyer le message"), ("Send", "Envoyer"), ("Cancel reply", "Annuler la réponse"),
+        ("Requested", "Demandé"), ("Respond in Friends", "Répondre dans Amis"), ("Add", "Ajouter"),
 
     ]
 }

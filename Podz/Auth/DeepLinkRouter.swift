@@ -8,10 +8,10 @@
 import Foundation
 import Combine
 
-/// Handles `podz://pod/<uuid>` links (the format `PodDetailView`'s share
-/// card exports alongside its image) — parses the incoming URL and holds
-/// the target pod id until whichever screen is showing pods (HomeView)
-/// can resolve it against `PodsStore` and navigate.
+/// Handles `podz://pod/<uuid>` links (the old share card wrote them; nothing
+/// in the app writes them today, but a link someone kept still opens the
+/// pod) — parses the incoming URL and holds the target pod id until Home
+/// (`MinimalHomeView`) can resolve it against `PodsStore` and navigate.
 ///
 /// Custom URL scheme, not a Universal Link — this only opens the app if
 /// it's already installed on the recipient's device (no website/App

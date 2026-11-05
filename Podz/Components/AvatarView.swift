@@ -1,8 +1,7 @@
 import SwiftUI
 
 /// Reusable flat avatar (no ring, no shadow — `design.md`), used in friend
-/// and post rows, Profile and more — round by
-/// default everywhere, since that's every existing call site.
+/// rows, folder bubbles, Profile and more; round by default.
 ///
 /// Accepts either a local asset name ("avatar-placeholder") or a remote
 /// URL string (e.g. a Supabase Storage public URL from `profile.avatarURL`)
@@ -10,11 +9,8 @@ import SwiftUI
 struct AvatarView: View {
     var imageName: String?
     var size: CGFloat = 42
-    /// Nil (default) clips to a circle, matching every call site this
-    /// had before this parameter existed. A value switches to a rounded
-    /// square at that radius instead — e.g. ProfileView's own persistent
-    /// top-bar avatar, matching PodDetailView's small top-bar photo
-    /// (`RoundedRectangle(cornerRadius: AppRadius.r10, style: .continuous)`).
+    /// Nil (default) clips to a circle. A value switches to a rounded
+    /// square at that radius instead.
     var cornerRadius: CGFloat? = nil
     /// A thin white ring around the photo. Off by default: the design
     /// system is flat, a photo needs no outline.

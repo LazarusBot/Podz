@@ -35,7 +35,6 @@ final class Analytics {
         case lennySearch = "lenny_search"
         case podLiked = "pod_liked"
         case folderCreated = "folder_created"
-        case error = "error"
     }
 
     private struct Row: Codable {
@@ -116,13 +115,6 @@ final class Analytics {
         ))
         if queue.count > Self.queueLimit { queue.removeFirst(queue.count - Self.queueLimit) }
         if queue.count >= Self.batchSize { Task { await flush() } }
-    }
-
-    /// A failure worth knowing about: where it happened and the error's kind
-    /// (domain and code), never its message, which can carry a name or an e-mail.
-    func trackError(_ place: String, _ error: Error) {
-        let nsError = error as NSError
-        track(.error, ["where": place, "kind": "\(nsError.domain) \(nsError.code)"])
     }
 
     func flush() async {

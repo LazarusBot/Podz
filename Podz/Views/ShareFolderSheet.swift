@@ -23,7 +23,7 @@ struct ShareFolderSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                CloseButton(style: .pill, size: 44, action: { dismiss() })
+                CloseButton(action: { dismiss() })
                 Spacer()
             }
             .padding(.horizontal, 20)

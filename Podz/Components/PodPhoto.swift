@@ -1,8 +1,9 @@
 import SwiftUI
 import CoreLocation
 
-/// Shared photo loader: remote URL via AsyncImage, gray placeholder
-/// otherwise. Same pattern as AvatarView.
+/// A pod's picture everywhere (cards, shelves, the detail, folders, passes):
+/// its photo through `CachedAsyncImage`, or the satellite view of the spot
+/// when it has none (`design.md`, A pod with no photo).
 struct PodPhoto: View {
     var url: String?
     /// Where the pod is: with no photo, the picture is the satellite view of
