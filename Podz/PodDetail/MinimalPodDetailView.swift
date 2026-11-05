@@ -93,7 +93,7 @@ struct MinimalPodDetailView: View {
                                     EmptyView()
                                 } else if isBooking {
                                     // What's been decided so far, to change on its own.
-                                    BookingChips(flow: activeBooking)
+                                    BookingChips(flow: activeBooking, inset: Self.cardMargin)
                                         .padding(.top, 0)
                                 } else {
                                     keyFacts
