@@ -29,6 +29,7 @@ struct MyReservationsView: View {
     @State private var tipIndex = 0
     /// The stay that was just added: it pops and glows for a moment.
     @State private var highlightedId: UUID?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The past stays are folded away until asked for, so they don't crowd
     /// the page (or Lenny's bubble under it).
     @State private var showsPast = false
@@ -147,7 +148,8 @@ struct MyReservationsView: View {
         reservationsStore.lastAddedId = nil
         Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) { highlightedId = id }
+            // Reduce Motion: the glow alone, no pop.
+            withAnimation(reduceMotion ? .easeOut(duration: 0.3) : .spring(response: 0.4, dampingFraction: 0.55)) { highlightedId = id }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             try? await Task.sleep(nanoseconds: 1_100_000_000)
             withAnimation(.easeOut(duration: 0.7)) { highlightedId = nil }
@@ -265,7 +267,7 @@ struct MyReservationsView: View {
                             .fill(Color.homeText.opacity(highlightedId == stay.id ? 0.08 : 0))
                             .padding(.horizontal, 12)
                     )
-                    .scaleEffect(highlightedId == stay.id ? 1.03 : 1)
+                    .scaleEffect(highlightedId == stay.id && !reduceMotion ? 1.03 : 1)
             }
 
             cancelCaption(trip.isPlannedWithLenny ? "Cancel trip" : (trip.stays[0].isExternal ? "Remove" : "Cancel"))

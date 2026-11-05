@@ -14,6 +14,7 @@ struct FolderPodTile: View {
     var onLongPress: () -> Void = {}
 
     @State private var wiggle: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: onTap) {
@@ -73,7 +74,8 @@ struct FolderPodTile: View {
             }
         )
         .onChange(of: isEditing) { _, editing in
-            if editing {
+            // Reduce Motion: no wiggle; the red minus already says it's edit mode.
+            if editing && !reduceMotion {
                 withAnimation(.easeInOut(duration: 0.13).repeatForever(autoreverses: true)) {
                     wiggle = Double.random(in: 0.7...1.1)
                 }
