@@ -274,7 +274,7 @@ struct MinimalHomeView: View {
             Color.clear.frame(height: 1)
         } else if visiblePods.isEmpty {
             VStack(spacing: 6) {
-                T(query.isEmpty ? "No pods available yet." : "No pods match “\(query)”.")
+                T(query.isEmpty ? "No huts available yet." : "No huts match “\(query)”.")
                     .font(AppFont.regularLabel(14))
                     .foregroundColor(.homeSubtitle)
 

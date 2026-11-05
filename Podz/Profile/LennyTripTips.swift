@@ -48,7 +48,7 @@ enum LennyTripTips {
         if trip.guests >= 4 {
             tips.append("With \(trip.guests) of you, pick one person to confirm arrival times with each hut.")
         }
-        tips.append("Tap a stay to see its pod again, and you can cancel the whole trip from here if plans change.")
+        tips.append("Tap a stay to see its hut again, and you can cancel the whole trip from here if plans change.")
         return tips
     }
 }

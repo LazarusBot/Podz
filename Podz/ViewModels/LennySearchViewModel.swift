@@ -91,7 +91,7 @@ final class LennySearchViewModel: ObservableObject {
     private static func initialSteps() -> [StepInfo] {
         [
             StepInfo(id: 0, title: "Extracting your stops.", subtitle: "", isDone: false),
-            StepInfo(id: 1, title: "Finding the best pods around here.", subtitle: "", isDone: false),
+            StepInfo(id: 1, title: "Finding the best huts around here.", subtitle: "", isDone: false),
             StepInfo(id: 2, title: "Loading your itinerary.", subtitle: "", isDone: false)
         ]
     }
@@ -107,7 +107,7 @@ final class LennySearchViewModel: ObservableObject {
             steps = Self.initialSteps()
             try? await Task.sleep(nanoseconds: 900_000_000)
             guard !Task.isCancelled else { return }
-            errorMessage = "I can't see any pods right now. Check your connection and try again."
+            errorMessage = "I can't see any huts right now. Check your connection and try again."
             phase = .results
             return
         }
@@ -154,7 +154,7 @@ final class LennySearchViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
 
         if nothing {
-            errorMessage = "I couldn't find any pods along that route. Try another stop, or a wider area."
+            errorMessage = "I couldn't find any huts along that route. Try another stop, or a wider area."
         }
         Analytics.shared.track(.lennySearch, [
             "stops": "\(journeyStops.count)",

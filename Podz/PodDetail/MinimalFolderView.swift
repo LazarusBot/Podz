@@ -89,7 +89,7 @@ struct MinimalFolderView: View {
                 .tracking(-0.6)
                 .foregroundColor(.homeText)
                 .lineLimit(2)
-            T(subtitle ?? "\(pods.count) \(pods.count == 1 ? "pod" : "pods")")
+            T(subtitle ?? "\(pods.count) \(pods.count == 1 ? "hut" : "huts")")
                 .font(AppFont.regularLabel(13))
                 .foregroundColor(.homeSubtitle)
 

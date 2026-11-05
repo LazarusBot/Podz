@@ -49,7 +49,7 @@ enum LegalText {
 
     private static let privacyEN = [
         Section(heading: "What we keep", text: "Your email, and the name, username, age, place and photo you choose to add. Your reservations, likes, folders and friends. That's what the app needs to work."),
-        Section(heading: "How the app is used", text: "Podz notes simple events, such as opening a pod or booking, and crash reports, under a random number made on your phone. It is not linked to your account, and what you type in a search is never kept. You can turn it off in Profile > About Podz."),
+        Section(heading: "How the app is used", text: "Podz notes simple events, such as opening a hut or booking, and crash reports, under a random number made on your phone. It is not linked to your account, and what you type in a search is never kept. You can turn it off in Profile > About Podz."),
         Section(heading: "What we don't do", text: "No ads, no tracking across other apps, no selling your data, and we don't use your phone's location."),
         Section(heading: "Who helps us run Podz", text: "Supabase hosts the database and your sign-in. Resend sends your sign-in code by email. Apple Maps draws the maps. Hut data comes from OpenStreetMap contributors and photos from Wikimedia Commons, with their credits."),
         Section(heading: "On your phone", text: "To work in the mountains without signal, Podz saves your likes, reservations, passes and some photos and maps on your phone."),
