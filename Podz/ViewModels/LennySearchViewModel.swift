@@ -70,6 +70,13 @@ final class LennySearchViewModel: ObservableObject {
     @Published private(set) var refineNote: String?
     @Published private(set) var refineFailed = false
 
+    /// What the plan is called when saved: "Across the Alps", or the places in order.
+    var planTitle: String? {
+        if let area { return tr("Across \(area.name)") }
+        let names = request?.mentions.map(\.name) ?? []
+        return names.isEmpty ? nil : names.joined(separator: " → ")
+    }
+
     /// A route across an area can be reshaped (loop, shorter days, bookable huts only).
     var canRefine: Bool { area != nil && !journeyStops.isEmpty }
 

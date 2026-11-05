@@ -38,6 +38,8 @@ struct LennySummaryView: View {
     var onViewReservations: () -> Void
     /// The route comes back to its first hut.
     var isLoop = false
+    /// What the plan is called when saved ("Across the Alps").
+    var planTitle: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The booking questions, answers and the booking itself (`BookingFlow`,
@@ -46,6 +48,9 @@ struct LennySummaryView: View {
     @State private var appeared = false
     /// The hiking trails between the huts, found once the page is up.
     @StateObject private var trails = LennyRouteTracks()
+    @ObservedObject private var savedPlans = SavedPlansStore.shared
+    /// List (the stops) or Map (the trace of the route).
+    @State private var showsMap = false
 
     private let dotSize: CGFloat = 24
     private let photoSize: CGFloat = 88
@@ -60,9 +65,11 @@ struct LennySummaryView: View {
         onOpenPod: @escaping (Pod) -> Void,
         onViewReservations: @escaping () -> Void,
         request: LennyRequest? = nil,
-        isLoop: Bool = false
+        isLoop: Bool = false,
+        planTitle: String? = nil
     ) {
         self.isLoop = isLoop
+        self.planTitle = planTitle
         self.entries = entries
         self.photoURLs = photoURLs
         self.onBack = onBack
@@ -87,21 +94,26 @@ struct LennySummaryView: View {
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
                         .padding(.top, 6)
-                        .padding(.bottom, hasPath ? 18 : (flow.hasChoices ? 16 : 28))
+                        .padding(.bottom, 16)
 
-                    if hasPath { routeTrace }
+                    // List or Map, and keep the plan without booking it.
+                    HStack {
+                        if hasPath { PlanModeToggle(showsMap: $showsMap) }
+                        Spacer(minLength: 0)
+                        SavePlanCaption(isSaved: savedPlan != nil, action: toggleSaved)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, flow.hasChoices ? 14 : 20)
 
                     if flow.hasChoices {
                         BookingChips(flow: flow)
                             .padding(.bottom, 24)
                     }
 
-                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        row(entry, stage: stage(into: index), number: index + 1, isLast: index == entries.count - 1, date: flow.showsDates ? flow.date(forStop: index) : nil, nights: flow.nightsFor(index))
-                            // Each stop settles in a beat after the one before.
-                            .opacity(appeared || reduceMotion ? 1 : 0)
-                            .offset(y: appeared || reduceMotion ? 0 : 14)
-                            .animation(.smooth(duration: 0.5).delay(0.08 * Double(index)), value: appeared)
+                    if showsMap && hasPath {
+                        routeMap
+                    } else {
+                        stopsList
                     }
 
                     // Room under the list for the pills and Lenny's bubble.
@@ -161,24 +173,89 @@ struct LennySummaryView: View {
 
     private var hasPath: Bool { entries.filter { $0.pod.coordinate != nil }.count >= 2 }
 
-    /// The trace of the route, and what it adds up to when the days are known.
-    private var routeTrace: some View {
-        VStack(alignment: .leading, spacing: 10) {
+    /// The stops, one row each, settling in one after the other.
+    private var stopsList: some View {
+        ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+            row(entry, stage: stage(into: index), number: index + 1, isLast: index == entries.count - 1, date: flow.showsDates ? flow.date(forStop: index) : nil, nights: flow.nightsFor(index))
+                .opacity(appeared || reduceMotion ? 1 : 0)
+                .offset(y: appeared || reduceMotion ? 0 : 14)
+                .animation(.smooth(duration: 0.5).delay(0.08 * Double(index)), value: appeared)
+        }
+    }
+
+    /// The route as a trace, big, what it adds up to, and which hut each dot is.
+    private var routeMap: some View {
+        VStack(alignment: .leading, spacing: 14) {
             LennyRoutePath(
                 huts: entries.compactMap(\.pod.coordinate),
                 legs: legs.map { pair in trails.tracks[LennyRouteTracks.key(pair.0, pair.1)]?.coordinates },
                 isReady: trails.isDone,
-                isLoop: isLoop
+                isLoop: isLoop,
+                height: 340
             )
             .padding(.horizontal, 24)
+
             if let totals = routeTotals {
                 T(totals)
                     .font(AppFont.regularLabel(12))
                     .foregroundColor(.homeSubtitle)
                     .padding(.horizontal, 24)
             }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                    Button { onOpenPod(entry.pod) } label: {
+                        HStack(spacing: 12) {
+                            Text(verbatim: "\(index + 1)")
+                                .font(AppFont.semiBoldLabel(10))
+                                .foregroundColor(.homeBackground)
+                                .frame(width: 20, height: 20)
+                                .background(Color.homeText, in: Circle())
+                            Text(entry.pod.name)
+                                .font(AppFont.regularLabel(14))
+                                .foregroundColor(.homeText)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 6)
         }
-        .padding(.bottom, flow.hasChoices ? 18 : 28)
+        .padding(.bottom, 28)
+    }
+
+    // MARK: - Saving
+
+    /// The saved plan with these huts, when this one was saved.
+    private var savedPlan: SavedPlan? { savedPlans.plan(withPods: entries.map(\.pod.id)) }
+
+    /// Keeps the plan to come back to (Profile > Plans), or takes it back out.
+    private func toggleSaved() {
+        if let existing = savedPlan {
+            savedPlans.remove(existing)
+            return
+        }
+        let request = flow.request
+        savedPlans.add(SavedPlan(
+            id: UUID(),
+            title: planTitle ?? defaultTitle,
+            savedAt: Date(),
+            isLoop: isLoop,
+            isRoute: entries.contains { $0.stage != nil },
+            stops: entries.map { .init(name: $0.stopName, podId: $0.pod.id, detail: $0.detail, isPick: $0.isLennysPick) },
+            guests: flow.guestsConfirmed ? flow.guests : request?.guests,
+            startDate: flow.dateConfirmed ? flow.startDate : request?.startDate,
+            nights: flow.nightsConfirmed ? flow.nights : request?.nights
+        ))
+    }
+
+    private var defaultTitle: String {
+        guard let first = entries.first, let last = entries.last, entries.count > 1 else { return entries.first?.pod.name ?? tr("Your plan") }
+        return "\(first.stopName) → \(last.stopName)"
     }
 
     /// "Loop · 78 km · ~19 h" over the stages (and the way back, for a loop).

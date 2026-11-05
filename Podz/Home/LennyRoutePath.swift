@@ -14,6 +14,7 @@ struct LennyRoutePath: View {
     /// Every trail has been looked for.
     let isReady: Bool
     var isLoop = false
+    var height: CGFloat = 132
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var drawn: CGFloat = 0
@@ -60,7 +61,7 @@ struct LennyRoutePath: View {
                 }
             }
         }
-        .frame(height: 132)
+        .frame(height: height)
         .onChange(of: isReady, initial: true) { _, ready in
             guard ready else { return }
             if reduceMotion {

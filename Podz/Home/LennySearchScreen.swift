@@ -34,6 +34,7 @@ struct LennySearchScreen: View {
                     photoURLs: podsStore.primaryPhotoByPodId,
                     request: lenny.request,
                     isLoop: lenny.routeIsLoop,
+                    planTitle: lenny.planTitle,
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
                     onOpenPod: { selectedPod = $0 },
                     onFinish: {

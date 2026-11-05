@@ -12,6 +12,8 @@ struct LennyPlanView: View {
     var request: LennyRequest?
     /// The route comes back to its first hut.
     var isLoop = false
+    /// What the plan is called when saved.
+    var planTitle: String?
     /// Back from the first stop leaves the plan.
     var onLeave: () -> Void
     var onOpenPod: (Pod) -> Void
@@ -41,7 +43,8 @@ struct LennyPlanView: View {
                 onOpenPod: onOpenPod,
                 onViewReservations: onFinish,
                 request: request,
-                isLoop: isLoop
+                isLoop: isLoop,
+                planTitle: planTitle
             )
             .transition(.opacity)
         } else {

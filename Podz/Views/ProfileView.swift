@@ -21,6 +21,7 @@ struct ProfileView: View {
     @State private var showsAvatarEditor = false
     @State private var showFriends = false
     @State private var showReservations = false
+    @State private var showPlans = false
     @State private var showLoginSecurity = false
     @State private var showAbout = false
     @State private var showDeleteAccountConfirmation = false
@@ -33,6 +34,8 @@ struct ProfileView: View {
                 FriendsView(onBack: { showFriends = false })
             } else if showReservations {
                 MyReservationsView(onBack: { showReservations = false })
+            } else if showPlans {
+                SavedPlansView(onBack: { showPlans = false })
             } else if showLoginSecurity {
                 LoginSecurityView(onBack: { showLoginSecurity = false })
             } else if showAbout {
@@ -60,11 +63,12 @@ struct ProfileView: View {
     private func openRequestedPage() {
         guard router.showsReservationsRequested else { return }
         router.showsReservationsRequested = false
+        showPlans = false
         showReservations = true
     }
 
     private var isShowingSection: Bool {
-        showEditProfile || showFriends || showReservations || showLoginSecurity || showAbout
+        showEditProfile || showFriends || showReservations || showPlans || showLoginSecurity || showAbout
     }
 
     // MARK: - Main screen
@@ -104,6 +108,7 @@ struct ProfileView: View {
                 VStack(spacing: 0) {
                     ProfileListRow(title: "Friends") { showFriends = true }
                     ProfileListRow(title: "Reservations", caption: nextTripCaption) { showReservations = true }
+                    ProfileListRow(title: "Plans") { showPlans = true }
                     ProfileListRow(title: "Login and security") { showLoginSecurity = true }
                     ProfileListRow(title: "About Podz") { showAbout = true }
                 }
