@@ -47,7 +47,7 @@ final class AuthManager: ObservableObject {
                 // landed — the "login page appears and disappears" flash.
                 // Instead, stay on the launch screen and wait for that
                 // resolved event, with a short timeout rather than hanging
-                // on the skeleton forever if the SDK's own background
+                // on the launch screen forever if the SDK's own background
                 // refresh never resolves.
                 if isInitializing, let session, session.isExpired {
                     expiredSessionFallbackTask?.cancel()

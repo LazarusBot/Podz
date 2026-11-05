@@ -20,19 +20,17 @@ private enum LikesItem: Identifiable {
     }
 }
 
-/// Tab content for "Likes" — liked pods grouped into bubbles
-/// "folders" by country. Tap a folder to see its pods, tap a pod for
-/// the detail screen. Same self-contained navigation pattern as
-/// HomeView/ProfileView (local @State toggles between screens).
+/// Tab content for "Likes" — your folders (and those shared with you) as
+/// bubbles. Tap a folder to see its pods, tap a pod for the detail screen.
+/// Same self-contained navigation pattern as MinimalHomeView/ProfileView
+/// (local @State toggles between screens).
 struct LikesView: View {
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var friendsStore = FriendsStore.shared
-    // Shared with HomeView — feeds the floating tab bar's scroll-down
-    // shrink (MainTabView), which used to only react to the Home feed's
-    // own ScrollView. Every ScrollView here keeps the tab bar visible
-    // (unlike FriendsView/ConversationView, which hide it outright), so
-    // they all report their offset the same way Home's does.
+    // Shared with MinimalHomeView — feeds the floating tab bar's scroll-down
+    // shrink (MainTabView). Every ScrollView here keeps the tab bar visible,
+    // so they all report their offset the same way Home's does.
     @StateObject private var scrollState = ScrollTrackingState.shared
     @State private var selectedFolder: LikeFolder?
     @State private var selectedSharedFolder: SharedFolder?
