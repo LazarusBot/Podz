@@ -12,8 +12,11 @@ struct HomePodCard: View {
     /// Replaces the default "region · beds" line (the highest shelf says the
     /// altitude, for example).
     var subtitleOverride: String?
-    /// A second quiet line under the first (price, whether it's open).
+    /// A second quiet line under the first (the price, "Open now").
     var detailLine: String?
+    /// "Closed until June", at the end of that line in `alertInk`: red is for
+    /// what can cancel the trip (`design.md`, Pod detail).
+    var closedLabel: String?
     var onTap: () -> Void
 
     private var subtitle: String {
@@ -25,6 +28,14 @@ struct HomePodCard: View {
         // A listed hut can't be booked in the app: say so on the card.
         if !pod.isBookable { parts.append("Listed") }
         return parts.joined(separator: " · ")
+    }
+
+    private var detailText: Text {
+        let quiet = detailLine.map { T($0).foregroundColor(.homeSubtitle.opacity(0.8)) }
+        guard let closedLabel else { return quiet ?? Text(verbatim: "") }
+        let closed = T(closedLabel).foregroundColor(.alertInk)
+        guard let quiet else { return closed }
+        return Text("\(quiet)\(Text(verbatim: " · ").foregroundColor(.homeSubtitle.opacity(0.8)))\(closed)")
     }
 
     var body: some View {
@@ -44,14 +55,13 @@ struct HomePodCard: View {
                         .font(AppFont.semiBoldLabel(16))
                         .foregroundColor(.homeText)
                         .lineLimit(1)
-                    Text(subtitle)
+                    T(subtitle)
                         .font(AppFont.regularLabel(14))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)
-                    if let detailLine {
-                        T(detailLine)
+                    if detailLine != nil || closedLabel != nil {
+                        detailText
                             .font(AppFont.regularLabel(12))
-                            .foregroundColor(.homeSubtitle.opacity(0.8))
                             .lineLimit(1)
                     }
                 }

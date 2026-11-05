@@ -143,7 +143,7 @@ struct LikesView: View {
                         Button(tr("Done")) {
                             withAnimation { isEditMode = false }
                         }
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(AppFont.semiBoldLabel(15))
                         .foregroundColor(.homeText)
                     }
                 }

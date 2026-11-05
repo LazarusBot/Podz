@@ -111,7 +111,7 @@ private struct RegionTile: View {
             .opacity(isSelected ? 1 : 0.55)
             .contentShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(region.rawValue)
+            .accessibilityLabel(tr(region.rawValue))
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

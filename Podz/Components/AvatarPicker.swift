@@ -59,7 +59,7 @@ struct AvatarPicker: View {
                     avatarContent
                 }
                 .disabled(isUploading)
-                .accessibilityLabel("Change profile photo")
+                .accessibilityLabel(tr("Change profile photo"))
             } else {
                 avatarContent
             }

@@ -29,7 +29,7 @@ struct LennyReply: View {
         .animation(.smooth(duration: 0.3), value: message == nil)
         .task(id: message) { await type() }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(message.map(tr) ?? "Lenny is typing")
+        .accessibilityLabel(message.map(tr) ?? tr("Lenny is typing"))
     }
 
     /// An error is the one thing that turns red: Lenny's disc and the bubble.

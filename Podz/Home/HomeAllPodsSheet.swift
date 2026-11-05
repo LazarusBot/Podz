@@ -88,6 +88,7 @@ struct HomeAllPodsSheet: View {
                             zoomNamespace: zoomNamespace,
                             subtitleOverride: subtitle(for: pod),
                             detailLine: detail(for: pod),
+                            closedLabel: closedLabel(for: pod),
                             onTap: { selectedPod = pod }
                         )
                     }
@@ -153,7 +154,13 @@ struct HomeAllPodsSheet: View {
     private func detail(for pod: Pod) -> String? {
         var parts: [String] = []
         if let price = pod.priceText { parts.append(price) }
-        if let status = OpeningStatus.evaluate(pod.openingHours) { parts.append(status.label) }
+        if let status = OpeningStatus.evaluate(pod.openingHours), status.isOpen { parts.append(status.label) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// A closed hut says so in red at the end of that line.
+    private func closedLabel(for pod: Pod) -> String? {
+        guard let status = OpeningStatus.evaluate(pod.openingHours), !status.isOpen else { return nil }
+        return status.label
     }
 }
