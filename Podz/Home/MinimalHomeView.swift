@@ -70,9 +70,8 @@ struct MinimalHomeView: View {
             searchResults = []
             return
         }
-        let found = podsStore.pods.filter { pod in
-            LennyText.matches(text, in: [pod.name, pod.country, pod.region])
-        }
+        let search = PodSearchQuery(text)
+        let found = podsStore.pods.filter(search.matches)
         searchResults = PodQuality.ranked(found, photoIDs: photoIDs)
     }
 
@@ -145,6 +144,9 @@ struct MinimalHomeView: View {
         .onChange(of: podsStore.pods) { _, _ in
             rebuildShelves()
             resolveDeepLink()
+            // Fold the names now, so the first letters typed aren't slow.
+            let pods = podsStore.pods
+            Task.detached(priority: .utility) { PodSearchIndex.shared.prepare(pods) }
         }
         .onChange(of: podsStore.primaryPhotoByPodId) { _, _ in rebuildShelves() }
         .onChange(of: query) { _, _ in updateSearch() }

@@ -19,11 +19,13 @@ nonisolated enum LennyText {
         string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
     }
 
+    /// Built once: compiling it per call made searching thousands of names slow.
+    private static let wordPattern = try! NSRegularExpression(pattern: #"[\p{L}\p{N}]+"#)
+
     /// The words of a folded text with where each is (UTF-16 offsets, as
     /// `NSRange` uses).
     static func words(in folded: String) -> [(word: String, range: NSRange)] {
-        guard let regex = try? NSRegularExpression(pattern: #"[\p{L}\p{N}]+"#) else { return [] }
-        return regex.matches(in: folded, range: NSRange(folded.startIndex..., in: folded)).compactMap { match in
+        return wordPattern.matches(in: folded, range: NSRange(folded.startIndex..., in: folded)).compactMap { match in
             Range(match.range, in: folded).map { (String(folded[$0]), match.range) }
         }
     }
