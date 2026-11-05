@@ -11,18 +11,15 @@ import SwiftUI
 import Supabase
 
 /// Your own reservations — see SQL/reservations.sql for the table and its
-/// capacity-enforcing trigger. Same shape as MessagesStore: a singleton
-/// backing store, optimistic local updates on write, `lastError` for the
-/// UI to surface failures (including the trigger's "not enough beds"
-/// error, shown the same way any other failure is — no special-casing).
+/// capacity-enforcing trigger. A singleton backing store, optimistic local
+/// updates on write, `lastError` for the UI to surface failures (including
+/// the trigger's "not enough beds" error, shown the same way any other
+/// failure is — no special-casing).
 @MainActor
 final class ReservationsStore: ObservableObject {
     static let shared = ReservationsStore()
 
     @Published private(set) var reservations: [Reservation] = []
-    /// The guests behind `hostedReservations` — same
-    /// batch-fetch-only-what's-missing pattern as `PostsStore.profilesById`.
-    @Published private(set) var profilesById: [UUID: Profile] = [:]
     @Published var lastError: String?
     /// The stay just added, so the Reservations page can show that it's new.
     @Published var lastAddedId: UUID?
@@ -57,9 +54,8 @@ final class ReservationsStore: ObservableObject {
         }
     }
 
-    /// Returns whether it succeeded — the caller (ReservationSheet) uses
-    /// this to decide whether to show its confirmation state, same
-    /// boolean-return shape as `AuthManager.resetPassword`.
+    /// Returns whether it succeeded — the booking flow (`BookingFlow`) uses
+    /// this to tell which stops are booked.
     func create(podId: UUID, checkIn: Date, checkOut: Date, guests: Int, source: String? = nil) async -> Bool {
         guard let userId = AuthManager.shared.session?.user.id else { return false }
         lastError = nil
@@ -90,8 +86,7 @@ final class ReservationsStore: ObservableObject {
         }
     }
 
-    /// Optimistic, matching `MessagesStore.markRead`'s pattern — flips
-    /// local state first, reverts if the server call fails.
+    /// Optimistic: flips local state first, reverts if the server call fails.
     func cancel(_ reservation: Reservation) async {
         guard let index = reservations.firstIndex(where: { $0.id == reservation.id }) else { return }
         let previousStatus = reservations[index].status

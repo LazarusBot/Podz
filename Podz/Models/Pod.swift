@@ -21,14 +21,6 @@ struct Pod: Codable, Identifiable, Equatable {
     var altitudeM: Int?
     var bedsTotal: Int?
     var description: String?
-    /// The host who created this pod — nil for every pod that existed
-    /// before host accounts (see SQL/host_accounts.sql), not just newly
-    /// created ones.
-    var hostId: UUID?
-    /// Set after creation, not at insert — a host's optional in-app LiDAR
-    /// scan (see SQL/pod_3d_models.sql) uploads after the pod row and any
-    /// photos already exist, same reason it's not on `PodInsert` either.
-    var modelURL: String?
     /// "partner" (bookable in the app) or "listed" (information only: book
     /// through the hut). Nil reads as a partner, like every pod before this.
     var listingStatus: String?
@@ -73,8 +65,6 @@ struct Pod: Codable, Identifiable, Equatable {
         case altitudeM = "altitude_m"
         case bedsTotal = "beds_total"
         case description
-        case hostId = "host_id"
-        case modelURL = "model_url"
         case listingStatus = "listing_status"
         case phone, email, website
         case bookingURL = "booking_url"
