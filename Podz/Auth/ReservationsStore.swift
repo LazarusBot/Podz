@@ -33,7 +33,6 @@ final class ReservationsStore: ObservableObject {
     /// never sees them.
     func clear() {
         reservations = []
-        profilesById = [:]
         lastAddedId = nil
         lastError = nil
     }
