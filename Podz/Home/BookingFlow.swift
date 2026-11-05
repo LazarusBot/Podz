@@ -170,6 +170,33 @@ final class BookingFlow: ObservableObject {
         return nil
     }
 
+    /// "About 180 €": what the huts booked in the app cost for these guests and
+    /// nights (the price is per person and night). Nil unless every one of
+    /// them gives a price, in the same currency: half a total would mislead.
+    var totalPriceText: String? {
+        guard mode == .reserve else { return nil }
+        let booked = entries.indices.filter { entries[$0].pod.isBookable }
+        guard !booked.isEmpty else { return nil }
+        var total = 0.0
+        var currency: String?
+        for index in booked {
+            let pod = entries[index].pod
+            guard let price = pod.pricePerNight else { return nil }
+            let code = pod.priceCurrency ?? "EUR"
+            if let currency, currency != code { return nil }
+            currency = code
+            total += price * Double(guests * nightsFor(index))
+        }
+        let symbol = currency == "EUR" ? "€" : (currency ?? "")
+        return "About \(Int(total.rounded())) \(symbol)"
+    }
+
+    /// What it costs and how it's paid, before Reserve: nothing is taken in
+    /// the app, the stay is settled at the hut.
+    private var paymentNote: String {
+        totalPriceText.map { "\($0), paid at the hut." } ?? "You pay at the hut."
+    }
+
     /// How many nights each stop probably gets, from the stay the user gave.
     private var suggestedNights: Int? {
         request?.suggestedNightsPerStop(stops: entries.count, maximum: Self.maxNights)
@@ -324,7 +351,7 @@ final class BookingFlow: ObservableObject {
         case .booked where mode == .external:
             "Added! It's in your reservations, as booked with the hut. Have a great stay."
         case .booked:
-            "Booked! \(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), all set.\(listedNote.map { " " + $0 } ?? "")"
+            "Booked! \(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText). Your pass is in Reservations, even offline.\(listedNote.map { " " + $0 } ?? "")"
         case .failed(let message): message
         case .idle:
             switch stage {
@@ -343,7 +370,7 @@ final class BookingFlow: ObservableObject {
             case .review:
                 mode == .external
                     ? "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I add it to your reservations?\(closedNote.map { " " + $0 } ?? "")"
-                    : "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). Shall I book it?\((closedNote ?? listedNote).map { " " + $0 } ?? "")"
+                    : "\(totalNights) \(totalNights == 1 ? "night" : "nights") for \(guestsText), from \(dateText). \(paymentNote) Shall I book it?\((closedNote ?? listedNote).map { " " + $0 } ?? "")"
             }
         }
     }
@@ -372,6 +399,9 @@ final class BookingFlow: ObservableObject {
             }
             Analytics.shared.track(.reservationBooked, ["mode": mode == .external ? "external" : "partner", "stops": "\(entries.count)", "guests": "\(guests)"])
             status = .booked
+            // Lenny says the pass opens offline: save it on the phone now, not
+            // only at the next launch or visit to Reservations.
+            if mode == .reserve { await TripPassStore.shared.refreshFromServer() }
         }
     }
 }
