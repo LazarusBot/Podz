@@ -91,17 +91,12 @@ struct LennyPlanView: View {
                         .padding(.horizontal, 24)
                         .padding(.top, 25)
 
-                    // Which stop these pods are around, and a way out of the whole plan.
-                    HStack {
-                        T("\(stop.name) · \(stopIndex + 1) of \(stops.count)")
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .lineLimit(1)
-                        Spacer(minLength: 12)
-                        if onExit != nil { LeavePlanCaption { asksToLeave = true } }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 6)
+                    // Which stop these pods are around.
+                    T("\(stop.name) · \(stopIndex + 1) of \(stops.count)")
+                        .font(AppFont.regularLabel(13))
+                        .foregroundColor(.homeSubtitle)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 6)
 
                     pickCaption
                         .padding(.horizontal, 24)
@@ -130,6 +125,7 @@ struct LennyPlanView: View {
 
             HStack(spacing: 13) {
                 DetailBackButton(action: back)
+                if onExit != nil { DetailCloseButton { asksToLeave = true } }
                 DetailTextButton(title: isLastStop ? "See summary" : "Next stop: \(stops[stopIndex + 1].name)", action: next)
             }
             .padding(.horizontal, 24)

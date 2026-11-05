@@ -55,22 +55,29 @@ struct SavePlanCaption: View {
     }
 }
 
-/// "Leave" gets out of the whole plan flow in one tap (back only steps back):
-/// to Home from Lenny's screens, or out of a plan opened from Profile.
-struct LeavePlanCaption: View {
+/// The round pill in the control stack that gets out of the whole plan flow
+/// in one tap (the back pill only steps back): a thin cross like the back
+/// pill's chevron, at 35%.
+struct DetailCloseButton: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            T("Leave")
-                .font(AppFont.regularLabel(13))
-                .foregroundColor(.homeSubtitle)
-                .underline(color: Color.homeSubtitle.opacity(0.5))
-                .padding(.vertical, 8)
-                .captionTapArea()
+        DetailRoundButton(accessibilityLabel: tr("Leave the plan"), action: action) {
+            CrossGlyph()
+                .stroke(Color.homeText.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                .frame(width: 12, height: 12)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(tr("Leave the plan"))
+    }
+}
+
+private struct CrossGlyph: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        return path
     }
 }
 

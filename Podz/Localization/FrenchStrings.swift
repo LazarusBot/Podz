@@ -230,7 +230,7 @@ enum FrenchStrings {
         ("I couldn't book {} for {}. It may be full, so try other dates.", "Je n'ai pas pu réserver {1} pour le {2}. Il est peut-être complet, essaie d'autres dates."),
         ("{} is listed only, so book it through the hut.", "{1} est seulement référencé : réserve auprès du refuge."),
         ("{} of the huts are listed only, so book them through the huts.", "{1} des refuges sont seulement référencés : réserve auprès des refuges."),
-        ("These huts take their bookings themselves. Tap Book through the hut to call, email or visit their site.", "Ces refuges prennent eux-mêmes leurs réservations. Touche Réserver auprès du refuge pour appeler, écrire ou voir leur site."), ("Which hut?", "Quel refuge ?"),
+        ("These huts take their bookings themselves. Tap Book through the hut under each to call, email or visit its site.", "Ces refuges prennent eux-mêmes leurs réservations. Touche Réserver auprès du refuge sous chacun pour appeler, écrire ou voir son site."), 
 
         // Lenny plan and search
         ("Your plan", "Ton plan"), ("Check your plan", "Vérifie ton plan"), ("{} stops, one hut each", "{1} étapes, un refuge chacune"),
