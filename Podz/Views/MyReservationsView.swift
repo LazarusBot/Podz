@@ -345,6 +345,8 @@ struct MyReservationsView: View {
                                 .font(AppFont.regularLabel(12))
                                 .foregroundColor(reservation.status == "cancelled" ? .appBadgeRed : .homeSubtitle)
                         }
+                        // A finished stay: what you told Lenny, and the photos you kept.
+                        if number == nil { StayFeedbackLine(reservationId: reservation.id) }
                     }
                     Spacer(minLength: 0)
                 }

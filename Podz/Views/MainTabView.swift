@@ -7,6 +7,8 @@ struct MainTabView: View {
     @State private var selectedTab: TravelerTab = .feed
     @StateObject private var tabRouter = TabRouter.shared
     @StateObject private var contactTracker = HutContactTracker.shared
+    // Lenny asks how a finished stay went.
+    @StateObject private var feedbackStore = StayFeedbackStore.shared
     // Watched only to keep the huts you need offline up to date.
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var reservationsStore = ReservationsStore.shared
@@ -76,11 +78,24 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background: contactTracker.appWentToBackground()
-            case .active: contactTracker.appBecameActive()
+            case .active:
+                contactTracker.appBecameActive()
+                feedbackStore.check()
             default: break
             }
         }
-        .onAppear { contactTracker.appBecameActive() }
+        .onAppear {
+            contactTracker.appBecameActive()
+            feedbackStore.check()
+        }
+        // A stay is over: Lenny asks how it went on that hut's own page (the
+        // same way as back from the hut), once the reservations are in.
+        .onChange(of: reservationsStore.reservations) { _, _ in feedbackStore.check() }
+        .onChange(of: feedbackStore.askNow) { _, asks in
+            guard asks, let podId = feedbackStore.pendingStay?.podId else { return }
+            selectedTab = .feed
+            DeepLinkRouter.shared.pendingPodId = podId
+        }
         // Back from a hut: Lenny asks on that hut's own page, so open it (Home,
         // the pod's detail) if it isn't already. Nothing floats over the tabs.
         .onChange(of: contactTracker.askNow) { _, asks in
