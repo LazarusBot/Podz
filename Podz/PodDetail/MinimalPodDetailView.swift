@@ -441,7 +441,7 @@ struct MinimalPodDetailView: View {
                     onBack()
                 }
             )
-            .padding(.horizontal, 40)
+            .padding(.horizontal, Self.cardMargin)
             .padding(.top, 24)
         } else if asksIfBooked {
             // Back from the hut: one answer to give. (Not yet is a caption under
@@ -451,7 +451,7 @@ struct MinimalPodDetailView: View {
                 DetailBackButton { contactTracker.clear(); onBack() }
                 DetailTextButton(title: "Yes, I booked it", isHighlighted: true, action: startExternalBooking)
             }
-            .padding(.horizontal, 40)
+            .padding(.horizontal, Self.cardMargin)
             .padding(.top, 24)
             .transition(.asymmetric(
                 insertion: AnyTransition.move(edge: .bottom).combined(with: .opacity)
