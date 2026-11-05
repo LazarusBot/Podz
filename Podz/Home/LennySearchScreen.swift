@@ -12,8 +12,6 @@ struct LennySearchScreen: View {
 
     @ObservedObject private var lenny = LennySearchViewModel.shared
     @ObservedObject private var podsStore = PodsStore.shared
-    /// The two walkers offered under Lenny's answer, left to right (see `currentLevelSlots`).
-    @State private var levelSlots: [LennyAreaRoute.Options.Level] = []
     @State private var showsPlan = false
     /// What's typed in the route pill when it's open again after an error.
     @State private var draft = ""
@@ -169,32 +167,26 @@ struct LennySearchScreen: View {
         return failed || lenny.refineFailed ? .sorry : .happy
     }
 
-    /// What Lenny offers to change on a route across an area, one tap each:
-    /// the loop, then the two other walkers side by side on one line, then
-    /// the listed huts.
+    /// What Lenny offers to change on a route across an area, on one line:
+    /// the loop, and the other walker. Each swaps with what it replaces: **Make
+    /// it a loop** becomes **Make it one way**, **Beginner hiker** becomes
+    /// **Regular hiker** (and back).
     @ViewBuilder
     private var refinementCaptions: some View {
         let options = lenny.routeOptions
-        BookingQuickReply(reply: .init(title: options.loop ? "Make it one way" : "Make it a loop") {
-            lenny.refine(
-                done: options.loop ? "One way again." : "Done, it comes back to where it starts.",
-                failed: "I can't close a loop with the huts around there."
-            ) { $0.loop.toggle() }
-        })
+        let offered: LennyAreaRoute.Options.Level = options.level == .regular ? .beginner : .regular
         HStack(spacing: 18) {
-            ForEach(currentLevelSlots(options.level), id: \.self) { level in
-                BookingQuickReply(reply: .init(title: Self.levelTitle(level)) { chooseLevel(level, from: options.level) })
-            }
+            BookingQuickReply(reply: .init(title: options.loop ? "Make it one way" : "Make it a loop") {
+                lenny.refine(
+                    done: options.loop ? "One way again." : "Done, it comes back to where it starts.",
+                    failed: "I can't close a loop with the huts around there."
+                ) { $0.loop.toggle() }
+            })
+            BookingQuickReply(reply: .init(title: Self.levelTitle(offered)) {
+                lenny.refine(done: Self.levelDone(offered), failed: "I can't find a route with that.") { $0.level = offered }
+            })
         }
-        BookingQuickReply(reply: .init(title: options.bookableOnly ? "Include listed huts" : "Only huts I can book") {
-            lenny.refine(
-                done: options.bookableOnly ? "Listed huts are back in." : "Only huts you can book here.",
-                failed: "There aren't enough huts you can book there."
-            ) { $0.bookableOnly.toggle() }
-        })
     }
-
-    private static let allLevels: [LennyAreaRoute.Options.Level] = [.beginner, .regular, .expert]
 
     private static func levelTitle(_ level: LennyAreaRoute.Options.Level) -> String {
         switch level {
@@ -210,18 +202,6 @@ struct LennySearchScreen: View {
         case .regular: "Regular days again."
         case .expert: "Long days for an expert, then."
         }
-    }
-
-    /// The two walkers on offer: the ones that aren't chosen. Each keeps its
-    /// place on the line; tapping one puts the level it replaces in its spot.
-    private func currentLevelSlots(_ current: LennyAreaRoute.Options.Level) -> [LennyAreaRoute.Options.Level] {
-        let others = Self.allLevels.filter { $0 != current }
-        return Set(levelSlots) == Set(others) ? levelSlots : others
-    }
-
-    private func chooseLevel(_ level: LennyAreaRoute.Options.Level, from current: LennyAreaRoute.Options.Level) {
-        levelSlots = currentLevelSlots(current).map { $0 == level ? current : $0 }
-        lenny.refine(done: Self.levelDone(level), failed: "I can't find a route with that.") { $0.level = level }
     }
 
     /// "(3 guests · from Sat 31 Oct · 5 days)": what Lenny picked up besides
