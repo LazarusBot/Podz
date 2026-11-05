@@ -123,6 +123,8 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 `AppMotion`: quick 0.15, snappy 0.2, standard 0.25. Larger moves use `.smooth`: 0.4 for the search roll, 0.45 for the detail stack / extended. Respect Reduce Motion for anything continuous.
 
+**Reduce Motion, one rule**: keep every change of state (fades, the glow, a mark changing place), drop what loops, spins or bounces. So the delete-mode wiggle (folder tiles, folder bubbles) stops and the minus alone says it; the search pill's mark slides to the leading end without its full turn; a new stay in Reservations glows without the 103% pop. A new animation states its Reduce Motion version in this file.
+
 ## Appearance
 
 The whole app follows the system appearance: every screen and sheet is built from the tokens above. Nothing forces light any more (the Profile tab's old `AppearanceState` switch is gone). The one thing that stays white in both modes is the trip pass barcode's paper (`barcodePaper`), so it scans.

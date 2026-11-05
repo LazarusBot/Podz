@@ -19,6 +19,7 @@ struct HomeSearchPill: View {
     var onSubmit: () -> Void = {}
 
     private let buttonSize: CGFloat = 40
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let inset: CGFloat = 9
     /// Lenny's button with its label ("Ask Lenny"): it opens up to this width
     /// while the search field has the keyboard, and is the round mark otherwise.
@@ -79,8 +80,9 @@ struct HomeSearchPill: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 20, height: 20)
-                    // One full turn as it slides across: the "roll".
-                    .rotationEffect(.degrees(isLennyMode ? 360 : 0))
+                    // One full turn as it slides across: the "roll" (Reduce
+                    // Motion: it only slides).
+                    .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))
 
                 if offersAsk {
                     T("Ask Lenny")

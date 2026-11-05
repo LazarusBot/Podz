@@ -44,6 +44,7 @@ struct FolderBubble: View {
     @FocusState private var nameFocused: Bool
     @State private var isPressed = false
     @State private var wiggleAngle: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -96,7 +97,8 @@ struct FolderBubble: View {
                 }
         )
         .onChange(of: isWiggling) { _, wiggling in
-            if wiggling {
+            // Reduce Motion: no wiggle; the minus on the rim says it's delete mode.
+            if wiggling && !reduceMotion {
                 withAnimation(.easeInOut(duration: 0.12).repeatForever(autoreverses: true)) {
                     wiggleAngle = Double.random(in: 0.8...1.2)
                 }
