@@ -31,7 +31,7 @@ struct BookingControlStack: View {
                     .opacity(flow.status == .booking ? 0.45 : 1)
                 // A small close button: out of the whole flow in one tap.
                 if let onExit, flow.status != .booking {
-                    CloseButton(action: onExit)
+                    CloseButton(size: 83, action: onExit)
                         .transition(.opacity)
                 }
                 primaryPill
@@ -69,7 +69,7 @@ struct BookingControlStack: View {
         case _ where flow.bookableCount == 0:
             // All listed: nothing to reserve here, so the classic pill books
             // through the hut (each row has its own caption too).
-            return ("Book through the hut", true, true, {
+            return ("e-Book", true, true, {
                 if flow.entries.count == 1 { onBookListed?(flow.entries[0].pod) } else { choosingHut = true }
             })
         case (.booked, _):

@@ -32,22 +32,18 @@ struct PlanModeToggle: View {
 }
 
 /// "Save plan" keeps the plan in Profile > Plans without booking; once saved
-/// it reads "Saved" and a tap takes it back out.
+/// it is a filled bookmark and a tap takes it back out. Only the icon shows.
 struct SavePlanCaption: View {
     let isSaved: Bool
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 12, weight: .regular))
-                T(isSaved ? "Saved" : "Save plan")
-                    .font(AppFont.regularLabel(13))
-            }
-            .foregroundColor(isSaved ? .homeText : .homeSubtitle)
-            .padding(.vertical, 8)
-            .captionTapArea()
+            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(isSaved ? .homeText : .homeSubtitle)
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.success, trigger: isSaved) { _, saved in saved }

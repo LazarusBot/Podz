@@ -125,7 +125,7 @@ struct LennyPlanView: View {
 
             HStack(spacing: 13) {
                 DetailBackButton(action: back)
-                if onExit != nil { CloseButton { asksToLeave = true } }
+                if onExit != nil { CloseButton(size: 83) { asksToLeave = true } }
                 DetailTextButton(title: isLastStop ? "See summary" : "Next stop: \(stops[stopIndex + 1].name)", action: next)
             }
             .padding(.horizontal, 24)
