@@ -117,13 +117,13 @@ struct LennySummaryView: View {
                     }
 
                     // Room under the list for the pills and Lenny's bubble.
-                    Color.clear.frame(height: 200 + (flow.quickReply != nil ? 36 : 0))
+                    Color.clear.frame(height: 212 + (flow.quickReply != nil ? 36 : 0))
                 }
             }
 
             // Lenny's bubble floats above the pills: the fade rises with it
             // (the whole-screen fade, a little higher with a quick reply).
-            SectionFadeLayer(fade: flow.quickReply == nil ? .tall : SectionFade(start: 0.61, solid: 0.82))
+            SectionFadeLayer(fade: flow.quickReply == nil ? .tall : SectionFade(start: 0.60, solid: 0.81))
 
             // Lenny's line, and under it, when there's one, a quick reply.
             VStack(alignment: .leading, spacing: 8) {

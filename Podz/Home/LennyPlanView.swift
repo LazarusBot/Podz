@@ -111,7 +111,7 @@ struct LennyPlanView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
                     // Room to scroll the last row above the buttons.
-                    .padding(.bottom, 140)
+                    .padding(.bottom, 152)
                 }
             }
             .id(stop.id)
