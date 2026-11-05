@@ -13,7 +13,7 @@ extension View {
                     ZStack {
                         Color.photoScrim.opacity(0.25)
                         T(status.label)
-                            .font(AppFont.semiBoldLabel(textSize))
+                            .font(AppFont.regularLabel(textSize))
                             .foregroundColor(.onPhoto)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 12)
