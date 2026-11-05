@@ -5,9 +5,9 @@ import CoreLocation
 /// screens look and behave the same (Paper "DetailView" frames).
 enum DetailLayout {
     /// The control stack (back pill + the page's action) sits this far above
-    /// the home-indicator zone, i.e. `controlStackGap + 34` = 74 from the
-    /// screen's physical bottom edge on a Face ID iPhone (the Paper frames).
-    static let controlStackGap: CGFloat = 40
+    /// the home-indicator zone, i.e. 36 above the screen's physical edge on a
+    /// Face ID iPhone (34 of inset).
+    static let controlStackGap: CGFloat = 36 - 34
 
     /// Photo heights from the Paper frames, as a share of the screen.
     static let stackedPhotoShare: CGFloat = 524 / 852

@@ -111,7 +111,7 @@ struct LennyPlanView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
                     // Room to scroll the last row above the buttons.
-                    .padding(.bottom, 190)
+                    .padding(.bottom, 152)
                 }
             }
             .id(stop.id)
@@ -124,9 +124,9 @@ struct LennyPlanView: View {
                 DetailTextButton(title: isLastStop ? "See summary" : "Next stop: \(stops[stopIndex + 1].name)", action: next)
             }
             .padding(.horizontal, 24)
-            // The cover respects the safe area, so 40 here is the 74 from
-            // the bottom edge every control stack uses.
-            .padding(.bottom, 40)
+            // The cover respects the safe area: this puts the stack where every
+            // control stack is (`DetailLayout.controlStackGap`).
+            .padding(.bottom, DetailLayout.controlStackGap)
         }
         .background(Color.homeBackground.ignoresSafeArea())
     }
