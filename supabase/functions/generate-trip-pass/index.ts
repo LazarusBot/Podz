@@ -27,6 +27,9 @@ import JSZip from "npm:jszip@3.10.1";
 
 const ICON_FILES = ["icon.png", "icon@2x.png", "icon@3x.png"] as const;
 
+// A reservation id is a UUID; anything else is refused before it reaches a query.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface ReservationRow {
   id: string;
   pod_id: string;
@@ -58,8 +61,10 @@ Deno.serve(async (req) => {
   let reservationId: string;
   try {
     const body = await req.json();
-    reservationId = body.reservationId;
-    if (!reservationId) throw new Error("missing reservationId");
+    reservationId = body?.reservationId;
+    if (typeof reservationId !== "string" || !UUID_PATTERN.test(reservationId)) {
+      throw new Error("reservationId must be a UUID");
+    }
   } catch {
     return new Response("Expected JSON body: { reservationId }", { status: 400 });
   }
@@ -74,10 +79,15 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } },
   );
 
+  // Only a live Podz booking gets a pass: not a cancelled one, and not a stay
+  // the traveler booked with the hut and only added to their list
+  // (source = 'external', see SQL/external_reservations.sql).
   const { data: reservation, error: reservationError } = await supabase
     .from("reservations")
     .select("id, pod_id, check_in, check_out, guests")
     .eq("id", reservationId)
+    .eq("status", "confirmed")
+    .eq("source", "podz")
     .single<ReservationRow>();
 
   if (reservationError || !reservation) {
@@ -180,7 +190,7 @@ function buildPassJson(args: {
       ],
       auxiliaryFields: [
         { key: "guests", label: "GUESTS", value: `${reservation.guests}` },
-        ...(pod.altitudeM != null ? [{ key: "altitude", label: "ALTITUDE", value: `${pod.altitudeM} m` }] : []),
+        ...(pod.altitude_m != null ? [{ key: "altitude", label: "ALTITUDE", value: `${pod.altitude_m} m` }] : []),
       ],
       backFields: [
         { key: "confirmation", label: "Confirmation code", value: confirmationCode },

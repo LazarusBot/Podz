@@ -1,3 +1,7 @@
+-- RETIRED (2026-11-05): SQL/security_hardening.sql drops this function. It let
+-- anyone with the anon key turn a username into an e-mail, and the app signs
+-- in by e-mail code now. Kept only as a record; do not run it again.
+--
 -- Resolves a username to its account email so the client can sign in
 -- with either email or username, while still only ever calling Supabase
 -- Auth's normal email/password sign-in under the hood.
