@@ -209,6 +209,8 @@ struct BookingControlStack: View {
 /// on its own; the others stay as they are.
 struct BookingChips: View {
     @ObservedObject var flow: BookingFlow
+    /// The row's side margin: 24 on a page, the card's own margin under a card.
+    var inset: CGFloat = 24
 
     var body: some View {
         if flow.hasChoices {
@@ -218,7 +220,7 @@ struct BookingChips: View {
                     if flow.dateConfirmed { chip(flow.dateText, stage: .date) }
                     if flow.nightsConfirmed { chip(flow.nightsText, stage: .nights) }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, inset)
             }
             .transition(.opacity)
         }
