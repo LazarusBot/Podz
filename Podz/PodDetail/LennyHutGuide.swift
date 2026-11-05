@@ -91,7 +91,7 @@ struct LennyHutGuide: View {
                     .font(AppFont.regularLabel(13))
                     .foregroundColor(.homeSubtitle)
                     .padding(.vertical, 8)
-                    .contentShape(Rectangle())
+                    .captionTapArea()
                 }
                 .buttonStyle(.plain)
             }

@@ -212,6 +212,7 @@ struct PodDetailSections: View {
             }
             .font(AppFont.regularLabel(13))
             .foregroundColor(.homeSubtitle)
+            .captionTapArea(outset: 14)
         }
         .buttonStyle(.plain)
     }

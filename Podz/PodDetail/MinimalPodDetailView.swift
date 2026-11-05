@@ -317,7 +317,7 @@ struct MinimalPodDetailView: View {
                                 .foregroundColor(.homeSubtitle)
                         }
                         .padding(.vertical, 4)
-                        .contentShape(Rectangle())
+                        .captionTapArea(outset: 10)
                     }
                     .buttonStyle(.plain)
                     // Lined up with the bubble's text, past the avatar.
@@ -342,7 +342,7 @@ struct MinimalPodDetailView: View {
                             .foregroundColor(.homeSubtitle)
                     }
                     .padding(.vertical, 4)
-                    .contentShape(Rectangle())
+                    .captionTapArea(outset: 10)
                 }
                 .buttonStyle(.plain)
                 // Lined up with the bubble's text, past the avatar.
