@@ -7,7 +7,7 @@ extension View {
     func closedHutLook(_ pod: Pod, textSize: CGFloat = 13) -> some View {
         let status = OpeningStatus.evaluate(pod.openingHours)
         let isClosed = status?.isOpen == false
-        return blur(radius: isClosed ? 18 : 0, opaque: isClosed)
+        return blur(radius: isClosed ? 9 : 0, opaque: isClosed)
             .overlay {
                 if isClosed, let status {
                     ZStack {
