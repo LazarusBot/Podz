@@ -27,6 +27,10 @@ import Supabase
 /// a real `.pkpass` is signed with a key that lives on the server
 /// (`supabase/functions/generate-trip-pass`).
 struct TripPassView: View {
+    /// The Wallet button needs the `generate-trip-pass` edge function and its
+    /// Apple certificate secrets. Turn this on once both are deployed.
+    private static let offersWallet = false
+
     let pass: TripPass
     var onBack: () -> Void
 
@@ -222,12 +226,14 @@ struct TripPassView: View {
                 }
 
                 // Apple asks for its own button for this, not a lookalike.
-                AddToWalletButton {
-                    Task { await addToWallet() }
+                if Self.offersWallet {
+                    AddToWalletButton {
+                        Task { await addToWallet() }
+                    }
+                    .frame(width: 240, height: 46)
+                    .opacity(isFetchingPass ? 0.5 : 1)
+                    .disabled(isFetchingPass)
                 }
-                .frame(width: 240, height: 46)
-                .opacity(isFetchingPass ? 0.5 : 1)
-                .disabled(isFetchingPass)
             }
             .frame(maxWidth: 329)
             .padding(.horizontal, 32)
