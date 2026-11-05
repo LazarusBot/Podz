@@ -44,6 +44,8 @@ struct LennySummaryView: View {
     /// shared with the pod detail).
     @StateObject private var flow: BookingFlow
     @State private var appeared = false
+    /// The hiking trails between the huts, found once the page is up.
+    @StateObject private var trails = LennyRouteTracks()
 
     private let dotSize: CGFloat = 24
     private let photoSize: CGFloat = 88
@@ -95,7 +97,7 @@ struct LennySummaryView: View {
                     }
 
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        row(entry, number: index + 1, isLast: index == entries.count - 1, date: flow.showsDates ? flow.date(forStop: index) : nil, nights: flow.nightsFor(index))
+                        row(entry, stage: stage(into: index), number: index + 1, isLast: index == entries.count - 1, date: flow.showsDates ? flow.date(forStop: index) : nil, nights: flow.nightsFor(index))
                             // Each stop settles in a beat after the one before.
                             .opacity(appeared || reduceMotion ? 1 : 0)
                             .offset(y: appeared || reduceMotion ? 0 : 14)
@@ -139,6 +141,22 @@ struct LennySummaryView: View {
         .animation(.smooth(duration: 0.35), value: flow.dateConfirmed)
         .animation(.smooth(duration: 0.35), value: flow.nightsConfirmed)
         .onAppear { appeared = true }
+        .task { await trails.load(legs: legs) }
+    }
+
+    /// The pairs of huts a trail is looked for between (and the way back, for a loop).
+    private var legs: [(Pod, Pod)] {
+        var pairs = Array(zip(entries.map(\.pod), entries.dropFirst().map(\.pod)))
+        if isLoop, entries.count > 2, let last = entries.last?.pod, let first = entries.first?.pod { pairs.append((last, first)) }
+        return pairs
+    }
+
+    /// The day into hut `index`: along the real trail when it's found, else the estimate.
+    private func stage(into index: Int) -> LennyStage? {
+        if index > 0, let track = trails.tracks[LennyRouteTracks.key(entries[index - 1].pod, entries[index].pod)] {
+            return LennyStage(track: track)
+        }
+        return entries[index].stage
     }
 
     private var hasPath: Bool { entries.filter { $0.pod.coordinate != nil }.count >= 2 }
@@ -146,8 +164,13 @@ struct LennySummaryView: View {
     /// The trace of the route, and what it adds up to when the days are known.
     private var routeTrace: some View {
         VStack(alignment: .leading, spacing: 10) {
-            LennyRoutePath(points: entries.compactMap(\.pod.coordinate), isLoop: isLoop)
-                .padding(.horizontal, 24)
+            LennyRoutePath(
+                huts: entries.compactMap(\.pod.coordinate),
+                legs: legs.map { pair in trails.tracks[LennyRouteTracks.key(pair.0, pair.1)]?.coordinates },
+                isReady: trails.isDone,
+                isLoop: isLoop
+            )
+            .padding(.horizontal, 24)
             if let totals = routeTotals {
                 T(totals)
                     .font(AppFont.regularLabel(12))
@@ -160,10 +183,11 @@ struct LennySummaryView: View {
 
     /// "Loop · 78 km · ~19 h" over the stages (and the way back, for a loop).
     private var routeTotals: String? {
-        var stages = entries.compactMap(\.stage)
+        var stages = entries.indices.compactMap(stage(into:))
         guard !stages.isEmpty else { return nil }
-        if isLoop, let first = entries.first?.pod, let last = entries.last?.pod, let back = LennyStage.between(last, first) {
-            stages.append(back)
+        if isLoop, let first = entries.first?.pod, let last = entries.last?.pod {
+            let back = trails.tracks[LennyRouteTracks.key(last, first)].map { LennyStage(track: $0) } ?? LennyStage.between(last, first)
+            if let back { stages.append(back) }
         }
         let km = Int(stages.map(\.km).reduce(0, +).rounded())
         let hours = LennyStage.duration(stages.map(\.hours).reduce(0, +))
@@ -183,7 +207,7 @@ struct LennySummaryView: View {
     }
 
     /// A numbered dot on the line, then the stop, the pod and its photo.
-    private func row(_ entry: Entry, number: Int, isLast: Bool, date: Date?, nights: Int) -> some View {
+    private func row(_ entry: Entry, stage: LennyStage?, number: Int, isLast: Bool, date: Date?, nights: Int) -> some View {
         Button { onOpenPod(entry.pod) } label: {
             HStack(alignment: .top, spacing: 14) {
                 VStack(spacing: 0) {
@@ -232,7 +256,7 @@ struct LennySummaryView: View {
                                     .foregroundColor(.homeSubtitle)
                                     .lineLimit(1)
                             }
-                            if let stage = entry.stage {
+                            if let stage {
                                 T(stage.text)
                                     .font(AppFont.regularLabel(12))
                                     .foregroundColor(.homeSubtitle)

@@ -8,6 +8,9 @@ struct LennyStage {
     let km: Double
     /// Net climb between the two huts, when both altitudes are known (negative going down).
     let climb: Int?
+    /// Up and down along the real trail, once it's found.
+    var ascent: Int?
+    var descent: Int?
     let hours: Double
 
     /// A trail winds: 30% on top of the crow's flight.
@@ -24,10 +27,30 @@ struct LennyStage {
         return LennyStage(km: km, climb: climb, hours: km / 4 + up / 600)
     }
 
+    /// The day along the trail BRouter found: its real length and climbs.
+    init(track: HikingTrack) {
+        km = track.km
+        climb = nil
+        ascent = track.ascent
+        descent = track.descent
+        hours = track.km / 4 + Double(track.ascent) / 600
+    }
+
+    private init(km: Double, climb: Int?, hours: Double) {
+        self.km = km
+        self.climb = climb
+        self.hours = hours
+    }
+
     /// "27 km · +450 m · ~7 h".
     var text: String {
         var parts = ["\(Int(km.rounded())) km"]
-        if let climb, abs(climb) >= 10 { parts.append(climb > 0 ? "+\(climb) m" : "−\(-climb) m") }
+        if let ascent, let descent {
+            if ascent >= 10 { parts.append("+\(ascent) m") }
+            if descent >= 10 { parts.append("−\(descent) m") }
+        } else if let climb, abs(climb) >= 10 {
+            parts.append(climb > 0 ? "+\(climb) m" : "−\(-climb) m")
+        }
         parts.append("~\(Self.duration(hours))")
         return parts.joined(separator: " · ")
     }
