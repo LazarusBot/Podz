@@ -135,7 +135,7 @@ struct LennySummaryView: View {
 
     private var subtitle: String {
         let stops = entries.count
-        return "\(stops) \(stops == 1 ? "stop" : "stops"), one pod each"
+        return "\(stops) \(stops == 1 ? "stop" : "stops"), one hut each"
     }
 
     /// "Lake Braies  ·  Mon 2 Nov → Wed 4 Nov" once the dates are known.

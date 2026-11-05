@@ -99,7 +99,7 @@ struct HomeSearchPill: View {
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(tr("Ask Lenny"))
-        .accessibilityHint(tr("Describe your trip and Lenny finds the pods"))
+        .accessibilityHint(tr("Describe your trip and Lenny finds the huts"))
         .accessibilityAddTraits(isLennyMode ? .isSelected : [])
     }
 }

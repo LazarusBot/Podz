@@ -132,7 +132,7 @@ struct ProfileView: View {
                 Task { await AuthManager.shared.deleteAccount() }
             }
         } message: {
-            T("This permanently deletes your account, profile, and liked pods. This can't be undone.")
+            T("This permanently deletes your account, profile, and liked huts. This can't be undone.")
         }
     }
 

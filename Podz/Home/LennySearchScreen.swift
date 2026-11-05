@@ -63,7 +63,7 @@ struct LennySearchScreen: View {
 
                 HStack(spacing: 13) {
                     DetailBackButton(action: onClose)
-                    DetailTextButton(title: "View selected pods", isHighlighted: canOpenPlan) {
+                    DetailTextButton(title: "View selected huts", isHighlighted: canOpenPlan) {
                         withAnimation(.easeInOut(duration: 0.3)) { showsPlan = true }
                     }
                     .disabled(!canOpenPlan)
@@ -141,9 +141,9 @@ struct LennySearchScreen: View {
 
     private var foundTitle: String {
         switch foundCount {
-        case 0: return "No pods found"
-        case 1: return "1 pod found"
-        default: return "\(foundCount) pods found"
+        case 0: return "No huts found"
+        case 1: return "1 hut found"
+        default: return "\(foundCount) huts found"
         }
     }
 
@@ -168,9 +168,9 @@ struct LennySearchScreen: View {
         guard lenny.phase == .results else { return nil }
         if let error = lenny.errorMessage { return error }
         switch foundCount {
-        case 0: return "I couldn't find any pods on that route."
-        case 1: return "I found 1 pod along your route\(understoodNote). Want to take a look?"
-        default: return "I found \(foundCount) pods along your route\(understoodNote). Want to take a look?"
+        case 0: return "I couldn't find any huts on that route."
+        case 1: return "I found 1 hut along your route\(understoodNote). Want to take a look?"
+        default: return "I found \(foundCount) huts along your route\(understoodNote). Want to take a look?"
         }
     }
 

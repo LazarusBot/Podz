@@ -204,7 +204,7 @@ struct MyReservationsView: View {
     private var emptyState: some View {
         LennyEmptyState(
             title: "No trips yet",
-            line: "Tell Lenny where you'd like to go, and for how long. It finds the pods and plans the stays for you."
+            line: "Tell Lenny where you'd like to go, and for how long. He finds the huts and plans the stays for you."
         )
     }
 
@@ -332,7 +332,7 @@ struct MyReservationsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(pod?.name ?? "Pod")
+                        Text(pod?.name ?? "Hut")
                             .font(AppFont.semiBoldLabel(16))
                             .foregroundColor(.homeText)
                             .lineLimit(1)

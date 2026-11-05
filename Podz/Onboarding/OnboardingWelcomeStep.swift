@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Step 1 — "Book a shelter. In an instant". A collage of pod photos
+/// Step 1 — "Book a hut. In an instant". A collage of pod photos
 /// fading into the ground color, with the title and a single pill over it.
 struct OnboardingWelcomeStep: View {
     var onStart: () -> Void
@@ -16,7 +16,7 @@ struct OnboardingWelcomeStep: View {
                 Spacer()
 
                 VStack(spacing: 6) {
-                    T("Book a shelter.")
+                    T("Book a hut.")
                     T("In an instant")
                 }
                 .font(OnboardingFont.title)

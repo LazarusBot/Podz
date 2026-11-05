@@ -41,7 +41,7 @@ struct TripPassView: View {
     @State private var passFetchError: String?
     @State private var didCopyCode = false
 
-    /// Only real once `PodsStore` has fetched this session: nil hides "View pod"
+    /// Only real once `PodsStore` has fetched this session: nil hides "View hut"
     /// when this is opened offline with nothing but the pass cached.
     private var matchedPod: Pod? {
         podsStore.pods.first { $0.id == pass.podId }
@@ -211,7 +211,7 @@ struct TripPassView: View {
                 if matchedPod != nil {
                     Button { showsPod = true } label: {
                         HStack(spacing: 5) {
-                            T("View pod")
+                            T("View hut")
                                 .font(AppFont.regularLabel(13))
                                 .foregroundColor(.homeSubtitle)
                                 .underline(color: Color.homeSubtitle.opacity(0.5))
