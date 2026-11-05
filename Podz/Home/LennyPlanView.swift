@@ -14,6 +14,8 @@ struct LennyPlanView: View {
     var isLoop = false
     /// What the plan is called when saved.
     var planTitle: String?
+    /// Leaves the whole plan flow at once (back only steps back).
+    var onExit: (() -> Void)?
     /// Back from the first stop leaves the plan.
     var onLeave: () -> Void
     var onOpenPod: (Pod) -> Void
@@ -22,6 +24,7 @@ struct LennyPlanView: View {
 
     @State private var stopIndex = 0
     @State private var showsSummary = false
+    @State private var asksToLeave = false
     /// The pod picked for each stop (by stop id).
     @State private var picks: [UUID: UUID] = [:]
 
@@ -44,7 +47,8 @@ struct LennyPlanView: View {
                 onViewReservations: onFinish,
                 request: request,
                 isLoop: isLoop,
-                planTitle: planTitle
+                planTitle: planTitle,
+                onExit: onExit
             )
             .transition(.opacity)
         } else {
@@ -87,12 +91,17 @@ struct LennyPlanView: View {
                         .padding(.horizontal, 24)
                         .padding(.top, 25)
 
-                    // Which stop these pods are around.
-                    T("\(stop.name) · \(stopIndex + 1) of \(stops.count)")
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.homeSubtitle)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 6)
+                    // Which stop these pods are around, and a way out of the whole plan.
+                    HStack {
+                        T("\(stop.name) · \(stopIndex + 1) of \(stops.count)")
+                            .font(AppFont.regularLabel(13))
+                            .foregroundColor(.homeSubtitle)
+                            .lineLimit(1)
+                        Spacer(minLength: 12)
+                        if onExit != nil { LeavePlanCaption { asksToLeave = true } }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 6)
 
                     pickCaption
                         .padding(.horizontal, 24)
@@ -129,6 +138,7 @@ struct LennyPlanView: View {
             .padding(.bottom, DetailLayout.controlStackGap)
         }
         .background(Color.homeBackground.ignoresSafeArea())
+        .lennyAsksToLeave($asksToLeave) { onExit?() }
     }
 
     /// Why the picked pod is there: Lenny's own pick says so and gives the

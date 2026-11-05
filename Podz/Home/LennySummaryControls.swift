@@ -54,3 +54,37 @@ struct SavePlanCaption: View {
         .accessibilityLabel(tr(isSaved ? "Saved. Tap to remove" : "Save plan"))
     }
 }
+
+/// "Leave" gets out of the whole plan flow in one tap (back only steps back):
+/// to Home from Lenny's screens, or out of a plan opened from Profile.
+struct LeavePlanCaption: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            T("Leave")
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.homeSubtitle)
+                .underline(color: Color.homeSubtitle.opacity(0.5))
+                .padding(.vertical, 8)
+                .captionTapArea()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tr("Leave the plan"))
+    }
+}
+
+extension View {
+    /// Lenny asks before a plan that isn't saved is left behind.
+    func lennyAsksToLeave(_ isPresented: Binding<Bool>, onLeave: @escaping () -> Void) -> some View {
+        lennyAsks(
+            isPresented: isPresented,
+            question: "Leave this plan? It isn't saved yet.",
+            confirm: "Leave",
+            keep: "Stay",
+            isDestructive: false,
+            respectsSafeArea: true,
+            onConfirm: onLeave
+        )
+    }
+}

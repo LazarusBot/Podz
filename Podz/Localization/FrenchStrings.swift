@@ -320,6 +320,8 @@ enum FrenchStrings {
         ("Saved. Tap to remove", "Enregistré. Touche pour retirer"), ("Plans", "Plans"), ("No plans yet", "Aucun plan"),
         ("Plan a trip with Lenny, then save it here to book later.", "Prépare un voyage avec Lenny, puis enregistre-le ici pour réserver plus tard."),
         ("Delete this plan?", "Supprimer ce plan ?"), ("Across {}", "À travers {1}"),
+        ("Leave", "Quitter"), ("Leave the plan", "Quitter le plan"), ("Stay", "Rester"),
+        ("Leave this plan? It isn't saved yet.", "Quitter ce plan ? Il n'est pas enregistré."),
         ("Make it a loop", "En faire une boucle"), ("Make it one way", "En faire un aller simple"),
         ("Beginner hiker", "Randonneur débutant"), ("Regular hiker", "Randonneur régulier"), ("Expert hiker", "Randonneur expert"),
         ("Easy days, then: huts closer together, less climbing, and a stop where a day was long.", "Des étapes faciles, alors : des refuges plus proches, moins de dénivelé, et une halte là où la journée était longue."),

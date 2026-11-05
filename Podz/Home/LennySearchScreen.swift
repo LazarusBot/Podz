@@ -35,6 +35,7 @@ struct LennySearchScreen: View {
                     request: lenny.request,
                     isLoop: lenny.routeIsLoop,
                     planTitle: lenny.planTitle,
+                    onExit: onClose,
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
                     onOpenPod: { selectedPod = $0 },
                     onFinish: {

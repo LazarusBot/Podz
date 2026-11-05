@@ -40,6 +40,8 @@ struct LennySummaryView: View {
     var isLoop = false
     /// What the plan is called when saved ("Across the Alps").
     var planTitle: String?
+    /// Leaves the whole plan flow at once (back only steps back).
+    var onExit: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The booking questions, answers and the booking itself (`BookingFlow`,
@@ -51,6 +53,7 @@ struct LennySummaryView: View {
     @ObservedObject private var savedPlans = SavedPlansStore.shared
     /// List (the stops) or Map (the trace of the route).
     @State private var showsMap = false
+    @State private var asksToLeave = false
 
     private let dotSize: CGFloat = 24
     private let photoSize: CGFloat = 88
@@ -66,8 +69,10 @@ struct LennySummaryView: View {
         onViewReservations: @escaping () -> Void,
         request: LennyRequest? = nil,
         isLoop: Bool = false,
-        planTitle: String? = nil
+        planTitle: String? = nil,
+        onExit: (() -> Void)? = nil
     ) {
+        self.onExit = onExit
         self.isLoop = isLoop
         self.planTitle = planTitle
         self.entries = entries
@@ -100,7 +105,10 @@ struct LennySummaryView: View {
                     HStack {
                         if hasPath { PlanModeToggle(showsMap: $showsMap) }
                         Spacer(minLength: 0)
-                        SavePlanCaption(isSaved: savedPlan != nil, action: toggleSaved)
+                        HStack(spacing: 18) {
+                            SavePlanCaption(isSaved: savedPlan != nil, action: toggleSaved)
+                            if onExit != nil { LeavePlanCaption(action: leave) }
+                        }
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, flow.hasChoices ? 14 : 20)
@@ -155,6 +163,7 @@ struct LennySummaryView: View {
         .animation(.smooth(duration: 0.35), value: flow.nightsConfirmed)
         .onAppear { appeared = true }
         .task { await trails.load(legs: legs) }
+        .lennyAsksToLeave($asksToLeave) { onExit?() }
     }
 
     /// The pairs of huts a trail is looked for between (and the way back, for a loop).
@@ -227,6 +236,15 @@ struct LennySummaryView: View {
             .padding(.top, 6)
         }
         .padding(.bottom, 28)
+    }
+
+    /// Out of the whole flow; Lenny asks first when the plan would be lost.
+    private func leave() {
+        if savedPlan != nil || flow.status == .booked {
+            onExit?()
+        } else {
+            asksToLeave = true
+        }
     }
 
     // MARK: - Saving
