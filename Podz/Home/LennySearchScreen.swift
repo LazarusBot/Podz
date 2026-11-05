@@ -177,13 +177,17 @@ struct LennySearchScreen: View {
                 failed: "I can't close a loop with the huts around there."
             ) { $0.loop.toggle() }
         })
-        let shorter = options.days != .short
-        replies.append(.init(title: shorter ? "Shorter days" : "Longer days") {
-            lenny.refine(
-                done: shorter ? "Shorter days, then." : "Longer days, then.",
-                failed: "I can't find a route with that."
-            ) { $0.days = shorter ? .short : .long }
-        })
+        // The two other walkers: closer huts and a stop in a long day, or longer days.
+        let levels: [(LennyAreaRoute.Options.Level, String, String)] = [
+            (.beginner, "Beginner hiker", "Easy days, then: huts closer together, less climbing, and a stop where a day was long."),
+            (.regular, "Regular hiker", "Regular days again."),
+            (.expert, "Expert hiker", "Long days for an expert, then.")
+        ]
+        for (level, title, done) in levels where level != options.level {
+            replies.append(.init(title: title) {
+                lenny.refine(done: done, failed: "I can't find a route with that.") { $0.level = level }
+            })
+        }
         replies.append(.init(title: options.bookableOnly ? "Include listed huts" : "Only huts I can book") {
             lenny.refine(
                 done: options.bookableOnly ? "Listed huts are back in." : "Only huts you can book here.",

@@ -189,11 +189,14 @@ final class LennySearchViewModel: ObservableObject {
         var areaName: String?
         if let found = LennyAreaRoute.area(for: request, pods: allPods) {
             let count = LennyAreaRoute.stopCount(for: request)
-            areaStops = LennyAreaRoute.stops(in: found, count: count, wants: request.facilities, photoIDs: Self.photoIDs).stops
+            var options = LennyAreaRoute.Options()
+            options.level = request.level ?? .regular
+            areaStops = LennyAreaRoute.stops(in: found, count: count, wants: request.facilities, photoIDs: Self.photoIDs, options: options).stops
             areaName = found.name
             if !areaStops.isEmpty {
                 area = found
                 areaStopCount = count
+                routeOptions.level = request.level ?? .regular
             }
         }
 
