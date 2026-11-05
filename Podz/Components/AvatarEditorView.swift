@@ -164,7 +164,7 @@ struct AvatarEditorView: View {
                 .foregroundColor(.homeSubtitle)
                 .underline(color: Color.homeSubtitle.opacity(0.5))
                 .padding(.vertical, 8)
-                .contentShape(Rectangle())
+                .captionTapArea()
         }
         .buttonStyle(.plain)
     }

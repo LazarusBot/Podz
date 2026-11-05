@@ -78,6 +78,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 - **Text pill** ("Book", "Open", "Continue", "Touch to start"): 14 regular label in `homeText`.
 - **Highlighted pill** (last onboarding step): ground and text swap, `onbHighlight` fill, 14 semiBold label.
 - **Back**: 83 x 83 pill, chevron 8 x 12, 1.5 stroke, round caps, `homeText` at 35%.
+- **Caption tap area.** The small 13 `homeSubtitle` captions ("Details ›", "See all", "Another tip ›", Lenny's "Go to Home ›", "Find huts ›"...) look and sit exactly as drawn but take taps in a band about 44 tall: `.captionTapArea()` grows the tappable shape (not the layout) by 8 on every side, 10 for a caption with 4 of padding, 14 for one with none. Use it on every new caption; never pad one taller to get there, it would move the stack.
 - **Close** (`CloseButton`, 44): round pill, same fill and 1pt border as back, thin 12pt "x" (1.5 stroke, round caps) in `homeText` at 45%. The add-friend and share-folder sheets use it; it is the only close button (the old gray circle is gone).
 - **Share** (Likes folder): round 83 pill like Back, the app's SF Symbol `link` (16 semibold) in `homeText` at 35%. Not the vector from the Paper example, which wasn't right.
 - **Like**: 83 x 83 pill, the tab bar's heart (22, 1.6 stroke): outline at 45% when not liked, filled at full strength when liked, with a quick bounce. Tapping when liked removes the like; otherwise it opens the folder picker.

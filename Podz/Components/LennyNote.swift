@@ -127,7 +127,7 @@ private struct LennyAsksModifier: ViewModifier {
                 .foregroundColor(color)
                 .underline(color: color.opacity(0.5))
                 .padding(.vertical, 8)
-                .contentShape(Rectangle())
+                .captionTapArea()
         }
         .buttonStyle(.plain)
     }

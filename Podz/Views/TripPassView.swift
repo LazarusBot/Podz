@@ -220,7 +220,7 @@ struct TripPassView: View {
                                 .foregroundColor(.homeSubtitle)
                         }
                         .padding(.vertical, 6)
-                        .contentShape(Rectangle())
+                        .captionTapArea()
                     }
                     .buttonStyle(.plain)
                 }
