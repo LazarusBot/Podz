@@ -224,8 +224,9 @@ final class LennySearchViewModel: ObservableObject {
             steps[1].subtitle = "Around each stop"
             steps[1].isDone = true
 
-            // 3 - Pods around each stop, nearest first, and some along the way.
-            journeyStops = Self.journey(from: stops, pods: allPods, wants: request.facilities)
+            // 3 - Pods around each stop, nearest first, and some along the way:
+            // closed huts are never proposed (a hut asked for by name stays).
+            journeyStops = Self.journey(from: stops, pods: allPods.filter { OpeningStatus.evaluate($0.openingHours)?.isOpen != false }, wants: request.facilities)
         }
         try? await Task.sleep(nanoseconds: 350_000_000)
         guard !Task.isCancelled else { return }

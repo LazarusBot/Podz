@@ -60,11 +60,9 @@ struct LennySearchScreen: View {
                     VStack(alignment: .leading, spacing: 4) {
                         LennyReply(message: replyMessage, mood: mood)
                         if lenny.phase == .results, lenny.canRefine, !failed {
-                            ForEach(refinements, id: \.title) { reply in
-                                BookingQuickReply(reply: reply)
-                                    // Lined up with the bubble's text, past the avatar.
-                                    .padding(.leading, 38 + 18)
-                            }
+                            refinementCaptions
+                                // Lined up with the bubble's text, past the avatar.
+                                .padding(.leading, 38 + 18)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -169,34 +167,41 @@ struct LennySearchScreen: View {
         return failed || lenny.refineFailed ? .sorry : .happy
     }
 
-    /// What Lenny offers to change on a route across an area, one tap each.
-    private var refinements: [BookingFlow.QuickReply] {
+    /// What Lenny offers to change on a route across an area, on one line:
+    /// the loop, and the other walker. Each swaps with what it replaces: **Make
+    /// it a loop** becomes **Make it one way**, **Beginner hiker** becomes
+    /// **Regular hiker** (and back).
+    @ViewBuilder
+    private var refinementCaptions: some View {
         let options = lenny.routeOptions
-        var replies: [BookingFlow.QuickReply] = []
-        replies.append(.init(title: options.loop ? "Make it one way" : "Make it a loop") {
-            lenny.refine(
-                done: options.loop ? "One way again." : "Done, it comes back to where it starts.",
-                failed: "I can't close a loop with the huts around there."
-            ) { $0.loop.toggle() }
-        })
-        // The two other walkers: closer huts and a stop in a long day, or longer days.
-        let levels: [(LennyAreaRoute.Options.Level, String, String)] = [
-            (.beginner, "Beginner hiker", "Easy days, then: huts closer together, less climbing, and a stop where a day was long."),
-            (.regular, "Regular hiker", "Regular days again."),
-            (.expert, "Expert hiker", "Long days for an expert, then.")
-        ]
-        for (level, title, done) in levels where level != options.level {
-            replies.append(.init(title: title) {
-                lenny.refine(done: done, failed: "I can't find a route with that.") { $0.level = level }
+        let offered: LennyAreaRoute.Options.Level = options.level == .regular ? .beginner : .regular
+        HStack(spacing: 18) {
+            BookingQuickReply(reply: .init(title: options.loop ? "Make it one way" : "Make it a loop") {
+                lenny.refine(
+                    done: options.loop ? "One way again." : "Done, it comes back to where it starts.",
+                    failed: "I can't close a loop with the huts around there."
+                ) { $0.loop.toggle() }
+            })
+            BookingQuickReply(reply: .init(title: Self.levelTitle(offered)) {
+                lenny.refine(done: Self.levelDone(offered), failed: "I can't find a route with that.") { $0.level = offered }
             })
         }
-        replies.append(.init(title: options.bookableOnly ? "Include listed huts" : "Only huts I can book") {
-            lenny.refine(
-                done: options.bookableOnly ? "Listed huts are back in." : "Only huts you can book here.",
-                failed: "There aren't enough huts you can book there."
-            ) { $0.bookableOnly.toggle() }
-        })
-        return replies
+    }
+
+    private static func levelTitle(_ level: LennyAreaRoute.Options.Level) -> String {
+        switch level {
+        case .beginner: "Beginner hiker"
+        case .regular: "Regular hiker"
+        case .expert: "Expert hiker"
+        }
+    }
+
+    private static func levelDone(_ level: LennyAreaRoute.Options.Level) -> String {
+        switch level {
+        case .beginner: "Easy days, then: huts closer together, less climbing, and a stop where a day was long."
+        case .regular: "Regular days again."
+        case .expert: "Long days for an expert, then."
+        }
     }
 
     /// "(3 guests · from Sat 31 Oct · 5 days)": what Lenny picked up besides
