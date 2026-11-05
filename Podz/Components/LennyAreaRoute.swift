@@ -105,11 +105,11 @@ enum LennyAreaRoute {
         let none = Route(stops: [], isLoop: false)
         let candidates: [Candidate] = area.pods.compactMap { pod in
             guard let lat = pod.latitude, let lng = pod.longitude,
-                  OpeningStatus.evaluate(pod.openingHours)?.isOpen != false,
-                  // Lenny only plans with huts that can be booked here.
-                  pod.isBookable
+                  // Closed huts are never proposed; listed ones are fine.
+                  OpeningStatus.evaluate(pod.openingHours)?.isOpen != false
             else { return nil }
             var score = Double(PodQuality.score(pod, hasPhoto: photoIDs.contains(pod.id)))
+            if pod.isBookable { score += 4 }
             score += Double(wants.filter { (pod.facilities ?? []).contains($0) }.count) * 2
             return Candidate(pod: pod, lat: lat, lng: lng, score: score, altitude: pod.altitudeM)
         }
