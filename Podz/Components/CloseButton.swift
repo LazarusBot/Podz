@@ -30,7 +30,7 @@ struct CloseButton: View {
                     .frame(width: size, height: size)
                     .background(Circle().fill(Color.homePill))
             }
-            .accessibilityLabel(tr("Close"))
+            .accessibilityLabel("Close")
         case .pill:
             Button(action: action) {
                 CloseCross()
@@ -44,7 +44,7 @@ struct CloseButton: View {
                     )
             }
             .buttonStyle(TapScaleButtonStyle())
-            .accessibilityLabel(tr("Close"))
+            .accessibilityLabel("Close")
         }
     }
 }

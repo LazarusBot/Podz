@@ -343,12 +343,12 @@ enum FrenchStrings {
         ("Your photo", "Ta photo"), ("Change photo", "Changer de photo"), ("Press and hold the photo to adjust it", "Maintiens la photo pour l'ajuster"),
         ("Profile photo. Double tap to change, press and hold to adjust", "Photo de profil. Touche deux fois pour changer, maintiens pour ajuster"),
         ("Adjust photo", "Ajuster la photo"), ("Pinch to zoom, drag to move", "Pince pour zoomer, glisse pour déplacer"),
-        ("Close", "Fermer"), ("Change profile photo", "Changer la photo de profil"), ("Lenny is typing", "Lenny écrit"),
-        ("Listed", "Référencé"),
         ("Rotate", "Pivoter"), ("Reset", "Réinitialiser"), ("Couldn't save", "Enregistrement impossible"),
         ("Couldn't open your photo.", "Impossible d'ouvrir ta photo."), ("Couldn't prepare the photo.", "Impossible de préparer la photo."),
 
         ("Expanded", "Déplié"), ("Collapsed", "Replié"),
+        ("Close", "Fermer"), ("Change profile photo", "Changer la photo de profil"), ("Lenny is typing", "Lenny écrit"),
+        ("Listed", "Référencé"),
 
         // About, legal, sign-up
         ("About Podz", "À propos de Podz"), ("Version {}", "Version {1}"), ("Terms of Service", "Conditions d'utilisation"),
