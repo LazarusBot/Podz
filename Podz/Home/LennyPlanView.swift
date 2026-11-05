@@ -10,6 +10,8 @@ struct LennyPlanView: View {
     let photoURLs: [UUID: String]
     /// What Lenny understood, to prefill the booking (guests, dates, nights).
     var request: LennyRequest?
+    /// The route comes back to its first hut.
+    var isLoop = false
     /// Back from the first stop leaves the plan.
     var onLeave: () -> Void
     var onOpenPod: (Pod) -> Void
@@ -33,32 +35,42 @@ struct LennyPlanView: View {
     var body: some View {
         if showsSummary {
             LennySummaryView(
-                entries: stops.compactMap { stop in
-                    (stop.pods.first { $0.id == picks[stop.id] } ?? stop.pods.first)
-                        .map { pod in
-                            var details: [String] = []
-                            if let distance = stop.distanceText(for: pod) { details.append("\(distance) away") }
-                            if let beds = pod.bedsTotal { details.append("\(beds) \(beds == 1 ? "bed" : "beds")") }
-                            let asked = (request?.facilities ?? []).filter { (pod.facilities ?? []).contains($0) }
-                            if !asked.isEmpty { details.append(LennyFacilities.phrase(asked)) }
-                            return LennySummaryView.Entry(
-                                stopName: stop.name,
-                                pod: pod,
-                                detail: details.joined(separator: " · "),
-                                isLennysPick: pod.id == stop.pods.first?.id && stop.pickReason != nil
-                            )
-                        }
-                },
+                entries: summaryEntries,
                 photoURLs: photoURLs,
                 onBack: { withAnimation(.easeInOut(duration: 0.3)) { showsSummary = false } },
                 onOpenPod: onOpenPod,
                 onViewReservations: onFinish,
-                request: request
+                request: request,
+                isLoop: isLoop
             )
             .transition(.opacity)
         } else {
             plan
         }
+    }
+
+    /// One entry per stop with the hut picked there; on a route across an
+    /// area each says the day from the last hut.
+    private var summaryEntries: [LennySummaryView.Entry] {
+        var previous: Pod?
+        var entries: [LennySummaryView.Entry] = []
+        for stop in stops {
+            guard let pod = stop.pods.first(where: { $0.id == picks[stop.id] }) ?? stop.pods.first else { continue }
+            var details: [String] = []
+            if let distance = stop.distanceText(for: pod) { details.append("\(distance) away") }
+            if let beds = pod.bedsTotal { details.append("\(beds) \(beds == 1 ? "bed" : "beds")") }
+            let asked = (request?.facilities ?? []).filter { (pod.facilities ?? []).contains($0) }
+            if !asked.isEmpty { details.append(LennyFacilities.phrase(asked)) }
+            entries.append(LennySummaryView.Entry(
+                stopName: stop.name,
+                pod: pod,
+                detail: details.joined(separator: " · "),
+                isLennysPick: pod.id == stop.pods.first?.id && stop.pickReason != nil,
+                stage: stop.isStage ? previous.flatMap { LennyStage.between($0, pod) } : nil
+            ))
+            previous = pod
+        }
+        return entries
     }
 
     private var plan: some View {

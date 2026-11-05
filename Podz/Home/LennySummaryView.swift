@@ -25,6 +25,8 @@ struct LennySummaryView: View {
         /// "3.2 km away · 24 beds"; may be empty.
         let detail: String
         let isLennysPick: Bool
+        /// The day from the last hut on a route across an area, when there is one.
+        var stage: LennyStage?
         var id: UUID { pod.id }
     }
 
@@ -34,6 +36,8 @@ struct LennySummaryView: View {
     var onOpenPod: (Pod) -> Void
     /// After booking: go look at the reservations.
     var onViewReservations: () -> Void
+    /// The route comes back to its first hut.
+    var isLoop = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The booking questions, answers and the booking itself (`BookingFlow`,
@@ -53,8 +57,10 @@ struct LennySummaryView: View {
         onBack: @escaping () -> Void,
         onOpenPod: @escaping (Pod) -> Void,
         onViewReservations: @escaping () -> Void,
-        request: LennyRequest? = nil
+        request: LennyRequest? = nil,
+        isLoop: Bool = false
     ) {
+        self.isLoop = isLoop
         self.entries = entries
         self.photoURLs = photoURLs
         self.onBack = onBack
@@ -79,7 +85,9 @@ struct LennySummaryView: View {
                         .foregroundColor(.homeSubtitle)
                         .padding(.horizontal, 24)
                         .padding(.top, 6)
-                        .padding(.bottom, flow.hasChoices ? 16 : 28)
+                        .padding(.bottom, hasPath ? 18 : (flow.hasChoices ? 16 : 28))
+
+                    if hasPath { routeTrace }
 
                     if flow.hasChoices {
                         BookingChips(flow: flow)
@@ -131,6 +139,35 @@ struct LennySummaryView: View {
         .animation(.smooth(duration: 0.35), value: flow.dateConfirmed)
         .animation(.smooth(duration: 0.35), value: flow.nightsConfirmed)
         .onAppear { appeared = true }
+    }
+
+    private var hasPath: Bool { entries.filter { $0.pod.coordinate != nil }.count >= 2 }
+
+    /// The trace of the route, and what it adds up to when the days are known.
+    private var routeTrace: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LennyRoutePath(points: entries.compactMap(\.pod.coordinate), isLoop: isLoop)
+                .padding(.horizontal, 24)
+            if let totals = routeTotals {
+                T(totals)
+                    .font(AppFont.regularLabel(12))
+                    .foregroundColor(.homeSubtitle)
+                    .padding(.horizontal, 24)
+            }
+        }
+        .padding(.bottom, flow.hasChoices ? 18 : 28)
+    }
+
+    /// "Loop · 78 km · ~19 h" over the stages (and the way back, for a loop).
+    private var routeTotals: String? {
+        var stages = entries.compactMap(\.stage)
+        guard !stages.isEmpty else { return nil }
+        if isLoop, let first = entries.first?.pod, let last = entries.last?.pod, let back = LennyStage.between(last, first) {
+            stages.append(back)
+        }
+        let km = Int(stages.map(\.km).reduce(0, +).rounded())
+        let hours = LennyStage.duration(stages.map(\.hours).reduce(0, +))
+        return (isLoop ? tr("Loop") + "  ·  " : "") + "\(km) km  ·  ~\(hours)"
     }
 
     private var subtitle: String {
@@ -192,6 +229,12 @@ struct LennySummaryView: View {
                             if !entry.detail.isEmpty {
                                 T(entry.detail)
                                     .font(AppFont.regularLabel(13))
+                                    .foregroundColor(.homeSubtitle)
+                                    .lineLimit(1)
+                            }
+                            if let stage = entry.stage {
+                                T(stage.text)
+                                    .font(AppFont.regularLabel(12))
                                     .foregroundColor(.homeSubtitle)
                                     .lineLimit(1)
                             }
