@@ -283,8 +283,8 @@ enum FrenchStrings {
         ("Save to folder", "Enregistrer dans un dossier"), ("New folder", "Nouveau dossier"), ("Folder name", "Nom du dossier"),
         ("Remove folder", "Retirer le dossier"), ("Share folder", "Partager le dossier"),
         ("Share \"{}\"", "Partager « {1} »"),
-        ("Friends you share it with can view this folder, read-only.", "Les amis avec qui tu le partages peuvent voir ce dossier, en lecture seule."),
-        ("Add friends in Profile, then share this folder with them.", "Ajoute des amis dans ton profil, puis partage ce dossier avec eux."),
+        ("Friends you turn on can view this folder, read-only.", "Les amis que tu actives peuvent voir ce dossier, en lecture seule."),
+        ("Add some friends first — nobody to share with yet.", "Ajoute d'abord des amis : personne avec qui partager pour l'instant."),
         ("Couldn't update sharing", "Impossible de mettre à jour le partage"), ("Someone", "Quelqu'un"),
         ("Edit profile", "Modifier le profil"), ("Friends", "Amis"), ("Login and security", "Connexion et sécurité"),
         ("Log out", "Se déconnecter"), ("Delete account", "Supprimer le compte"),
@@ -349,6 +349,8 @@ enum FrenchStrings {
         ("Expanded", "Déplié"), ("Collapsed", "Replié"),
         ("Close", "Fermer"), ("Change profile photo", "Changer la photo de profil"), ("Lenny is typing", "Lenny écrit"),
         ("Listed", "Référencé"),
+        ("Friends you share it with can view this folder, read-only.", "Les amis avec qui tu le partages peuvent voir ce dossier, en lecture seule."),
+        ("Add friends in Profile, then share this folder with them.", "Ajoute des amis dans ton profil, puis partage ce dossier avec eux."),
 
         // About, legal, sign-up
         ("About Podz", "À propos de Podz"), ("Version {}", "Version {1}"), ("Terms of Service", "Conditions d'utilisation"),
