@@ -46,11 +46,11 @@ struct SectionFade {
     var solid: CGFloat
 
     /// Rows melt away over the lower part and are gone behind the pills.
-    static let standard = SectionFade(start: 0.79, solid: 0.94)
+    static let standard = SectionFade(start: 0.78, solid: 0.94)
     /// Higher, for a floating bubble above the pills.
-    static let tall = SectionFade(start: 0.67, solid: 0.86)
+    static let tall = SectionFade(start: 0.66, solid: 0.86)
     /// Photo cards (See all): they must never be seen around the pill.
-    static let photos = SectionFade(start: 0.73, solid: 0.92)
+    static let photos = SectionFade(start: 0.72, solid: 0.92)
 }
 
 /// The fade into the ground over the whole screen, edge to edge, from where
@@ -92,7 +92,7 @@ struct SectionPage<Content: View, Trailing: View>: View {
     @ViewBuilder var content: () -> Content
 
     /// Room under the content so the last row clears the pill row.
-    private static var bottomRoom: CGFloat { 130 }
+    private static var bottomRoom: CGFloat { 140 }
 
     var body: some View {
         ZStack(alignment: .bottom) {

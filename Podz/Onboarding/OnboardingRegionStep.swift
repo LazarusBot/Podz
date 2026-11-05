@@ -46,7 +46,6 @@ struct OnboardingRegionStep: View {
             )
             .padding(.top, 48)
             .padding(.bottom, 40)
-            .offset(y: DetailLayout.controlStackDrop)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.onbBackground.ignoresSafeArea())

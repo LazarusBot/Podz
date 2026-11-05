@@ -87,7 +87,7 @@ struct LaunchWaitingView: View {
         .padding(.horizontal, 24)
         // At the bottom, where Lenny's bubbles sit on every other screen: the
         // caption is where the pill row would be.
-        .padding(.bottom, DetailLayout.controlStackGap + 24)
+        .padding(.bottom, 40 + 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .background(Color.homeBackground.ignoresSafeArea())
         .animation(.smooth(duration: 0.35), value: isReady)
