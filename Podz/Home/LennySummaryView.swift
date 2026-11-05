@@ -177,7 +177,7 @@ struct LennySummaryView: View {
     private var fade: some View {
         // Lenny's bubble floats above the pills: the fade rises with it
         // (the whole-screen fade, a little higher with a quick reply).
-        SectionFadeLayer(fade: flow.quickReply == nil ? .tall : SectionFade(start: 0.60, solid: 0.81))
+        SectionFadeLayer(fade: flow.quickReply == nil ? .tall : SectionFade(start: 0.57, solid: 0.78))
     }
 
     private var lennyLine: some View {
@@ -205,7 +205,7 @@ struct LennySummaryView: View {
     private var controlStack: some View {
         // The control stack (`BookingControlStack`); the cover respects the
         // safe area, so the usual gap puts it where every control stack is.
-        BookingControlStack(flow: flow, onLeave: onBack, onViewReservations: onViewReservations, onExit: exitAction)
+        BookingControlStack(flow: flow, onLeave: onBack, onViewReservations: onViewReservations, onExit: exitAction, onBookListed: { contactPod = $0 })
             .padding(.horizontal, 24)
             .padding(.bottom, DetailLayout.controlStackGap)
     }

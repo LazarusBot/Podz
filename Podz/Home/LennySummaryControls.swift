@@ -55,32 +55,6 @@ struct SavePlanCaption: View {
     }
 }
 
-/// The round pill in the control stack that gets out of the whole plan flow
-/// in one tap (the back pill only steps back): a thin cross like the back
-/// pill's chevron, at 35%.
-struct DetailCloseButton: View {
-    var action: () -> Void
-
-    var body: some View {
-        DetailRoundButton(accessibilityLabel: tr("Leave the plan"), action: action) {
-            CrossGlyph()
-                .stroke(Color.homeText.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-                .frame(width: 12, height: 12)
-        }
-    }
-}
-
-private struct CrossGlyph: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.move(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        return path
-    }
-}
-
 extension View {
     /// Lenny asks before a plan that isn't saved is left behind.
     func lennyAsksToLeave(_ isPresented: Binding<Bool>, onLeave: @escaping () -> Void) -> some View {

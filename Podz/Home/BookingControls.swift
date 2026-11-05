@@ -10,9 +10,13 @@ struct BookingControlStack: View {
     var onLeave: () -> Void
     /// After booking: go look at the reservations.
     var onViewReservations: () -> Void
-    /// Leaves the whole plan flow at once (a round pill beside back); nil where
-    /// there is nothing to leave (the pod detail).
+    /// Leaves the whole plan flow at once (a small close button beside back);
+    /// nil where there is nothing to leave (the pod detail).
     var onExit: (() -> Void)?
+    /// Opens the Call / Email / website choices of a listed hut.
+    var onBookListed: ((Pod) -> Void)?
+    /// With several listed stops: which hut to book through.
+    @State private var choosingHut = false
 
     var body: some View {
         HStack(spacing: 13) {
@@ -25,9 +29,9 @@ struct BookingControlStack: View {
                 DetailBackButton { flow.back(onLeave: onLeave) }
                     .disabled(flow.status == .booking)
                     .opacity(flow.status == .booking ? 0.45 : 1)
-                // Not when the primary pill already is "Leave" (every hut listed).
-                if let onExit, flow.status != .booking, flow.bookableCount > 0 {
-                    DetailCloseButton(action: onExit)
+                // A small close button: out of the whole flow in one tap.
+                if let onExit, flow.status != .booking {
+                    CloseButton(action: onExit)
                         .transition(.opacity)
                 }
                 primaryPill
@@ -41,6 +45,12 @@ struct BookingControlStack: View {
         .animation(.smooth(duration: 0.35), value: flow.dateConfirmed)
         .animation(.smooth(duration: 0.35), value: flow.nightsConfirmed)
         .bookingDateSheet(flow)
+        .confirmationDialog(tr("Which hut?"), isPresented: $choosingHut, titleVisibility: .visible) {
+            ForEach(flow.entries) { entry in
+                Button(entry.pod.name) { onBookListed?(entry.pod) }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        }
     }
 
     /// The right-hand pill at rest: the question as a plain button, then
@@ -57,9 +67,11 @@ struct BookingControlStack: View {
     private var primary: (title: String, isHighlighted: Bool, isEnabled: Bool, action: () -> Void) {
         switch (flow.status, flow.stage) {
         case _ where flow.bookableCount == 0:
-            // All listed: nothing to reserve here. Each hut has its own "Book
-            // through the hut" caption, so the pill is the way out.
-            return ("Leave", true, true, onExit ?? { flow.back(onLeave: onLeave) })
+            // All listed: nothing to reserve here, so the classic pill books
+            // through the hut (each row has its own caption too).
+            return ("Book through the hut", true, true, {
+                if flow.entries.count == 1 { onBookListed?(flow.entries[0].pod) } else { choosingHut = true }
+            })
         case (.booked, _):
             return ("View reservations", true, true, onViewReservations)
         case (.booking, _):

@@ -48,7 +48,7 @@ struct SectionFade {
     /// Rows melt away over the lower part and are gone behind the pills.
     static let standard = SectionFade(start: 0.77, solid: 0.93)
     /// Higher, for a floating bubble above the pills.
-    static let tall = SectionFade(start: 0.65, solid: 0.85)
+    static let tall = SectionFade(start: 0.62, solid: 0.82)
     /// Photo cards (See all): they must never be seen around the pill.
     static let photos = SectionFade(start: 0.71, solid: 0.91)
 }
