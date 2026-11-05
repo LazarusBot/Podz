@@ -20,7 +20,7 @@ struct CloseButton: View {
                 )
         }
         .buttonStyle(TapScaleButtonStyle())
-        .accessibilityLabel("Close")
+        .accessibilityLabel(tr("Close"))
     }
 }
 
