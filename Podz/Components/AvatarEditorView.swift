@@ -55,7 +55,7 @@ struct AvatarEditorView: View {
                     .padding(.top, 14)
 
                     Spacer(minLength: 0)
-                    Color.clear.frame(height: 83 + 40 + 24)
+                    Color.clear.frame(height: 83 + DetailLayout.controlStackGap + 24)
                 }
 
                 HStack(spacing: 13) {
@@ -65,8 +65,8 @@ struct AvatarEditorView: View {
                         .opacity(image == nil ? 0.45 : 1)
                 }
                 .padding(.horizontal, 24)
-                // A cover respects the safe area: 40 here is the 74 from the edge.
-                .padding(.bottom, 40)
+                // A cover respects the safe area: the usual control stack position.
+                .padding(.bottom, DetailLayout.controlStackGap)
             }
         }
         .background(Color.homeBackground.ignoresSafeArea())

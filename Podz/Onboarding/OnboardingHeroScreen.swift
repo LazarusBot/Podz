@@ -46,6 +46,7 @@ struct OnboardingHeroScreen<Bottom: View>: View {
             bottom()
                 .padding(.top, 24)
                 .padding(.bottom, 40)
+                .offset(y: DetailLayout.controlStackDrop)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.onbBackground.ignoresSafeArea())

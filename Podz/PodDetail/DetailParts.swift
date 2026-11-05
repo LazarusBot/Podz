@@ -5,9 +5,17 @@ import CoreLocation
 /// screens look and behave the same (Paper "DetailView" frames).
 enum DetailLayout {
     /// The control stack (back pill + the page's action) sits this far above
-    /// the home-indicator zone, i.e. `controlStackGap + 34` = 74 from the
-    /// screen's physical bottom edge on a Face ID iPhone (the Paper frames).
-    static let controlStackGap: CGFloat = 40
+    /// the home-indicator zone (negative: below its top). The pills' middle is
+    /// the tab bar's middle: the bar is 64 tall with its bottom 24 above the
+    /// screen's edge, so its middle is 56 up, and an 83 tall pill centred
+    /// there has its bottom 14.5 above the edge, i.e. `controlStackGap + 34`
+    /// on a Face ID iPhone.
+    static let controlStackGap: CGFloat = 24 + 64 / 2 - 83 / 2 - 34
+
+    /// How far lower than the old 40 above the safe area (the stack used to
+    /// sit 74 from the edge): for the screens that place their pills with
+    /// their own layout (onboarding), moved with an offset.
+    static let controlStackDrop: CGFloat = 40 - controlStackGap
 
     /// Photo heights from the Paper frames, as a share of the screen.
     static let stackedPhotoShare: CGFloat = 524 / 852

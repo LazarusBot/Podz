@@ -33,6 +33,7 @@ struct OnboardingWelcomeStep: View {
                     .frame(width: 209)
                     .padding(.top, 48)
                     .padding(.bottom, 40)
+                    .offset(y: DetailLayout.controlStackDrop)
             }
         }
     }

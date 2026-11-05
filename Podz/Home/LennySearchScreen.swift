@@ -67,8 +67,8 @@ struct LennySearchScreen: View {
                         }
                     }
                     .padding(.horizontal, 24)
-                        // Just above the pill row (83 high, 40 + safe area up).
-                        .padding(.bottom, 40 + 83 + 20)
+                        // Just above the pill row (83 high).
+                        .padding(.bottom, DetailLayout.controlStackGap + 83 + 20)
                         .transition(.opacity)
                 }
 
@@ -86,7 +86,7 @@ struct LennySearchScreen: View {
                 .padding(.horizontal, 24)
                 // The cover respects the safe area, so 40 here is the 74 from
                 // the bottom edge every control stack uses.
-                .padding(.bottom, 40)
+                .padding(.bottom, DetailLayout.controlStackGap)
             }
         }
         .background(Color.homeBackground.ignoresSafeArea())
