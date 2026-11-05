@@ -111,7 +111,7 @@ enum FrenchStrings {
         ("January", "janvier"), ("February", "février"), ("March", "mars"), ("April", "avril"),
         ("May", "mai"), ("June", "juin"), ("July", "juillet"), ("August", "août"),
         ("September", "septembre"), ("October", "octobre"), ("November", "novembre"), ("December", "décembre"),
-        ("Open now", "Ouvert"), ("Closed", "Fermé"), ("Closed until {}", "Fermé jusqu'en {1}"),
+        ("Open now", "Ouvert"), ("Closed until {}", "Fermé jusqu'en {1}"),
         // The next trip beside Reservations on Profile (before "In {}", which
         // would match "In 5 days" too).
         ("In {} days", "Dans {1} jours"), ("Today", "Aujourd'hui"), ("Tomorrow", "Demain"), ("Under way", "En cours"),

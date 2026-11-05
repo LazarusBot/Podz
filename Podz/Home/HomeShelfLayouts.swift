@@ -26,7 +26,7 @@ struct HomeTallCard: View {
                     // The photo is drawn bigger than its frame: it must not take
                     // taps, or it steals them from the next card.
                     .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate, pixelWidth: 480).allowsHitTesting(false) }
-                    .closedHutLook(pod.isClosedNow)
+                    .closedHutLook(pod, textSize: 13)
                     .overlay(alignment: .bottom) {
                         LinearGradient(colors: [.clear, .photoScrim.opacity(0.5)], startPoint: .top, endPoint: .bottom)
                             .frame(height: 100)
@@ -115,7 +115,7 @@ struct HomeMosaic: View {
                 // The photo is drawn bigger than its tile: it must not take
                 // taps, or it steals them from the tile next to it.
                 .overlay { PodPhoto(url: photoURLs[pod.id], coordinate: pod.coordinate, pixelWidth: large ? 640 : 480).allowsHitTesting(false) }
-                .closedHutLook(pod.isClosedNow, textSize: large ? 18 : 14)
+                .closedHutLook(pod, textSize: large ? 15 : 12)
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [.clear, .photoScrim.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                         .frame(height: large ? 110 : 70)
