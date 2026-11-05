@@ -14,9 +14,6 @@ struct HomePodCard: View {
     var subtitleOverride: String?
     /// A second quiet line under the first (the price, "Open now").
     var detailLine: String?
-    /// "Closed until June", at the end of that line in `alertInk`: red is for
-    /// what can cancel the trip (`design.md`, Pod detail).
-    var closedLabel: String?
     var onTap: () -> Void
 
     private var subtitle: String {
@@ -30,14 +27,6 @@ struct HomePodCard: View {
         return parts.joined(separator: " · ")
     }
 
-    private var detailText: Text {
-        let quiet = detailLine.map { T($0).foregroundColor(.homeSubtitle.opacity(0.8)) }
-        guard let closedLabel else { return quiet ?? Text(verbatim: "") }
-        let closed = T(closedLabel).foregroundColor(.alertInk)
-        guard let quiet else { return closed }
-        return Text("\(quiet)\(Text(verbatim: " · ").foregroundColor(.homeSubtitle.opacity(0.8)))\(closed)")
-    }
-
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 12) {
@@ -46,6 +35,7 @@ struct HomePodCard: View {
                     // The photo is drawn bigger than its frame (it fills it): it
                     // must not take taps, or it steals them from the next card.
                     .overlay { PodPhoto(url: photoURL, coordinate: pod.coordinate, pixelWidth: 900).allowsHitTesting(false) }
+                    .closedHutLook(pod, textSize: 15)
                     .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
                     .contentShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
                     .podZoomSource(id: zoomID ?? AnyHashable(pod.id), in: zoomNamespace, cornerRadius: 36)
@@ -59,9 +49,10 @@ struct HomePodCard: View {
                         .font(AppFont.regularLabel(14))
                         .foregroundColor(.homeSubtitle)
                         .lineLimit(1)
-                    if detailLine != nil || closedLabel != nil {
-                        detailText
+                    if let detailLine {
+                        T(detailLine)
                             .font(AppFont.regularLabel(12))
+                            .foregroundColor(.homeSubtitle.opacity(0.8))
                             .lineLimit(1)
                     }
                 }
