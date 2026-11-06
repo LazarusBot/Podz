@@ -88,6 +88,36 @@ final class StayFeedbackStore: ObservableObject {
         return (entries[id]?.photos ?? []).map { folder.appendingPathComponent($0) }
     }
 
+    /// A photo kept with a stay, on the phone.
+    struct KeptPhoto: Identifiable, Hashable {
+        let reservationId: UUID
+        let name: String
+        let url: URL
+        var id: String { "\(reservationId.uuidString)/\(name)" }
+    }
+
+    /// Every photo kept at stays in this hut, newest stay first.
+    func keptPhotos(forPod podId: UUID) -> [KeptPhoto] {
+        let stays = ReservationsStore.shared.reservations
+            .filter { $0.podId == podId && entries[$0.id] != nil }
+            .sorted { $0.checkOut > $1.checkOut }
+        return stays.flatMap { stay -> [KeptPhoto] in
+            guard let folder = photoFolder(for: stay.id) else { return [] }
+            return (entries[stay.id]?.photos ?? []).map {
+                KeptPhoto(reservationId: stay.id, name: $0, url: folder.appendingPathComponent($0))
+            }
+        }
+    }
+
+    /// Takes a photo out of its stay and off the phone.
+    func removePhoto(_ photo: KeptPhoto) {
+        try? FileManager.default.removeItem(at: photo.url)
+        guard var entry = entries[photo.reservationId] else { return }
+        entry.photos.removeAll { $0 == photo.name }
+        entries[photo.reservationId] = entry
+        write()
+    }
+
     /// Keeps a photo with the stay. Returns whether it was kept.
     @discardableResult
     func addPhoto(_ jpeg: Data, to id: UUID) -> Bool {

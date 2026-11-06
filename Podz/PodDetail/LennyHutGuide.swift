@@ -2,11 +2,12 @@ import SwiftUI
 
 /// The sections of the extended pod detail, in reading order.
 enum PodDetailSection: String, CaseIterable, Hashable {
-    case about, onSite, goodToKnow, gettingThere, contact, source
+    case about, yourPhotos, onSite, goodToKnow, gettingThere, contact, source
 
     var title: String {
         switch self {
         case .about: return "About"
+        case .yourPhotos: return "Your photos"
         case .onSite: return "On site"
         case .goodToKnow: return "Good to know"
         case .gettingThere: return "Getting there"
@@ -16,10 +17,11 @@ enum PodDetailSection: String, CaseIterable, Hashable {
     }
 
     /// The sections this pod has something to say in.
-    static func available(for pod: Pod, photoCredit: String?) -> [PodDetailSection] {
+    static func available(for pod: Pod, photoCredit: String?, hasKeptPhotos: Bool = false) -> [PodDetailSection] {
         allCases.filter { section in
             switch section {
             case .about: return hutClean(pod.description) != nil
+            case .yourPhotos: return hasKeptPhotos
             case .onSite: return !(pod.facilities ?? []).isEmpty || !pod.isBookable
             case .goodToKnow: return true
             case .gettingThere: return pod.coordinate != nil
@@ -144,6 +146,8 @@ struct LennyHutGuide: View {
         switch section ?? first ?? .goodToKnow {
         case .about:
             return pod.isBookable ? "Bookable right here in Podz." : "Details come from OpenStreetMap: confirm with the hut."
+        case .yourPhotos:
+            return "Your own photos from this hut. Tap one to see it."
         case .onSite:
             guard let facilities = pod.facilities, !facilities.isEmpty else { return "Nothing listed: ask the hut what it offers." }
             let shown = facilities.filter { $0 != "Reservation required" }
