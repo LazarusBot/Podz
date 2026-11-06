@@ -248,6 +248,7 @@ final class AuthManager: ObservableObject {
         TripPassStore.shared.clear()
         ReservationsStore.shared.clear()
         StayFeedbackStore.shared.clear()
+        SavedPlansStore.shared.clear()
         if let userId { OfflineStorage.removeFiles(of: userId) }
     }
     
