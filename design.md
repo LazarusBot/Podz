@@ -140,6 +140,8 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 
 The whole app follows the system appearance: every screen and sheet is built from the tokens above. Nothing forces light any more (the Profile tab's old `AppearanceState` switch is gone). The one thing that stays white in both modes is the trip pass barcode's paper (`barcodePaper`), so it scans.
 
+**App icon** (`AppIcon.appiconset`, exported from Icon Composer): a black blob with a round hole, on a soft white ground (light), the same blob in white on near-black (dark), and the grey glass version for the tinted mode (`Icon-iOS-ClearDark`, which the system tints). Replace all three together when the logo changes.
+
 ## Before you push UI
 
 1. Colors come from a token above. No new hex; add a token here first.
