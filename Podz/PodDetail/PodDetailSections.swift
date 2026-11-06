@@ -16,11 +16,12 @@ struct PodDetailSections: View {
     @Binding var active: PodDetailSection?
 
     @Environment(\.openURL) private var openURL
+    @ObservedObject private var feedbackStore = StayFeedbackStore.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                ForEach(PodDetailSection.available(for: pod, photoCredit: photoCredit), id: \.self) { section in
+                ForEach(PodDetailSection.available(for: pod, photoCredit: photoCredit, hasKeptPhotos: !feedbackStore.keptPhotos(forPod: pod.id).isEmpty), id: \.self) { section in
                     view(for: section).id(section)
                 }
             }
@@ -46,6 +47,7 @@ struct PodDetailSections: View {
     private func view(for section: PodDetailSection) -> some View {
         switch section {
         case .about: about
+        case .yourPhotos: YourPhotosSection(podId: pod.id)
         case .onSite: onSite
         case .goodToKnow: goodToKnow
         case .gettingThere: gettingThere
@@ -225,7 +227,7 @@ struct PodDetailSections: View {
 }
 
 /// A 13 `homeSubtitle` heading over a section's content.
-private struct DetailSection<Content: View>: View {
+struct DetailSection<Content: View>: View {
     let title: String
     @ViewBuilder var content: () -> Content
 

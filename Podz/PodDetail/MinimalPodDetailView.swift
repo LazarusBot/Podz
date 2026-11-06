@@ -68,7 +68,7 @@ struct MinimalPodDetailView: View {
                                 pod: pod,
                                 liveBedsAvailable: liveBedsAvailable,
                                 section: activeSection,
-                                available: PodDetailSection.available(for: pod, photoCredit: currentPhotoCredit),
+                                available: PodDetailSection.available(for: pod, photoCredit: currentPhotoCredit, hasKeptPhotos: !feedbackStore.keptPhotos(forPod: pod.id).isEmpty),
                                 onGo: { section in withAnimation(.smooth(duration: 0.5)) { activeSection = section } },
                                 onContact: { showHutContact = true }
                             )
