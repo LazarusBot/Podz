@@ -175,16 +175,20 @@ struct LennySearchScreen: View {
     private var refinementCaptions: some View {
         let options = lenny.routeOptions
         let offered: LennyAreaRoute.Options.Level = options.level == .regular ? .beginner : .regular
-        HStack(spacing: 18) {
-            BookingQuickReply(reply: .init(title: options.loop ? "Make it one way" : "Make it a loop") {
-                lenny.refine(
-                    done: options.loop ? "One way again." : "Done, it comes back to where it starts.",
-                    failed: "I can't close a loop with the huts around there."
-                ) { $0.loop.toggle() }
-            })
-            BookingQuickReply(reply: .init(title: Self.levelTitle(offered)) {
-                lenny.refine(done: Self.levelDone(offered), failed: "I can't find a route with that.") { $0.level = offered }
-            })
+        let loop = BookingQuickReply(reply: .init(title: options.loop ? "Make it one way" : "Make it a loop") {
+            lenny.refine(
+                done: options.loop ? "One way again." : "Done, it comes back to where it starts.",
+                failed: "I can't close a loop with the huts around there."
+            ) { $0.loop.toggle() }
+        })
+        let level = BookingQuickReply(reply: .init(title: Self.levelTitle(offered)) {
+            lenny.refine(done: Self.levelDone(offered), failed: "I can't find a route with that.") { $0.level = offered }
+        })
+        // One line; if the words ever don't fit (a long language, a big text
+        // size) they stack instead of squeezing or cutting.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 18) { loop; level }
+            VStack(alignment: .leading, spacing: 0) { loop; level }
         }
     }
 
