@@ -4,11 +4,13 @@ import SwiftUI
 /// `homeBackground` ground as the launch screen. His disc arrives in the
 /// middle (a soft pop), his eyes open, he blinks once and hops; then three
 /// bubbles say who he is, what he does and where to find him, each rising in
-/// after the last has been typed (nothing already on screen moves), and a small
-/// caption, **Nice to meet you**, lets the traveler in. It plays once per
-/// install (`lennyIntroSeen`); a later blink every few seconds keeps him alive
-/// while the lines are read. Reduce Motion keeps the order but drops the pop,
-/// the blinks and the hop.
+/// after the last has been typed (nothing already on screen moves). Lenny
+/// goes with them: he shrinks to his avatar beside the first bubble and
+/// glides down to sit beside each new one, always next to the line being
+/// typed. A small caption, **Nice to meet you**, lets the traveler in. It
+/// plays once per install (`lennyIntroSeen`); a later blink every few seconds
+/// keeps him alive while the lines are read. Reduce Motion keeps the order but
+/// drops the pop, the glide, the blinks and the hop.
 struct LennyIntroView: View {
     /// The screen is on its way out: everything fades and drifts down.
     var isLeaving = false
@@ -22,6 +24,7 @@ struct LennyIntroView: View {
     /// How many bubbles have been let in.
     @State private var lines = 0
     @State private var typed = 0
+    @Namespace private var lennySpace
 
     private static let discSize: CGFloat = 132
     private static let messages = [
@@ -34,18 +37,29 @@ struct LennyIntroView: View {
         VStack(alignment: .leading, spacing: 8) {
             Spacer(minLength: 0)
 
-            face
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 56)
+            // Where he stands before the first line: the middle, big.
+            ZStack {
+                if lines == 0 { face(size: Self.discSize) }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: Self.discSize)
+            .padding(.bottom, 56)
 
             ForEach(Array(Self.messages.enumerated()), id: \.offset) { index, message in
-                LennyReply(
-                    message: message,
-                    mood: .idle,
-                    showsAvatar: false,
-                    isPresent: lines > index,
-                    onTyped: { typed = max(typed, index + 1) }
-                )
+                HStack(alignment: .bottom, spacing: 8) {
+                    // His place beside this line: he moves here when it's his turn.
+                    ZStack {
+                        if lines - 1 == index { face(size: 30) }
+                    }
+                    .frame(width: 30, height: 30)
+                    LennyReply(
+                        message: message,
+                        mood: .idle,
+                        showsAvatar: false,
+                        isPresent: lines > index,
+                        onTyped: { typed = max(typed, index + 1) }
+                    )
+                }
             }
 
             // Always in the layout, so nothing moves when it arrives.
@@ -63,7 +77,7 @@ struct LennyIntroView: View {
                 .captionTapArea()
             }
             .buttonStyle(.plain)
-            .padding(.leading, 18)
+            .padding(.leading, 38 + 18)
             .opacity(typed >= Self.messages.count ? 1 : 0)
             .animation(.smooth(duration: 0.4), value: typed)
             .disabled(typed < Self.messages.count)
@@ -80,13 +94,14 @@ struct LennyIntroView: View {
         .task { await blinkNow() }
     }
 
-    /// His disc and eyes.
-    private var face: some View {
+    /// His disc and eyes, one view that travels between his places.
+    private func face(size: CGFloat) -> some View {
         LennyMark(mood: mood)
             .scaleEffect(x: 1, y: eyes, anchor: UnitPoint(x: 0.5, y: 0.57))
             .foregroundColor(.homeBackground)
-            .frame(width: Self.discSize, height: Self.discSize)
             .background(Color.homeText, in: Circle())
+            .matchedGeometryEffect(id: "lenny", in: lennySpace)
+            .frame(width: size, height: size)
             .scaleEffect(discShown || reduceMotion ? 1 : 0.55)
             .opacity(discShown ? 1 : 0)
             .accessibilityLabel(tr("Lenny"))
@@ -113,14 +128,23 @@ struct LennyIntroView: View {
         mood = .happy
         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         try? await Task.sleep(for: .milliseconds(250))
-        lines = 1
+        moveTo(line: 1)
     }
 
     /// The next bubble comes in a beat after the last was typed.
     private func advance() async {
         guard typed > 0, typed < Self.messages.count else { return }
         try? await Task.sleep(for: .milliseconds(reduceMotion ? 300 : 600))
-        if !Task.isCancelled { lines = max(lines, typed + 1) }
+        if !Task.isCancelled { moveTo(line: max(lines, typed + 1)) }
+    }
+
+    /// The next bubble rises and Lenny glides to it.
+    private func moveTo(line: Int) {
+        if reduceMotion {
+            lines = line
+        } else {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.82)) { lines = line }
+        }
     }
 
     /// While the lines are read, he blinks now and then.
