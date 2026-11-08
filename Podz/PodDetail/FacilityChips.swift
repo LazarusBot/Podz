@@ -62,9 +62,6 @@ struct TrustBadge: View {
                 .foregroundColor(isVerified ? .photoScrim : .onPhoto)
                 .lineLimit(1)
                 .fixedSize()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundColor(isVerified ? Color.photoScrim.opacity(0.45) : Color.onPhoto.opacity(0.65))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -95,9 +92,6 @@ struct TrustBadge: View {
                 .foregroundColor(isVerified ? .homeText : .homeSubtitle)
                 .lineLimit(1)
                 .fixedSize()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundColor(.homeSubtitle)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
