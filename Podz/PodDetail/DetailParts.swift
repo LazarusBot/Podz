@@ -13,11 +13,11 @@ enum DetailLayout {
     static let stackedPhotoShare: CGFloat = 524 / 852
     static let extendedPhotoShare: CGFloat = 250 / 852
 
-    /// The pod detail's photo is the hero: 55% of a tall phone (the name, status
-    /// and facts sit on it), less on shorter screens so Lenny's bubble and the
-    /// pills keep their room.
+    /// The pod detail's photo is the hero: 65% of a tall phone (the name, status
+    /// and facts sit on it), less on shorter screens so the "See more" caption,
+    /// Lenny's bubble and the pills keep their room.
     static func podPhotoShare(screenHeight: CGFloat) -> CGFloat {
-        screenHeight >= 800 ? 0.55 : (screenHeight >= 700 ? 0.50 : 0.48)
+        screenHeight >= 830 ? 0.65 : (screenHeight >= 780 ? 0.60 : (screenHeight >= 700 ? 0.54 : 0.50))
     }
 
     /// The inset card (a question from Lenny, a booking): 390 of 852, with the
