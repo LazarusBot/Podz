@@ -48,6 +48,8 @@ struct LennyHutGuide: View {
     var onContact: () -> Void = {}
     /// The stack's bubble instead of the compact line.
     var inStack = false
+    /// On the stack: the bubble holds its place until it may speak.
+    var isPresent = true
 
     /// Where the page is: before any scroll it's the first section.
     private var current: PodDetailSection { section ?? available.first ?? .goodToKnow }
@@ -59,7 +61,7 @@ struct LennyHutGuide: View {
 
     var body: some View {
         if inStack {
-            LennyReply(message: Self.stackMessage(pod, liveBedsAvailable), mood: .idle)
+            LennyReply(message: Self.stackMessage(pod, liveBedsAvailable), mood: .idle, isPresent: isPresent)
         } else {
             compact
         }

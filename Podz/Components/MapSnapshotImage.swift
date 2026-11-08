@@ -10,6 +10,13 @@ struct MapSnapshotImage: View {
 
     @State private var image: UIImage?
 
+    init(coordinate: CLLocationCoordinate2D) {
+        self.coordinate = coordinate
+        // Already made this session: there from the first frame, so a screen
+        // opening on it (the zoom from a card) never shows a blank first.
+        _image = State(initialValue: MapSnapshotCache.peek(coordinate))
+    }
+
     var body: some View {
         ZStack {
             if let image {
@@ -40,6 +47,17 @@ struct MapSnapshotImage: View {
 /// Makes and remembers the snapshots.
 actor MapSnapshotCache {
     static let shared = MapSnapshotCache()
+
+    /// The pictures made so far, readable without waiting (the actor isn't).
+    private nonisolated static let memory = NSCache<NSString, UIImage>()
+
+    private nonisolated static func key(_ coordinate: CLLocationCoordinate2D) -> String {
+        String(format: "%.4f,%.4f", coordinate.latitude, coordinate.longitude)
+    }
+
+    nonisolated static func peek(_ coordinate: CLLocationCoordinate2D) -> UIImage? {
+        memory.object(forKey: key(coordinate) as NSString)
+    }
 
     private var cache: [String: UIImage] = [:]
     private var order: [String] = []
@@ -121,6 +139,7 @@ actor MapSnapshotCache {
     }
 
     private func remember(_ image: UIImage, for key: String) {
+        Self.memory.setObject(image, forKey: key as NSString)
         cache[key] = image
         order.append(key)
         // About 60 pictures at a time.

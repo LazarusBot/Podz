@@ -96,7 +96,9 @@ struct DetailPhotoPager: View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 0) {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, url in
-                    PodPhoto(url: url, coordinate: coordinate)
+                    // A standard size (1280): sized like the cards' photos, so
+                    // opening from a card finds one of its sizes already there.
+                    PodPhoto(url: url, coordinate: coordinate, pixelWidth: 1280)
                         .frame(width: width, height: height)
                         .clipped()
                         .id(index)

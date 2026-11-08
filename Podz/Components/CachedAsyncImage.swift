@@ -27,12 +27,17 @@ import CryptoKit
 final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
     private let memoryCache = NSCache<NSString, UIImage>()
+    /// The biggest picture seen of each photo, whatever size it was fetched at
+    /// (Wikimedia photos come in several), so a screen that needs another size
+    /// of a photo already on screen can show that one at once.
+    private let anySizeCache = NSCache<NSString, UIImage>()
     private let diskDirectory: URL
 
     private init() {
         // About 150 MB of decoded photos; the system empties it on a memory
         // warning anyway.
         memoryCache.totalCostLimit = 150 * 1024 * 1024
+        anySizeCache.totalCostLimit = 60 * 1024 * 1024
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         diskDirectory = caches.appendingPathComponent("PodzImageCache", isDirectory: true)
         try? FileManager.default.createDirectory(at: diskDirectory, withIntermediateDirectories: true)
@@ -96,6 +101,24 @@ final class ImageCache: @unchecked Sendable {
         // Weighed by its decoded size.
         let cost = Int(image.size.width * image.scale * image.size.height * image.scale * 4)
         memoryCache.setObject(image, forKey: url as NSString, cost: cost)
+        let base = Self.baseKey(url) as NSString
+        if let known = anySizeCache.object(forKey: base), known.size.width >= image.size.width { return }
+        anySizeCache.setObject(image, forKey: base, cost: cost)
+    }
+
+    /// The same photo at whatever size is already in memory: sharper or softer
+    /// than asked, but there, so a screen opening on it never shows a gray
+    /// placeholder first.
+    func anySizeImage(for url: String) -> UIImage? {
+        anySizeCache.object(forKey: Self.baseKey(url) as NSString)
+    }
+
+    /// A photo's address with its size taken out ("/960px-Name.jpg" becomes
+    /// "/px-Name.jpg"), so every size of one Wikimedia photo shares a key.
+    private static func baseKey(_ url: String) -> String {
+        guard url.contains("wikimedia.org"),
+              let range = url.range(of: "/[0-9]+px-", options: .regularExpression) else { return url }
+        return url.replacingCharacters(in: range, with: "/px-")
     }
 
     /// Keeps a downloaded photo: decoded in memory, and the file as it came on
@@ -277,6 +300,11 @@ struct CachedAsyncImage<Placeholder: View>: View {
             shownURL = nil
         }
         loadError = nil
+        // Another size of this photo is already on screen elsewhere (the card
+        // you tapped): show it now, and swap to the right one when it's here.
+        if uiImage == nil, let standIn = ImageCache.shared.anySizeImage(for: url) {
+            uiImage = standIn
+        }
 
         // On the phone's disk: read and decoded off the main thread.
         if let stored = await ImageCache.shared.image(for: url) {

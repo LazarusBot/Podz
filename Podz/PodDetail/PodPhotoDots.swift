@@ -29,6 +29,10 @@ struct PodPhotoDots: View {
             }
         }
         .animation(.easeOut(duration: AppMotion.snappy), value: activeDot)
+        // A hut whose full set of photos arrives a moment after the page opens:
+        // the dots fade in, they never pop.
+        .opacity(dotCount > 0 ? 1 : 0)
+        .animation(.easeOut(duration: 0.3), value: dotCount)
         .accessibilityHidden(true)
     }
 }
