@@ -154,7 +154,7 @@ enum FrenchStrings {
         ("Book", "Réserver"), ("Book through the hut", "Réserver auprès du refuge"),
         ("Book through {}", "Réserver auprès de {1}"),
         ("Back", "Retour"), ("Add to likes", "Ajouter aux favoris"), ("Remove from likes", "Retirer des favoris"),
-        ("Details", "Détails"), ("Not yet", "Pas encore"), ("Yes, I booked it", "Oui, j'ai réservé"),
+        ("Details", "Détails"), ("See more", "Voir plus"), ("Not yet", "Pas encore"), ("Yes, I booked it", "Oui, j'ai réservé"),
         ("Welcome back! Did you book {} with the hut?", "Te revoilà ! As-tu réservé {1} auprès du refuge ?"),
         // The stay is over
         ("Welcome back! How was your stay at {}?", "Te revoilà ! Comment s'est passé ton séjour à {1} ?"),

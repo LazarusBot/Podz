@@ -158,7 +158,8 @@ struct MinimalPodDetailView: View {
                     coordinate: pod.coordinate,
                     topRadius: 0,
                     bottomRadius: 0,
-                    showsBadge: !isExtended && !showsCard
+                    showsBadge: !isExtended && !showsCard,
+                    dotsAtTop: true
                 )
                 .scrollDisabled(isExtended || showsCard)
                 .scaleEffect(scale, anchor: .center)
@@ -166,7 +167,7 @@ struct MinimalPodDetailView: View {
                 // In the card the pod keeps its name and altitude, on the flat
                 // scrim every photo tile uses.
                 .overlay(alignment: .bottomLeading) { cardCaption.opacity(showsCard ? 1 : 0) }
-                .overlay(alignment: .topLeading) {
+                .overlay(alignment: .bottomLeading) {
                     let onStack = !isExtended && !showsCard
                     stackCaption
                         .opacity(onStack ? 1 : 0)
@@ -279,9 +280,10 @@ struct MinimalPodDetailView: View {
         return parts.isEmpty ? nil : parts.joined(separator: "  ·  ")
     }
 
-    /// The name, the status chips and the key facts, **on the photo** at its
-    /// top left, under the status bar, over a scrim that fades down (the page's
-    /// one headline), until the page is asked something or opens its sections.
+    /// The name, the status chips, the key facts and the **See more** caption,
+    /// **on the photo** at its bottom left, well inside its edges, over a scrim
+    /// that fades up (the page's one headline), until the page is asked
+    /// something or opens its sections.
     private var stackCaption: some View {
         VStack(alignment: .leading, spacing: 10) {
             // One line: a long name is cut with an ellipsis so the altitude stays.
@@ -294,22 +296,37 @@ struct MinimalPodDetailView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
+            // Where to touch for the page: the same small caption as everywhere.
+            Button(action: toggleExtended) {
+                HStack(spacing: 5) {
+                    T("See more")
+                        .font(AppFont.regularLabel(13))
+                        .underline(color: Color.onPhoto.opacity(0.5))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .opacity(0.85)
+                .padding(.vertical, 4)
+                .captionTapArea(outset: 10)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
         }
         .foregroundColor(.onPhoto)
-        .padding(.horizontal, 24)
-        // Under the status bar.
-        .padding(.top, ScreenInsets.top + 14)
+        // Well inside the photo's edges and clear of its rounded bottom corners.
+        .padding(.horizontal, 30)
+        .padding(.bottom, 34)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .top) {
-            LinearGradient(colors: [.photoScrim.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: ScreenInsets.top + 190)
+        .background(alignment: .bottom) {
+            LinearGradient(colors: [.clear, .photoScrim.opacity(0.62)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 250)
                 .allowsHitTesting(false)
         }
     }
 
     /// Lenny's word on the hut, or, while booking, the question: the same
-    /// bubble as in Lenny's search, and under it the small caption that says
-    /// the page opens.
+    /// bubble as in Lenny's search (the "See more" caption that opens the page
+    /// is on the photo).
     @ViewBuilder
     private var stackLenny: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -347,23 +364,6 @@ struct MinimalPodDetailView: View {
                 ))
             } else {
                 LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true)
-
-                Button(action: toggleExtended) {
-                    HStack(spacing: 5) {
-                        T("Details")
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                    .padding(.vertical, 4)
-                    .captionTapArea(outset: 10)
-                }
-                .buttonStyle(.plain)
-                // Lined up with the bubble's text, past the avatar.
-                .padding(.leading, 38 + 18)
             }
         }
     }
