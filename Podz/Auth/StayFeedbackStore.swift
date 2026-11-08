@@ -5,7 +5,8 @@ internal import Auth
 
 /// Lenny asks how a stay went once it is over, and keeps the answer and the
 /// photos on the phone (one file per account in Application Support; the photos
-/// in a folder per stay). Nothing is sent anywhere.
+/// in a folder per stay). Local first: a copy follows the account in the
+/// background (`StayFeedbackStore+Sync.swift`).
 ///
 /// It asks once per stay, for the most recent one that ended in the last two
 /// weeks. Answering, or saying "Not now", closes it for good.
@@ -13,13 +14,17 @@ internal import Auth
 final class StayFeedbackStore: ObservableObject {
     static let shared = StayFeedbackStore()
 
-    /// Every answer given, by reservation id.
-    @Published private(set) var entries: [UUID: StayFeedback] = [:]
+    /// Every answer given, by reservation id. Only the store and its sync change it.
+    @Published var entries: [UUID: StayFeedback] = [:]
     /// The stay Lenny is asking about right now.
     @Published private(set) var pendingStay: Reservation?
     @Published private(set) var askNow = false
 
     private var loadedFor: String?
+    /// What the account's copy knows of this phone's photos (see the sync).
+    var syncState = SyncState()
+    var isSyncing = false
+    var syncAgain = false
     /// A stay that ended longer ago than this isn't asked about any more.
     private let shelfLife: TimeInterval = 14 * 24 * 3600
     static let maxPhotosPerStay = 12
@@ -55,6 +60,7 @@ final class StayFeedbackStore: ObservableObject {
         entry.answeredAt = Date()
         entries[id] = entry
         write()
+        Task { await sync() }
     }
 
     /// "Not now": closes the question without an answer, so it isn't asked again.
@@ -62,6 +68,7 @@ final class StayFeedbackStore: ObservableObject {
         if let id = pendingStay?.id, entries[id] == nil {
             entries[id] = StayFeedback(id: id, mood: nil, photos: [], answeredAt: Date())
             write()
+            Task { await sync() }
         }
         finish()
     }
@@ -76,6 +83,7 @@ final class StayFeedbackStore: ObservableObject {
     func clear() {
         entries = [:]
         loadedFor = nil
+        syncState = SyncState()
         finish()
     }
 
@@ -115,7 +123,10 @@ final class StayFeedbackStore: ObservableObject {
         guard var entry = entries[photo.reservationId] else { return }
         entry.photos.removeAll { $0 == photo.name }
         entries[photo.reservationId] = entry
+        let key = Self.photoKey(photo.reservationId, photo.name)
+        if syncState.uploaded.contains(key) { syncState.pendingDeletes.insert(key) }
         write()
+        Task { await sync() }
     }
 
     /// Keeps a photo with the stay. Returns whether it was kept.
@@ -129,6 +140,7 @@ final class StayFeedbackStore: ObservableObject {
         entry.photos.append(name)
         entries[id] = entry
         write()
+        Task { await sync() }
         return true
     }
 
@@ -149,17 +161,19 @@ final class StayFeedbackStore: ObservableObject {
 
     // MARK: - Files
 
-    private var accountKey: String {
+    var accountKey: String {
         AuthManager.shared.session?.user.id.uuidString ?? "local"
     }
 
-    private var support: URL? {
+    var support: URL? {
         try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
     }
 
     private var file: URL? { support?.appendingPathComponent("stay-feedback-\(accountKey).json") }
 
-    private func photoFolder(for id: UUID) -> URL? {
+    private var syncFile: URL? { support?.appendingPathComponent("stay-feedback-sync-\(accountKey).json") }
+
+    func photoFolder(for id: UUID) -> URL? {
         support?.appendingPathComponent("StayFeedback", isDirectory: true).appendingPathComponent(id.uuidString, isDirectory: true)
     }
 
@@ -167,6 +181,9 @@ final class StayFeedbackStore: ObservableObject {
     func reload() {
         guard loadedFor != accountKey else { return }
         loadedFor = accountKey
+        syncState = syncFile
+            .flatMap { try? Data(contentsOf: $0) }
+            .flatMap { try? JSONDecoder().decode(SyncState.self, from: $0) } ?? SyncState()
         guard let file, let data = try? Data(contentsOf: file),
               let saved = try? JSONDecoder().decode([StayFeedback].self, from: data)
         else {
@@ -176,8 +193,12 @@ final class StayFeedbackStore: ObservableObject {
         entries = Dictionary(saved.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
-    private func write() {
-        guard let file, let data = try? JSONEncoder().encode(Array(entries.values)) else { return }
-        try? data.write(to: file, options: .atomic)
+    func write() {
+        if let file, let data = try? JSONEncoder().encode(Array(entries.values)) {
+            try? data.write(to: file, options: .atomic)
+        }
+        if let file = syncFile, let data = try? JSONEncoder().encode(syncState) {
+            try? data.write(to: file, options: .atomic)
+        }
     }
 }

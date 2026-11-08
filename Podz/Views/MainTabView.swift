@@ -81,14 +81,20 @@ struct MainTabView: View {
             case .active:
                 contactTracker.appBecameActive()
                 feedbackStore.check()
-                Task { await SavedPlansStore.shared.sync() }
+                Task {
+                    await SavedPlansStore.shared.sync()
+                    await StayFeedbackStore.shared.sync()
+                }
             default: break
             }
         }
         .onAppear {
             contactTracker.appBecameActive()
             feedbackStore.check()
-            Task { await SavedPlansStore.shared.sync() }
+            Task {
+                    await SavedPlansStore.shared.sync()
+                    await StayFeedbackStore.shared.sync()
+                }
         }
         // A stay is over: Lenny asks how it went on that hut's own page (the
         // same way as back from the hut), once the reservations are in.
