@@ -104,6 +104,7 @@ struct LennyIntroView: View {
             .frame(width: size, height: size)
             .scaleEffect(discShown || reduceMotion ? 1 : 0.55)
             .opacity(discShown ? 1 : 0)
+            .transition(.identity)
             .accessibilityLabel(tr("Lenny"))
     }
 

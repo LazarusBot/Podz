@@ -60,6 +60,8 @@ struct LaunchWaitingView: View {
     @State private var started = false
     @State private var firstTyped = false
     @State private var allGoodTyped = false
+    @State private var hopped = false
+    @Namespace private var lennySpace
 
     private var waitingLine: String {
         guard let lockedName else { return "One moment, I'm getting things ready." }
@@ -71,27 +73,33 @@ struct LaunchWaitingView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LennyReply(
-                message: waitingLine,
-                mood: showsAllGood ? .happy : .working,
-                isPresent: started,
-                onTyped: { firstTyped = true }
-            )
+            HStack(alignment: .bottom, spacing: 8) {
+                LennyFaceSlot(isHere: !showsAllGood, isShown: started, mood: .working, namespace: lennySpace)
+                LennyReply(
+                    message: waitingLine,
+                    mood: .idle,
+                    showsAvatar: false,
+                    isPresent: started,
+                    onTyped: { firstTyped = true }
+                )
+            }
 
             // Its place is held from the start, so the first bubble stays put.
-            LennyReply(
-                message: "All good, you're all set.",
-                mood: .idle,
-                showsAvatar: false,
-                isPresent: showsAllGood,
-                onTyped: {
-                    guard !allGoodTyped else { return }
-                    allGoodTyped = true
-                    onAllGood()
-                }
-            )
-            // Lined up with the first bubble's text, past the avatar.
-            .padding(.leading, 38)
+            // Lenny glides down to it, and hops on arrival.
+            HStack(alignment: .bottom, spacing: 8) {
+                LennyFaceSlot(isHere: showsAllGood, mood: hopped ? .happy : .idle, namespace: lennySpace)
+                LennyReply(
+                    message: "All good, you're all set.",
+                    mood: .idle,
+                    showsAvatar: false,
+                    isPresent: showsAllGood,
+                    onTyped: {
+                        guard !allGoodTyped else { return }
+                        allGoodTyped = true
+                        onAllGood()
+                    }
+                )
+            }
 
             // Always in the layout, so nothing moves when the caption arrives
             // (or when there's none).
@@ -123,7 +131,14 @@ struct LaunchWaitingView: View {
         .padding(.bottom, 40 + 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .background(Color.homeBackground.ignoresSafeArea())
+        .animation(.spring(response: 0.7, dampingFraction: 0.82), value: showsAllGood)
         .onAppear { lockedName = firstName }
+        .task(id: showsAllGood) {
+            // He's glided down: now the hop.
+            guard showsAllGood else { return }
+            try? await Task.sleep(for: .milliseconds(reduceMotion ? 0 : 700))
+            hopped = true
+        }
         .task {
             // A beat of plain ground, then Lenny arrives.
             try? await Task.sleep(for: .milliseconds(reduceMotion ? 0 : 350))

@@ -19,10 +19,9 @@ struct HomeSearchPill: View {
     var onSubmit: () -> Void = {}
 
     private let buttonSize: CGFloat = 40
-    /// Lenny's face inside that button (see `LennySearchScreen.routePill`, which
-    /// takes over from here and must match).
-    static let faceSize: CGFloat = 28
-    private var faceSize: CGFloat { Self.faceSize }
+    /// Lenny's face fills the round button; while the button opens into "Ask
+    /// Lenny" it steps down so the eyes stay small beside the words.
+    private var faceSize: CGFloat { offersAsk ? 28 : buttonSize }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let inset: CGFloat = 9
     /// Lenny's button with its label ("Ask Lenny"): it opens up to this width
@@ -79,8 +78,7 @@ struct HomeSearchPill: View {
             isFocused.wrappedValue = true
         } label: {
             HStack(spacing: 4) {
-                // The face is drawn at the size of a disc: smaller than the
-                // button, so the eyes stay small in it.
+                // The face is drawn at the size of a disc.
                 Image("lenny")
                     .renderingMode(.template)
                     .resizable()

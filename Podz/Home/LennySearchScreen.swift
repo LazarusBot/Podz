@@ -232,7 +232,6 @@ struct LennySearchScreen: View {
         HStack(spacing: 20) {
             LennyMark(mood: mood)
                 .foregroundColor(.homeBackground)
-                .frame(width: HomeSearchPill.faceSize, height: HomeSearchPill.faceSize)
                 .frame(width: 40, height: 40)
 
             if failed {
