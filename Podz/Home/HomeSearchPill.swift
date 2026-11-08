@@ -21,7 +21,7 @@ struct HomeSearchPill: View {
     private let buttonSize: CGFloat = 40
     /// Lenny's face fills the round button; while the button opens into "Ask
     /// Lenny" it steps down so the eyes stay small beside the words.
-    private var faceSize: CGFloat { offersAsk ? 28 : buttonSize }
+    private var faceSize: CGFloat { offersAsk ? 22 : buttonSize }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let inset: CGFloat = 9
     /// Lenny's button with its label ("Ask Lenny"): it opens up to this width
