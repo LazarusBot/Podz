@@ -6,10 +6,8 @@ struct LennyAvatar: View {
     var size: CGFloat = 30
 
     var body: some View {
-        LennyMark(mood: .idle)
-            .foregroundColor(.homeBackground)
+        LennyDisc()
             .frame(width: size, height: size)
-            .background(Color.homeText, in: Circle())
     }
 }
 

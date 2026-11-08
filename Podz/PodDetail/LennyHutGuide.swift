@@ -69,10 +69,8 @@ struct LennyHutGuide: View {
 
     private var compact: some View {
         HStack(spacing: 10) {
-            LennyMark(mood: .idle)
-                .foregroundColor(.homeBackground)
+            LennyDisc()
                 .frame(width: 26, height: 26)
-                .background(Color.homeText, in: Circle())
 
             T(Self.shortMessage(for: section, pod: pod, first: available.first))
                 .font(AppFont.regularLabel(14))

@@ -55,10 +55,8 @@ struct LennyReply: View {
     private var isError: Bool { mood == .sorry }
 
     private var avatar: some View {
-        LennyMark(mood: mood)
-            .foregroundColor(isError ? .onPhoto : .homeBackground)
+        LennyDisc(mood: mood, color: isError ? .appBadgeRed : .homeText)
             .frame(width: 30, height: 30)
-            .background(isError ? Color.appBadgeRed : Color.homeText, in: Circle())
             .animation(.smooth(duration: 0.3), value: isError)
     }
 
