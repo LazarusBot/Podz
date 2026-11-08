@@ -22,9 +22,17 @@ struct LennyMark: View {
 
     private struct Move {
         var rotation = 0.0
+        /// As a fraction of the face's height, so a hop is the same hop on a
+        /// 26 pt avatar and on the intro's big disc.
         var lift = 0.0
         var scale = 1.0
     }
+
+    /// How he looks once he couldn't find anything (the Figma "Error" frame): the
+    /// eyes leant 11.4° to the right and sunk a little (5.3% of the disc down,
+    /// 1.7% right). It is a resting pose, not a move, so it holds on a bubble
+    /// that is sorry from its first frame too.
+    private var isSorry: Bool { mood == .sorry }
 
     var body: some View {
         Image("lenny")
@@ -37,7 +45,9 @@ struct LennyMark: View {
             .keyframeAnimator(initialValue: Move(), trigger: reduceMotion ? .working : mood) { view, move in
                 view
                     .rotationEffect(.degrees(move.rotation))
-                    .offset(y: move.lift)
+                    .visualEffect { content, proxy in
+                        content.offset(y: move.lift * proxy.size.height)
+                    }
                     .scaleEffect(move.scale)
             } keyframes: { _ in
                 // The same tracks for every mood; a mood that doesn't use a
@@ -53,16 +63,23 @@ struct LennyMark: View {
                     LinearKeyframe(-4 * shake, duration: 0.1)
                     SpringKeyframe(0, duration: 0.2)
                 }
-                // A hop when happy, a small droop when sorry.
+                // A light hop when happy (the eyes stay well inside the disc:
+                // 8.5% of its height up, a swell of 8%).
                 KeyframeTrack(\.lift) {
-                    SpringKeyframe(-7 * hop + 2 * shake, duration: 0.22)
+                    SpringKeyframe(-0.085 * hop, duration: 0.22)
                     SpringKeyframe(0, duration: 0.5, spring: .bouncy)
                 }
                 KeyframeTrack(\.scale) {
-                    SpringKeyframe(1 + 0.2 * hop, duration: 0.22)
+                    SpringKeyframe(1 + 0.08 * hop, duration: 0.22)
                     SpringKeyframe(1, duration: 0.5, spring: .bouncy)
                 }
             }
+            // The error pose, on top of whatever move is playing.
+            .rotationEffect(.degrees(isSorry ? 11.4 : 0))
+            .visualEffect { content, proxy in
+                content.offset(x: isSorry ? proxy.size.width * 0.017 : 0, y: isSorry ? proxy.size.height * 0.053 : 0)
+            }
+            .animation(.smooth(duration: 0.3), value: isSorry)
     }
 }
 
