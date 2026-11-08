@@ -95,9 +95,8 @@ struct MinimalPodDetailView: View {
                                     // What's been decided so far, to change on its own.
                                     BookingChips(flow: activeBooking, inset: Self.cardMargin)
                                         .padding(.top, 0)
-                                } else {
-                                    stackChips
                                 }
+                                // (The facilities are in the sections, "On site".)
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -145,7 +144,10 @@ struct MinimalPodDetailView: View {
                 let cardScale = cardHeight / stackPhotoHeight
                 let scale: CGFloat = isExtended ? thumbScale : (showsCard ? cardScale : 1)
                 let boxWidth: CGFloat = isExtended ? width * thumbScale : (showsCard ? cardWidth : width)
-                let boxHeight: CGFloat = isExtended ? stackPhotoHeight * thumbScale : (showsCard ? cardHeight : stackPhotoHeight)
+                // The thumbnail is 92 wide and as tall as it was when the stack's photo
+                // was 360/852 (84 on this phone), whatever the stack's photo is now.
+                let thumbHeight = screenHeight * (360 / 852) * thumbScale
+                let boxHeight: CGFloat = isExtended ? thumbHeight : (showsCard ? cardHeight : stackPhotoHeight)
                 let topRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 0)
                 let bottomRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 75)
                 DetailPhotoPager(
@@ -156,8 +158,7 @@ struct MinimalPodDetailView: View {
                     coordinate: pod.coordinate,
                     topRadius: 0,
                     bottomRadius: 0,
-                    showsBadge: !isExtended && !showsCard,
-                    dotsAtTop: true
+                    showsBadge: !isExtended && !showsCard
                 )
                 .scrollDisabled(isExtended || showsCard)
                 .scaleEffect(scale, anchor: .center)
@@ -165,7 +166,7 @@ struct MinimalPodDetailView: View {
                 // In the card the pod keeps its name and altitude, on the flat
                 // scrim every photo tile uses.
                 .overlay(alignment: .bottomLeading) { cardCaption.opacity(showsCard ? 1 : 0) }
-                .overlay(alignment: .bottomLeading) {
+                .overlay(alignment: .topLeading) {
                     let onStack = !isExtended && !showsCard
                     stackCaption
                         .opacity(onStack ? 1 : 0)
@@ -279,8 +280,8 @@ struct MinimalPodDetailView: View {
     }
 
     /// The name, the status chips and the key facts, **on the photo** at its
-    /// bottom left over a taller scrim (the page's one headline), until the
-    /// page is asked something or opens its sections.
+    /// top left, under the status bar, over a scrim that fades down (the page's
+    /// one headline), until the page is asked something or opens its sections.
     private var stackCaption: some View {
         VStack(alignment: .leading, spacing: 10) {
             // One line: a long name is cut with an ellipsis so the altitude stays.
@@ -296,22 +297,13 @@ struct MinimalPodDetailView: View {
         }
         .foregroundColor(.onPhoto)
         .padding(.horizontal, 24)
-        .padding(.bottom, 30)
+        // Under the status bar.
+        .padding(.top, ScreenInsets.top + 14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .bottom) {
-            LinearGradient(colors: [.clear, .photoScrim.opacity(0.6)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 230)
+        .background(alignment: .top) {
+            LinearGradient(colors: [.photoScrim.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: ScreenInsets.top + 190)
                 .allowsHitTesting(false)
-        }
-    }
-
-    /// One line of facilities, as many as fit; the rest are in the sections.
-    @ViewBuilder
-    private var stackChips: some View {
-        if let facilities = pod.facilities, !facilities.isEmpty {
-            FacilityChips(facilities: facilities, maxLines: 1)
-                .padding(.top, 12)
-                .padding(.horizontal, 24)
         }
     }
 
