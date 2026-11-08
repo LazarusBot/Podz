@@ -21,6 +21,10 @@ struct MinimalPodDetailView: View {
     /// The section at the top of the extended page: what Lenny talks about.
     @State private var activeSection: PodDetailSection?
     @State private var liveBedsAvailable: Int?
+    /// Lenny's line on the stack may be said: the zoom has settled and, on a
+    /// partner hut, the beds are known, so the line is typed once, the same way
+    /// for every hut.
+    @State private var guideReady = false
     @State private var isExtended = false
     /// Booking happens right here, with Lenny: the control stack and the
     /// bubble turn into its questions (`BookingFlow`).
@@ -42,8 +46,17 @@ struct MinimalPodDetailView: View {
     init(pod: Pod, onBack: @escaping () -> Void) {
         self.pod = pod
         self.onBack = onBack
+        // The photos as they were the last time this hut was opened, if it was:
+        // the whole set (and so the pager dots) is there from the first frame,
+        // the same for every hut. Otherwise the card's own photo.
+        let kept = OfflineStorage.load([PodPhotoRow].self, named: "photos-\(pod.id.uuidString)") ?? []
         let seed = PodsStore.shared.primaryPhotoByPodId[pod.id]
-        _photoURLs = State(initialValue: seed.map { [$0] } ?? [])
+        if kept.isEmpty {
+            _photoURLs = State(initialValue: seed.map { [$0] } ?? [])
+        } else {
+            _photoURLs = State(initialValue: kept.map(\.url))
+            _photoCredits = State(initialValue: Dictionary(kept.compactMap { row in row.credit.map { (row.url, $0) } }, uniquingKeysWith: { first, _ in first }))
+        }
         _booking = StateObject(wrappedValue: BookingFlow(entries: [Self.bookingEntry(for: pod)]))
         _externalBooking = StateObject(wrappedValue: BookingFlow(entries: [Self.bookingEntry(for: pod)], mode: .external))
     }
@@ -189,6 +202,17 @@ struct MinimalPodDetailView: View {
         // dismiss fought with paging through the photos.
         .interactiveDismissDisabled()
         .hutContactDialog(for: pod, isPresented: $showHutContact)
+        .task {
+            // The same beat for every hut: let the opening zoom settle, then (for
+            // a partner hut) give the beds up to 0.6 s more to arrive.
+            try? await Task.sleep(for: .milliseconds(450))
+            var waited = 0
+            while pod.isBookable && liveBedsAvailable == nil && waited < 600 {
+                try? await Task.sleep(for: .milliseconds(50))
+                waited += 50
+            }
+            guideReady = true
+        }
         .task {
             Analytics.shared.track(.podOpened, ["pod_id": pod.id.uuidString, "kind": pod.isBookable ? "partner" : "listed"])
             async let photos = PodsStore.shared.photoRows(forPodId: pod.id)
@@ -374,7 +398,7 @@ struct MinimalPodDetailView: View {
                     removal: .opacity
                 ))
             } else {
-                LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true)
+                LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true, isPresent: guideReady)
             }
         }
     }
