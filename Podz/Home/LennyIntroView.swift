@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Lenny's first sight: the one time he introduces himself, on the same
 /// `homeBackground` ground as the launch screen. His disc arrives in the
-/// middle (a soft pop), his eyes open, he blinks once and hops; then three
+/// middle (a soft pop), his eyes come in, he blinks once and hops; then three
 /// bubbles say who he is, what he does and where to find him, each rising in
 /// after the last has been typed (nothing already on screen moves). Lenny
 /// goes with them: he shrinks to his avatar beside the first bubble and
@@ -18,8 +18,10 @@ struct LennyIntroView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var discShown = false
-    /// 0 = closed, 1 = open: the eyes' height.
-    @State private var eyes = 0.05
+    /// The eyes' arrival: 0 = the disc is bare, 1 = they're there.
+    @State private var eyesIn = 0.0
+    /// A blink only squashes them (never to a line): 1 = open.
+    @State private var blinkHeight = 1.0
     @State private var mood = LennyMood.idle
     /// How many bubbles have been let in.
     @State private var lines = 0
@@ -97,12 +99,14 @@ struct LennyIntroView: View {
     /// His disc and eyes, one view that travels between his places.
     private func face(size: CGFloat) -> some View {
         LennyMark(mood: mood)
-            .scaleEffect(x: 1, y: eyes, anchor: UnitPoint(x: 0.5, y: 0.57))
+            .scaleEffect(x: 1, y: blinkHeight, anchor: UnitPoint(x: 0.5, y: 0.57))
+            .scaleEffect(eyesIn, anchor: UnitPoint(x: 0.5, y: 0.57))
+            .opacity(eyesIn)
             .foregroundColor(.homeBackground)
             .background(Color.homeText, in: Circle())
             .matchedGeometryEffect(id: "lenny", in: lennySpace)
             .frame(width: size, height: size)
-            .scaleEffect(discShown || reduceMotion ? 1 : 0.55)
+            .scaleEffect(discShown || reduceMotion ? 1 : 0.7)
             .opacity(discShown ? 1 : 0)
             .transition(.identity)
             .accessibilityLabel(tr("Lenny"))
@@ -114,21 +118,22 @@ struct LennyIntroView: View {
     private func play() async {
         if reduceMotion {
             discShown = true
-            eyes = 1
+            eyesIn = 1
             try? await Task.sleep(for: .milliseconds(400))
             lines = 1
             return
         }
-        try? await Task.sleep(for: .milliseconds(450))
-        withAnimation(.spring(response: 0.7, dampingFraction: 0.72)) { discShown = true }
-        try? await Task.sleep(for: .milliseconds(700))
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) { eyes = 1 }
-        try? await Task.sleep(for: .milliseconds(900))
+        try? await Task.sleep(for: .milliseconds(300))
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { discShown = true }
+        try? await Task.sleep(for: .milliseconds(400))
+        // The eyes come in softly, from nothing.
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) { eyesIn = 1 }
+        try? await Task.sleep(for: .milliseconds(550))
         await blink()
-        try? await Task.sleep(for: .milliseconds(350))
+        try? await Task.sleep(for: .milliseconds(200))
         mood = .happy
         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-        try? await Task.sleep(for: .milliseconds(250))
+        try? await Task.sleep(for: .milliseconds(200))
         moveTo(line: 1)
     }
 
@@ -160,8 +165,8 @@ struct LennyIntroView: View {
     }
 
     private func blink() async {
-        withAnimation(.easeIn(duration: 0.09)) { eyes = 0.06 }
-        try? await Task.sleep(for: .milliseconds(110))
-        withAnimation(.easeOut(duration: 0.16)) { eyes = 1 }
+        withAnimation(.easeIn(duration: 0.07)) { blinkHeight = 0.4 }
+        try? await Task.sleep(for: .milliseconds(80))
+        withAnimation(.easeOut(duration: 0.12)) { blinkHeight = 1 }
     }
 }
