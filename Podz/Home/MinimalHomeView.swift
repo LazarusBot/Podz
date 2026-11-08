@@ -3,6 +3,10 @@ import SwiftUI
 /// The minimalist Home (Paper "Home" frames): a big question, one search
 /// pill, and a row of large pod cards on a pure black / white ground.
 struct MinimalHomeView: View {
+    /// Home stays mounted under the other tabs; false while another is shown.
+    var isActive = true
+    /// Where Home's own scroll is (kept while it's hidden).
+    @State private var homeOffset: CGFloat = 0
     @StateObject private var podsStore = PodsStore.shared
     @StateObject private var likesStore = LikesStore.shared
     @StateObject private var homeSearch = HomeSearchState.shared
@@ -107,7 +111,16 @@ struct MinimalHomeView: View {
             if !focused { isLennyMode = false }
         }
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
-            scrollState.updateOffset(offset)
+            homeOffset = offset
+            if isActive { scrollState.updateOffset(offset) }
+        }
+        // Home stays alive under the other tabs (so coming back is instant, with
+        // the scroll where it was): the shared scroll tracker picks up from
+        // Home's own offset, not whatever the other tab left in it.
+        .onChange(of: isActive) { _, active in
+            guard active else { return }
+            scrollState.reset(offset: homeOffset)
+            resolveDeepLink()
         }
         .background(Color.homeBackground.ignoresSafeArea())
         .sheet(item: $seeAll) { section in
