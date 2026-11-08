@@ -24,9 +24,9 @@ final class ScrollTrackingState: ObservableObject {
     /// compute a large spurious delta against that stale value and flash
     /// the tab bar's shrink for a beat right on tab entry, unrelated to
     /// any actual scrolling in the new tab.
-    func reset() {
+    func reset(offset: CGFloat = 0) {
         idleTask?.cancel()
-        lastOffset = 0
+        lastOffset = offset
         isScrollingDown = false
     }
 

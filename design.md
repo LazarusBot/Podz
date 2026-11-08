@@ -85,7 +85,7 @@ All buttons are flat capsules in `homePill` (95% opacity) with a 1pt ground-colo
 - **Share** (Likes folder): round 83 pill like Back, the app's SF Symbol `link` (16 semibold) in `homeText` at 35%. Not the vector from the Paper example, which wasn't right.
 - **Like**: 83 x 83 pill, the tab bar's heart (22, 1.6 stroke): outline at 45% when not liked, filled at full strength when liked, with a quick bounce. Tapping when liked removes the like; otherwise it opens the folder picker.
 - **Search pill**: capsule in `homePill`, 14 regular text, placeholder in `homeSubtitle`, Lenny mark at the trailing end.
-- **Tab bar**: floating capsule, three line icons (home, heart, person), 22 / 1.6 stroke. Active icon at full strength, others at 45%.
+- **Tab bar**: floating capsule, three line icons (home, heart, person), 22 / 1.6 stroke. Active icon at full strength, others at 45%. **Home stays mounted under the other tabs** (hidden, not rebuilt), so coming back to it is instant and its scroll position is kept; Likes and Profile are built when opened. Photos (`CachedAsyncImage`) are decoded once, off the main thread and already shrunk to 1600 px on the long side, so scrolling never waits on a decode.
 - **Field pill** (onboarding): same capsule, 14 regular, caret in `homeText`.
 - **Small action pills** inside a row ("Add" a friend, accept a request): the highlighted pill, ground and ink swapped (`homeText` fill, `homeBackground` label), 38-40 tall; the quiet counterpart (decline, "Cancel") is the flat `homePill` with the label in `homeText` or `appBadgeRed`. The pencil on a profile photo is the flat round pill too. A search field is a `homePill` capsule.
 - **Avatars** are flat: round, no ring, no shadow.

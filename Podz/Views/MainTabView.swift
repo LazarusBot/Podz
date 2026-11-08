@@ -22,10 +22,17 @@ struct MainTabView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .bottom) {
-                Group {
+                // Home is the heavy one (shelves, photos): it stays mounted under
+                // the other tabs instead of being rebuilt on every visit, so
+                // going back to it is instant and its scroll stays where it was.
+                ZStack {
+                    MinimalHomeView(isActive: selectedTab == .feed)
+                        .opacity(selectedTab == .feed ? 1 : 0)
+                        .allowsHitTesting(selectedTab == .feed)
+                        .accessibilityHidden(selectedTab != .feed)
                     switch selectedTab {
                     case .feed:
-                        MinimalHomeView()
+                        EmptyView()
                     case .profile:
                         ProfileView()
                     case .likes:
@@ -66,6 +73,12 @@ struct MainTabView: View {
                         .scaleEffect(scrollState.isScrollingDown ? 0.85 : 1, anchor: .bottom)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+            }
+        }
+        .onChange(of: selectedTab) { old, _ in
+            // Leaving Home with the keyboard up: it goes with the tab.
+            if old == .feed {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
         }
         .animation(.easeOut(duration: AppMotion.snappy), value: scrollState.isScrollingDown)

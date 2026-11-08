@@ -17,12 +17,22 @@ import CryptoKit
 /// open" — since NSCache alone has nothing left the moment the process
 /// dies. Keeps decoded UIImages in memory ready to draw, rather than raw
 /// data to redecode each time.
-final class ImageCache {
+///
+/// Built so scrolling never waits on it: photos are decoded **once, off the
+/// main thread, already shrunk** to at most `ImageLoader.maxDisplayPixel` on
+/// their long side (a 4000 px photo no longer costs 64 MB of memory nor a
+/// decode in the middle of a scroll), the disk is read off the main thread
+/// too, the memory tier is bounded by what the images weigh, and what is
+/// saved to disk is the downloaded file itself (nothing is re-encoded).
+final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
     private let memoryCache = NSCache<NSString, UIImage>()
     private let diskDirectory: URL
 
     private init() {
+        // About 150 MB of decoded photos; the system empties it on a memory
+        // warning anyway.
+        memoryCache.totalCostLimit = 150 * 1024 * 1024
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         diskDirectory = caches.appendingPathComponent("PodzImageCache", isDirectory: true)
         try? FileManager.default.createDirectory(at: diskDirectory, withIntermediateDirectories: true)
@@ -59,25 +69,39 @@ final class ImageCache {
         return true
     }
 
-    func image(for url: String) -> UIImage? {
-        if let cached = memoryCache.object(forKey: url as NSString) {
-            return cached
-        }
+    /// Already decoded in memory: instant, safe to ask while drawing.
+    func cachedImage(for url: String) -> UIImage? {
+        memoryCache.object(forKey: url as NSString)
+    }
+
+    /// From memory, or read from the phone and decoded off the calling thread.
+    func image(for url: String) async -> UIImage? {
+        if let cached = cachedImage(for: url) { return cached }
+        return await Task.detached(priority: .userInitiated) { [self] in
+            diskImage(for: url)
+        }.value
+    }
+
+    private func diskImage(for url: String) -> UIImage? {
         let stored = (try? Data(contentsOf: diskPath(for: url))) ?? (try? Data(contentsOf: packPath(for: url)))
         guard let data = stored,
               let image = ImageLoader.decodeImage(from: data) else {
             return nil
         }
-        memoryCache.setObject(image, forKey: url as NSString)
+        remember(image, for: url)
         return image
     }
 
-    func set(_ image: UIImage, for url: String) {
-        memoryCache.setObject(image, forKey: url as NSString)
-        // Encoded synchronously (small, and keeps the write itself off
-        // the calling code's critical path) so the detached write task
-        // only captures Sendable values (Data, URL) — not the UIImage.
-        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+    private func remember(_ image: UIImage, for url: String) {
+        // Weighed by its decoded size.
+        let cost = Int(image.size.width * image.scale * image.size.height * image.scale * 4)
+        memoryCache.setObject(image, forKey: url as NSString, cost: cost)
+    }
+
+    /// Keeps a downloaded photo: decoded in memory, and the file as it came on
+    /// disk (written in the background, never re-encoded).
+    func store(_ image: UIImage, data: Data, for url: String) {
+        remember(image, for: url)
         let path = diskPath(for: url)
         Task.detached(priority: .utility) {
             try? data.write(to: path)
@@ -109,7 +133,35 @@ enum ImageLoader {
     /// can claim a huge size).
     private static let maxPixels = 50_000_000
 
-    static func load(urlString: String) async throws -> UIImage {
+    /// What a download gives: the picture ready to draw, and the file as it came.
+    struct Downloaded: @unchecked Sendable {
+        let image: UIImage
+        let data: Data
+    }
+
+    /// Photos are shown at most this many pixels on their long side (a bit more
+    /// than a full-screen photo on the biggest iPhones): bigger files are
+    /// shrunk when they're decoded.
+    static let maxDisplayPixel: CGFloat = 1600
+
+    /// One download per photo, shared by every view asking for it at once.
+    private actor Coalescer {
+        private var tasks: [String: Task<Downloaded, Error>] = [:]
+        func load(_ urlString: String) async throws -> Downloaded {
+            if let running = tasks[urlString] { return try await running.value }
+            let task = Task { try await ImageLoader.fetch(urlString: urlString) }
+            tasks[urlString] = task
+            defer { tasks[urlString] = nil }
+            return try await task.value
+        }
+    }
+    private static let coalescer = Coalescer()
+
+    static func load(urlString: String) async throws -> Downloaded {
+        try await coalescer.load(urlString)
+    }
+
+    fileprivate static func fetch(urlString: String) async throws -> Downloaded {
         guard let url = secureURL(urlString) else {
             throw LoadError.badURL
         }
@@ -124,30 +176,33 @@ enum ImageLoader {
             let mime = (response as? HTTPURLResponse)?.mimeType ?? "unknown"
             throw LoadError.decodeFailed(mime: mime, byteCount: data.count)
         }
-        return image
+        return Downloaded(image: image, data: data)
     }
 
-    /// `UIImage(data:)` alone misses some formats ImageIO otherwise
-    /// supports — WebP included, since it depends on which decoder
-    /// `UIImage`'s own format-sniffing picks. Going through
-    /// `CGImageSource` directly is the more complete path and is what
-    /// actually recovers WebP (static frames; animated WebP still only
-    /// decodes its first frame here, same as this app treats GIFs/APNGs).
+    /// Decodes a photo, shrunk to `maxDisplayPixel` and fully decoded right
+    /// here (call it off the main thread), so drawing it later costs nothing.
+    /// Going through `CGImageSource` rather than `UIImage(data:)` also recovers
+    /// formats `UIImage` misses (WebP, static frames), and applies the EXIF
+    /// rotation.
     static func decodeImage(from data: Data) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               fitsInMemory(source) else { return nil }
-        if let image = UIImage(data: data) {
-            return image
+        // Never blown up: a small photo keeps its own size.
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let width = (properties?[kCGImagePropertyPixelWidth] as? Int) ?? 0
+        let height = (properties?[kCGImagePropertyPixelHeight] as? Int) ?? 0
+        let longest = max(width, height)
+        let limit = longest > 0 ? min(maxDisplayPixel, CGFloat(longest)) : maxDisplayPixel
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: limit
+        ]
+        if let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+            return UIImage(cgImage: cgImage)
         }
-        guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            return nil
-        }
-        // UIImage(cgImage:) alone ignores EXIF orientation — unlike
-        // UIImage(data:), which applies it automatically. A portrait
-        // photo with rotation metadata would otherwise report its raw
-        // (rotated) pixel dimensions as its "ideal size," throwing off
-        // any .aspectRatio(.fill) computed from it.
-        return UIImage(cgImage: cgImage, scale: 1, orientation: exifOrientation(from: source))
+        return UIImage(data: data)
     }
 
     /// Reads the size from the header only, before anything is decoded.
@@ -157,26 +212,6 @@ enum ImageLoader {
               let height = properties[kCGImagePropertyPixelHeight] as? Int else { return true }
         let (pixels, overflow) = width.multipliedReportingOverflow(by: height)
         return width > 0 && height > 0 && !overflow && pixels <= maxPixels
-    }
-
-    private static func exifOrientation(from source: CGImageSource) -> UIImage.Orientation {
-        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let raw = properties[kCGImagePropertyOrientation] as? UInt32 else {
-            return .up
-        }
-        // Standard TIFF/EXIF orientation values (1-8) mapped to UIImage's
-        // own enum, same table UIKit itself uses internally.
-        switch raw {
-        case 1: return .up
-        case 2: return .upMirrored
-        case 3: return .down
-        case 4: return .downMirrored
-        case 5: return .leftMirrored
-        case 6: return .right
-        case 7: return .rightMirrored
-        case 8: return .left
-        default: return .up
-        }
     }
 }
 
@@ -191,6 +226,9 @@ struct CachedAsyncImage<Placeholder: View>: View {
     @ViewBuilder var placeholder: () -> Placeholder
 
     @State private var uiImage: UIImage?
+    /// The URL `uiImage` belongs to: a recycled view must not keep showing the
+    /// previous photo while the next one is read.
+    @State private var shownURL: String?
     /// Surfaced instead of silently falling back to `placeholder()` — a
     /// failed network request looks identical to a URL whose bytes just
     /// don't decode as an image, and both used to be indistinguishable
@@ -211,44 +249,52 @@ struct CachedAsyncImage<Placeholder: View>: View {
     private func load() async {
         guard let url else {
             uiImage = nil
+            shownURL = nil
             loadError = nil
             return
         }
 
-        // Already downloaded once this session — show it immediately, no
-        // placeholder flash. This check has to come *before* resetting
-        // uiImage to nil below: `.task(id: url)` re-fires every time this
-        // view gets recreated (e.g. TabView paging swaps pages in and
-        // out), and clearing to nil first — even for an already-cached
-        // photo — meant a guaranteed placeholder flash for a frame before
-        // flipping right back, which is what was visible as "flashing."
-        //
-        // The disk-cache read inside `ImageCache.image(for:)` is
-        // synchronous — no `await` in it — so it's never a cooperative-
-        // cancellation checkpoint. A fast scroll in a LazyVGrid recycles
-        // this same view for a *different* avatar's `url` faster than a
-        // disk read completes; without this explicit check, a now-stale
-        // load for the URL this view *used* to have could still finish
-        // and overwrite whatever the newer task already loaded for the
-        // URL it has now — the exact "wrong photo flashes in" bug.
-        guard !Task.isCancelled else { return }
-        if let cached = ImageCache.shared.image(for: url) {
-            guard !Task.isCancelled else { return }
+        // `.task(id: url)` re-fires every time this view is recreated (a TabView
+        // paging, a grid recycling it), so the memory check comes first and the
+        // old picture is only dropped when this view now has a different URL:
+        // no placeholder flash for a photo already loaded, and never the
+        // previous photo shown for the next one. Every step that waits checks
+        // for cancellation, so a stale load can't overwrite a newer one.
+        // In memory: shown at once, no placeholder flash (this is the path
+        // that scrolling back and forth takes, and it never leaves the main
+        // thread's budget).
+        if let cached = ImageCache.shared.cachedImage(for: url) {
             loadError = nil
             uiImage = cached
+            shownURL = url
             return
         }
 
-        uiImage = nil
+        // Not in memory: this view may have been recycled for another photo, so
+        // the old one goes now (never before the memory check above).
+        if shownURL != url {
+            uiImage = nil
+            shownURL = nil
+        }
         loadError = nil
+
+        // On the phone's disk: read and decoded off the main thread.
+        if let stored = await ImageCache.shared.image(for: url) {
+            guard !Task.isCancelled else { return }
+            uiImage = stored
+            shownURL = url
+            return
+        }
+        guard !Task.isCancelled else { return }
 
         do {
             let downloaded = try await ImageLoader.load(urlString: url)
-            ImageCache.shared.set(downloaded, for: url)
+            ImageCache.shared.store(downloaded.image, data: downloaded.data, for: url)
             guard !Task.isCancelled else { return }
             withAnimation(.easeOut(duration: AppMotion.standard)) {
-                uiImage = downloaded
+                uiImage = downloaded.image
             }
+            shownURL = url
         } catch ImageLoader.LoadError.badURL {
             loadError = "Bad URL: \(url)"
         } catch ImageLoader.LoadError.httpStatus(let code) {
