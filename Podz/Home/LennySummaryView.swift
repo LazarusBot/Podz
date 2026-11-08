@@ -407,14 +407,7 @@ struct LennySummaryView: View {
                         }
                         if entry.isLennysPick {
                             HStack(spacing: 6) {
-                                Image("lenny")
-                                    .renderingMode(.template)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 10, height: 10)
-                                    .foregroundColor(.homeBackground)
-                                    .frame(width: 18, height: 18)
-                                    .background(Color.homeText, in: Circle())
+                                LennyPickBadge(size: 18)
                                 T("Lenny's pick")
                                     .font(AppFont.semiBoldLabel(12))
                                     .foregroundColor(.homeText)

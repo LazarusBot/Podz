@@ -126,6 +126,11 @@ enum FrenchStrings {
         ("One moment, I'm getting things ready.", "Un instant, je prépare tout."),
         ("One moment, {}. I'm getting things ready.", "Un instant, {1}, je prépare tout."),
         ("All good, you're all set.", "Tout est bon, c'est prêt."),
+        ("Hi, I'm Lenny.", "Salut, moi c'est Lenny."),
+        ("I find mountain huts, plan your routes and keep track of your stays.", "Je trouve des refuges, je prépare tes itinéraires et je garde le fil de tes séjours."),
+        ("Just describe your trip in the search bar on Home, and I'll take it from there.", "Décris ton séjour dans la barre de recherche de l'accueil, je m'occupe du reste."),
+        ("Nice to meet you", "Enchanté"),
+        ("Lenny", "Lenny"),
         ("Go to Home", "Aller à l'accueil"),
         // Lenny's notes and questions (instead of system alerts)
         ("Sorry, that didn't work. {}", "Désolé, ça n'a pas marché. {1}"),

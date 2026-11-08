@@ -7,7 +7,6 @@ struct LennyAvatar: View {
 
     var body: some View {
         LennyMark(mood: .idle)
-            .frame(width: size / 2, height: size / 2)
             .foregroundColor(.homeBackground)
             .frame(width: size, height: size)
             .background(Color.homeText, in: Circle())

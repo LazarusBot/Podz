@@ -6,7 +6,7 @@ import SwiftUI
 ///   the cards. Nothing moves.
 /// - **Lenny** (tapping the round mark; Paper "Home2" frames): the bar
 ///   inverts, Lenny rolls from the trailing end to the leading end and its
-///   disc melts into the bar so only the eyes and mouth stay visible, and
+///   disc melts into the bar so only the eyes stay visible, and
 ///   the field asks for a route. Leaving the field rolls it back.
 struct HomeSearchPill: View {
     /// What the field currently edits — the screen swaps this between the
@@ -19,6 +19,9 @@ struct HomeSearchPill: View {
     var onSubmit: () -> Void = {}
 
     private let buttonSize: CGFloat = 40
+    /// Lenny's face fills the round button; while the button opens into "Ask
+    /// Lenny" it steps down so the eyes stay small beside the words.
+    private var faceSize: CGFloat { offersAsk ? 22 : buttonSize }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let inset: CGFloat = 9
     /// Lenny's button with its label ("Ask Lenny"): it opens up to this width
@@ -68,18 +71,22 @@ struct HomeSearchPill: View {
     /// in the field it opens into "Ask Lenny" on a solid capsule, an offer
     /// at the moment you're looking for a pod. In Lenny mode it is the round
     /// mark again, rolled to the leading end and melted into the bar so only
-    /// the eyes and the mouth stay visible.
+    /// the eyes stay visible.
     private var lennyMark: some View {
         Button {
             isLennyMode.toggle()
             isFocused.wrappedValue = true
         } label: {
-            HStack(spacing: 7) {
+            HStack(spacing: offersAsk ? 10 : 0) {
+                // The face is drawn at the size of a disc.
                 Image("lenny")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 20, height: 20)
+                    .frame(width: faceSize, height: faceSize)
+                    // The eyes sit right in their disc: nudged left, so there
+                    // is air before "Ask Lenny".
+                    .offset(x: offersAsk ? -3 : 0)
                     // One full turn as it slides across: the "roll" (Reduce
                     // Motion: it only slides).
                     .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))

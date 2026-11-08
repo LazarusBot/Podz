@@ -145,14 +145,7 @@ struct LennyPlanView: View {
         let isPick = pod.map(isLennysPick) ?? false
         return HStack(spacing: 8) {
             if isPick {
-                Image("lenny")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 11, height: 11)
-                    .foregroundColor(.homeBackground)
-                    .frame(width: 20, height: 20)
-                    .background(Color.homeText, in: Circle())
+                LennyPickBadge(size: 20)
             }
             Group {
                 if isPick, let reason = stop.pickReason {
