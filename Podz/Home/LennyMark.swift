@@ -65,3 +65,37 @@ struct LennyMark: View {
             }
     }
 }
+
+/// Lenny's disc with his eyes **cut out of it**: they are holes, so they show
+/// whatever is behind the disc (the ground in light or dark, a photo, a
+/// bubble), never a color painted on. Size it like the disc. `color` is the
+/// disc's; the eye parameters are for his intro (they come in, they blink).
+struct LennyDisc: View {
+    var mood: LennyMood = .idle
+    var color: Color = .homeText
+    /// 0...1: the eyes growing in from nothing.
+    var eyesScale: CGFloat = 1
+    /// 1 = open; a blink squashes it (never to a line).
+    var eyesHeight: CGFloat = 1
+    var eyesOpacity: Double = 1
+
+    /// The middle of the eyes in the disc (see `Lenny.svg`).
+    private let eyeCenter = UnitPoint(x: 0.5, y: 0.57)
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .mask {
+                ZStack {
+                    Rectangle()
+                    LennyMark(mood: mood)
+                        .scaleEffect(x: 1, y: eyesHeight, anchor: eyeCenter)
+                        .scaleEffect(eyesScale, anchor: eyeCenter)
+                        .opacity(eyesOpacity)
+                        .foregroundColor(.black)
+                        .blendMode(.destinationOut)
+                }
+                .compositingGroup()
+            }
+    }
+}

@@ -13,13 +13,8 @@ struct LennyPickBadge: View {
     private var seal: CGFloat { size * 0.5 }
 
     var body: some View {
-        Image("lenny")
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .foregroundColor(.homeBackground)
+        LennyDisc()
             .frame(width: size, height: size)
-            .background(Color.homeText, in: Circle())
             .overlay {
                 LennySeal()
                     .frame(width: seal, height: seal)

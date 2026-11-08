@@ -16,9 +16,7 @@ struct LennyFaceSlot: View {
     var body: some View {
         ZStack {
             if isHere {
-                LennyMark(mood: mood)
-                    .foregroundColor(.homeBackground)
-                    .background(Color.homeText, in: Circle())
+                LennyDisc(mood: mood)
                     .matchedGeometryEffect(id: "lenny", in: namespace)
                     .scaleEffect(isShown || reduceMotion ? 1 : 0.5)
                     .opacity(isShown ? 1 : 0)

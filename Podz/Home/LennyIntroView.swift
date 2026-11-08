@@ -98,12 +98,7 @@ struct LennyIntroView: View {
 
     /// His disc and eyes, one view that travels between his places.
     private func face(size: CGFloat) -> some View {
-        LennyMark(mood: mood)
-            .scaleEffect(x: 1, y: blinkHeight, anchor: UnitPoint(x: 0.5, y: 0.57))
-            .scaleEffect(eyesIn, anchor: UnitPoint(x: 0.5, y: 0.57))
-            .opacity(eyesIn)
-            .foregroundColor(.homeBackground)
-            .background(Color.homeText, in: Circle())
+        LennyDisc(mood: mood, eyesScale: eyesIn, eyesHeight: blinkHeight, eyesOpacity: eyesIn)
             .matchedGeometryEffect(id: "lenny", in: lennySpace)
             .frame(width: size, height: size)
             .scaleEffect(discShown || reduceMotion ? 1 : 0.7)
