@@ -281,8 +281,9 @@ struct MinimalPodDetailView: View {
             .captionTapArea(outset: 10)
         }
         .buttonStyle(.plain)
-        .padding(.leading, 30)
-        .padding(.top, 14)
+        // In line with the text on the photo above it.
+        .padding(.leading, Self.stackCaptionInset)
+        .padding(.top, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -320,9 +321,12 @@ struct MinimalPodDetailView: View {
             }
         }
         .foregroundColor(.onPhoto)
-        // Well inside the photo's edges and clear of its rounded bottom corners.
-        .padding(.horizontal, 30)
-        .padding(.bottom, 34)
+        // Inset like the card's caption, in proportion to the corner: the card
+        // has 22 / 20 for a radius of 40, so here (radius 75) 40 / 38 leaves the
+        // same gap between the text's corner and the curve (about a third of the
+        // radius), and the text reads as following the photo's shape.
+        .padding(.horizontal, Self.stackCaptionInset)
+        .padding(.bottom, 38)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .bottom) {
             LinearGradient(colors: [.clear, .photoScrim.opacity(0.62)], startPoint: .top, endPoint: .bottom)
@@ -390,6 +394,9 @@ struct MinimalPodDetailView: View {
     /// Back from the hut: the photo is an inset card, 46 from the sides.
     private static let cardMargin: CGFloat = 46
     private static let cardRadius: CGFloat = 40
+    /// The text on the stack's photo, and the caption under it, sit this far from
+    /// the left (and the right): the photo's bottom corners are 75 round.
+    private static let stackCaptionInset: CGFloat = 40
 
     /// The name and altitude on the card's photo, over a scrim at the bottom.
     private var cardCaption: some View {
