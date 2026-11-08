@@ -11,6 +11,8 @@ import SwiftUI
 /// sections (`PodDetailSections`). Tap the header to go back.
 struct MinimalPodDetailView: View {
     let pod: Pod
+    /// Set when Lenny picked this hut for the traveler's route: the page says so.
+    var lennyPick: LennyPick?
     var onBack: () -> Void
 
     @State private var photoURLs: [String]
@@ -43,8 +45,9 @@ struct MinimalPodDetailView: View {
 
     /// Seeded from the Home card's already-fetched photo so the first frame
     /// isn't empty; the full ordered set arrives from `photos(forPodId:)`.
-    init(pod: Pod, onBack: @escaping () -> Void) {
+    init(pod: Pod, lennyPick: LennyPick? = nil, onBack: @escaping () -> Void) {
         self.pod = pod
+        self.lennyPick = lennyPick
         self.onBack = onBack
         // The photos as they were the last time this hut was opened, if it was:
         // the whole set (and so the pager dots) is there from the first frame,
@@ -77,6 +80,12 @@ struct MinimalPodDetailView: View {
                             // leaves room for the thumbnail. Tap it to go back.
                             extendedHeader
                                 .transition(Self.fadeIn)
+                            if let lennyPick {
+                                LennyPickLine(pick: lennyPick)
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 14)
+                                    .transition(Self.fadeIn)
+                            }
                             // Lenny walks you down the page, from the top.
                             LennyHutGuide(
                                 pod: pod,
@@ -333,6 +342,8 @@ struct MinimalPodDetailView: View {
     /// something or opens its sections.
     private var stackCaption: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // Lenny chose it for this route, and says why.
+            if let lennyPick { LennyPickLine(pick: lennyPick, onPhoto: true) }
             // One line: a long name is cut with an ellipsis so the altitude stays.
             DetailTitleLine(name: pod.name, altitude: pod.altitudeM.map { "\($0)m" }, isCentered: false)
             PodStatusRow(pod: pod, isCentered: false, onPhoto: true)

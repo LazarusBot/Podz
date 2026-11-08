@@ -73,6 +73,7 @@ struct LennyPlanView: View {
                 pod: pod,
                 detail: details.joined(separator: " · "),
                 isLennysPick: pod.id == stop.pods.first?.id && stop.pickReason != nil,
+                pickReason: pod.id == stop.pods.first?.id ? stop.pickReason : nil,
                 stage: stop.isStage ? previous.flatMap { LennyStage.between($0, pod) } : nil
             ))
             previous = pod

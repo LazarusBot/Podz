@@ -9,14 +9,17 @@ import SwiftUI
 /// disc plus the part of the seal that hangs out.
 struct LennyPickBadge: View {
     var size: CGFloat = 20
+    /// On a photo: a white disc and seal (`onPhoto`), ringed and checked in the
+    /// scrim's black, instead of the page's tokens.
+    var onPhoto = false
 
     private var seal: CGFloat { size * 0.5 }
 
     var body: some View {
-        LennyDisc()
+        LennyDisc(color: onPhoto ? .onPhoto : .homeText)
             .frame(width: size, height: size)
             .overlay {
-                LennySeal()
+                LennySeal(fill: onPhoto ? .onPhoto : .homeText, ground: onPhoto ? .photoScrim : .homeBackground)
                     .frame(width: seal, height: seal)
                     .offset(x: size * 0.5, y: size * 0.38)
             }
@@ -30,19 +33,23 @@ struct LennyPickBadge: View {
 /// The verified seal: a scalloped badge in `homeText`, a check in
 /// `homeBackground`, and a ring of the ground around it.
 struct LennySeal: View {
+    var fill: Color = .homeText
+    /// The ring and the check.
+    var ground: Color = .homeBackground
+
     var body: some View {
         GeometryReader { proxy in
             let side = min(proxy.size.width, proxy.size.height)
             ZStack {
                 ScallopShape()
-                    .fill(Color.homeBackground)
+                    .fill(ground)
                     .frame(width: side * 1.24, height: side * 1.24)
                 ScallopShape()
-                    .fill(Color.homeText)
+                    .fill(fill)
                     .frame(width: side, height: side)
                 CheckShape()
                     .stroke(
-                        Color.homeBackground,
+                        ground,
                         style: StrokeStyle(lineWidth: max(side * 0.09, 1), lineCap: .round, lineJoin: .round)
                     )
                     .frame(width: side, height: side)
@@ -77,5 +84,37 @@ private struct CheckShape: Shape {
         path.addLine(to: CGPoint(x: rect.width * 0.46, y: rect.height * 0.62))
         path.addLine(to: CGPoint(x: rect.width * 0.68, y: rect.height * 0.38))
         return path
+    }
+}
+
+/// Lenny chose this hut for the traveler's route (and why): carried from his plan
+/// onto the hut's own page so the trust doesn't stop at the tap.
+struct LennyPick: Equatable {
+    /// "Closest to Zermatt"; nil when it wasn't kept (an older saved plan).
+    var reason: String?
+}
+
+/// The pick's line: the badge, **Lenny's pick** and the reason. On a photo (the
+/// stack) in white; on the page in `homeText` / `homeSubtitle`.
+struct LennyPickLine: View {
+    let pick: LennyPick
+    var onPhoto = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            LennyPickBadge(size: 20, onPhoto: onPhoto)
+            label
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var label: Text {
+        let strong = onPhoto ? Color.onPhoto : Color.homeText
+        let quiet = onPhoto ? Color.onPhoto.opacity(0.85) : Color.homeSubtitle
+        if let reason = pick.reason, !reason.isEmpty {
+            return Text("\(T("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(strong))\(T("  ·  \(reason)").font(AppFont.regularLabel(13)).foregroundColor(quiet))")
+        }
+        return T("Lenny's pick").font(AppFont.semiBoldLabel(13)).foregroundColor(strong)
     }
 }

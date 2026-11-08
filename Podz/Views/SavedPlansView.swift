@@ -10,6 +10,7 @@ struct SavedPlansView: View {
     @StateObject private var podsStore = PodsStore.shared
     @State private var opened: SavedPlan?
     @State private var selectedPod: Pod?
+    @State private var selectedPick: LennyPick?
     @State private var pendingDeletion: SavedPlan?
 
     var body: some View {
@@ -85,7 +86,10 @@ struct SavedPlansView: View {
             entries: entries(of: plan),
             photoURLs: podsStore.primaryPhotoByPodId,
             onBack: { opened = nil },
-            onOpenPod: { selectedPod = $0 },
+            onOpenPod: { pod in
+                selectedPick = plan.stops.first { $0.podId == pod.id && $0.isPick }.map { LennyPick(reason: $0.pickReason) }
+                selectedPod = pod
+            },
             onViewReservations: {
                 opened = nil
                 TabRouter.shared.showsReservationsRequested = true
@@ -96,7 +100,7 @@ struct SavedPlansView: View {
             onExit: { opened = nil }
         )
         .fullScreenCover(item: $selectedPod) { pod in
-            MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
+            MinimalPodDetailView(pod: pod, lennyPick: selectedPick, onBack: { selectedPod = nil; selectedPick = nil })
         }
     }
 
@@ -107,7 +111,7 @@ struct SavedPlansView: View {
         for stop in plan.stops {
             guard let pod = podsStore.pods.first(where: { $0.id == stop.podId }) else { continue }
             entries.append(.init(
-                stopName: stop.name, pod: pod, detail: stop.detail, isLennysPick: stop.isPick,
+                stopName: stop.name, pod: pod, detail: stop.detail, isLennysPick: stop.isPick, pickReason: stop.pickReason,
                 stage: plan.isRoute ? previous.flatMap { LennyStage.between($0, pod) } : nil
             ))
             previous = pod

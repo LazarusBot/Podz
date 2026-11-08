@@ -9,6 +9,8 @@ struct SavedPlan: Codable, Identifiable, Equatable {
         /// "24 beds · showers", as the summary showed it.
         let detail: String
         let isPick: Bool
+        /// Why ("Closest to Zermatt"), when it was Lenny's pick.
+        var pickReason: String? = nil
     }
 
     let id: UUID

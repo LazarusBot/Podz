@@ -25,6 +25,8 @@ struct LennySummaryView: View {
         /// "3.2 km away · 24 beds"; may be empty.
         let detail: String
         let isLennysPick: Bool
+        /// Why Lenny picked it ("Closest to Zermatt"), when he did.
+        var pickReason: String? = nil
         /// The day from the last hut on a route across an area, when there is one.
         var stage: LennyStage?
         var id: UUID { pod.id }
@@ -309,7 +311,7 @@ struct LennySummaryView: View {
             savedAt: Date(),
             isLoop: isLoop,
             isRoute: entries.contains { $0.stage != nil },
-            stops: entries.map { .init(name: $0.stopName, podId: $0.pod.id, detail: $0.detail, isPick: $0.isLennysPick) },
+            stops: entries.map { .init(name: $0.stopName, podId: $0.pod.id, detail: $0.detail, isPick: $0.isLennysPick, pickReason: $0.pickReason) },
             guests: flow.guestsConfirmed ? flow.guests : request?.guests,
             startDate: flow.dateConfirmed ? flow.startDate : request?.startDate,
             nights: flow.nightsConfirmed ? flow.nights : request?.nights

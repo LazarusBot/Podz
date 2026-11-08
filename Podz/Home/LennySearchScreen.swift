@@ -21,6 +21,8 @@ struct LennySearchScreen: View {
     @State private var isEditingRoute = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedPod: Pod?
+    /// Lenny's pick for the stop the opened hut leads, with his reason.
+    @State private var selectedPick: LennyPick?
     @Namespace private var zoomNamespace
 
     /// Ready once the search is done and found something to plan with.
@@ -37,7 +39,11 @@ struct LennySearchScreen: View {
                     planTitle: lenny.planTitle,
                     onExit: onClose,
                     onLeave: { withAnimation(.easeInOut(duration: 0.3)) { showsPlan = false } },
-                    onOpenPod: { selectedPod = $0 },
+                    onOpenPod: { pod in
+                        selectedPick = planStops.first { $0.pods.first?.id == pod.id && $0.pickReason != nil }
+                            .map { LennyPick(reason: $0.pickReason) }
+                        selectedPod = pod
+                    },
                     onFinish: {
                         TabRouter.shared.showsReservationsRequested = true
                         onClose()
@@ -92,7 +98,7 @@ struct LennySearchScreen: View {
         .animation(.smooth(duration: 0.3), value: isEditingRoute)
         .interactiveDismissDisabled()
         .fullScreenCover(item: $selectedPod) { pod in
-            MinimalPodDetailView(pod: pod, onBack: { selectedPod = nil })
+            MinimalPodDetailView(pod: pod, lennyPick: selectedPick, onBack: { selectedPod = nil; selectedPick = nil })
                 .navigationTransition(.zoom(sourceID: pod.id, in: zoomNamespace))
         }
     }
