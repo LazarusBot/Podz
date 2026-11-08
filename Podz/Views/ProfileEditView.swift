@@ -126,17 +126,7 @@ struct ProfileEditView: View {
                     .font(AppFont.semiBoldLabel(16))
                     .foregroundColor(.homeText)
                 Button { showsPhotoPicker = true } label: {
-                    HStack(spacing: 5) {
-                        T("Change photo")
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                    .padding(.vertical, 6)
-                    .captionTapArea()
+                    CaptionLabel("Change photo", vertical: 6)
                 }
                 .buttonStyle(.plain)
 

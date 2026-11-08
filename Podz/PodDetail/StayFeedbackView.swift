@@ -81,17 +81,7 @@ struct StayFeedbackLenny: View {
             LennyReply(message: message, mood: flow.mood == .bad && flow.step == .photos ? .idle : .happy)
             if flow.step == .rating {
                 Button(action: flow.skip) {
-                    HStack(spacing: 5) {
-                        T("Not now")
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                    .padding(.vertical, 4)
-                    .captionTapArea(outset: 10)
+                    CaptionLabel("Not now", vertical: 4, outset: 10)
                 }
                 .buttonStyle(.plain)
                 // Lined up with the bubble's text, past the avatar.

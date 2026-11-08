@@ -177,17 +177,7 @@ struct MyReservationsView: View {
                     Button {
                         withAnimation(.smooth(duration: 0.3)) { tipIndex = (tipIndex + 1) % tips.count }
                     } label: {
-                        HStack(spacing: 5) {
-                            T("Another tip")
-                                .font(AppFont.regularLabel(13))
-                                .foregroundColor(.homeSubtitle)
-                                .underline(color: Color.homeSubtitle.opacity(0.5))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.homeSubtitle)
-                        }
-                        .padding(.vertical, 8)
-                        .captionTapArea()
+                        CaptionLabel("Another tip")
                     }
                     .buttonStyle(.plain)
                     // Lined up with the bubble's text, past the avatar.

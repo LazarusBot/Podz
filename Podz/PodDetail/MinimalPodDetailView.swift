@@ -2,10 +2,9 @@ import SwiftUI
 
 /// The minimalist pod detail (Paper "DetailView" frames).
 ///
-/// **Stack:** a shorter photo you swipe through (its pager dots fan out above
-/// Lenny's badge), the pod's name and altitude, the key facts and facility
-/// chips, Lenny's word on the hut (speaking from the badge) and the back /
-/// like / Book pills.
+/// **Stack:** a big photo you swipe through with the name, the status chips and
+/// the key facts on it (`PodStackCaption`), a "See more" caption, Lenny's word
+/// on the hut (`PodStackLenny`) and the back / like / Book pills.
 /// **Extended:** tap anywhere between the photo and the buttons and the
 /// photo shrinks to a thumbnail beside the name; Lenny guides you down the
 /// sections (`PodDetailSections`). Tap the header to go back.
@@ -38,8 +37,6 @@ struct MinimalPodDetailView: View {
     @ObservedObject private var feedbackStore = StayFeedbackStore.shared
     @StateObject private var feedback = StayFeedbackFlow()
     @State private var showHutContact = false
-    @State private var showFolderPicker = false
-    @ObservedObject private var likesStore = LikesStore.shared
 
     /// Seeded from the Home card's already-fetched photo so the first frame
     /// isn't empty; the full ordered set arrives from `photos(forPodId:)`.
@@ -75,7 +72,7 @@ struct MinimalPodDetailView: View {
                         if isExtended {
                             // The sections take the screen under a header that
                             // leaves room for the thumbnail. Tap it to go back.
-                            extendedHeader
+                            PodExtendedHeader(pod: pod, onTap: toggleExtended)
                                 .transition(Self.fadeIn)
                             // Lenny walks you down the page, from the top.
                             LennyHutGuide(
@@ -95,7 +92,7 @@ struct MinimalPodDetailView: View {
                             // Room for the photo, which is drawn on top of the
                             // content so it can shrink into the thumbnail (or
                             // sit as a card, which leaves a little less).
-                            Color.clear.frame(height: showsCard ? Self.thumbnailTop + proxy.size.height * cardShare + 20 : stackPhotoHeight)
+                            Color.clear.frame(height: showsCard ? PodDetailMetrics.thumbnailTop + proxy.size.height * cardShare + 20 : stackPhotoHeight)
 
                             // Everything between the photo and the buttons is one
                             // tap target: a tap anywhere here opens the sections.
@@ -106,11 +103,11 @@ struct MinimalPodDetailView: View {
                                     EmptyView()
                                 } else if isBooking {
                                     // What's been decided so far, to change on its own.
-                                    BookingChips(flow: activeBooking, inset: Self.cardMargin)
+                                    BookingChips(flow: activeBooking, inset: PodDetailMetrics.cardMargin)
                                         .padding(.top, 0)
                                 }
                                 // (The facilities are in the sections, "On site".)
-                                if !asksSomething && !isBooking { seeMore }
+                                if !asksSomething && !isBooking { PodSeeMoreCaption(action: toggleExtended) }
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -133,7 +130,17 @@ struct MinimalPodDetailView: View {
                     // Lenny's bubble sits where it does in Lenny's search and
                     // booking: just above the control stack.
                     if !isExtended {
-                        stackLenny
+                        PodStackLenny(
+                            pod: pod,
+                            liveBedsAvailable: liveBedsAvailable,
+                            guideReady: guideReady,
+                            isBooking: isBooking,
+                            booking: activeBooking,
+                            asksHowItWent: asksHowItWent,
+                            feedback: feedback,
+                            asksIfBooked: asksIfBooked,
+                            onNotYet: { contactTracker.clear() }
+                        )
                             .padding(.horizontal, 24)
                             .padding(.bottom, 83 + 20 + DetailLayout.controlStackGap + ScreenInsets.bottom)
                             .transition(Self.fadeIn)
@@ -152,8 +159,8 @@ struct MinimalPodDetailView: View {
                 // inside a box that clips it, so its pages never re-layout
                 // mid-animation (that made the other photos flash past).
                 let width = proxy.size.width
-                let thumbScale = Self.thumbnailSize / width
-                let cardWidth = width - 2 * Self.cardMargin
+                let thumbScale = PodDetailMetrics.thumbnailSize / width
+                let cardWidth = width - 2 * PodDetailMetrics.cardMargin
                 let cardHeight = proxy.size.height * cardShare
                 // The pager is scaled to fill the card on both sides: with a taller photo
                 // the height alone would leave it narrower than the card.
@@ -164,8 +171,8 @@ struct MinimalPodDetailView: View {
                 // was 360/852 (84 on this phone), whatever the stack's photo is now.
                 let thumbHeight = screenHeight * (360 / 852) * thumbScale
                 let boxHeight: CGFloat = isExtended ? thumbHeight : (showsCard ? cardHeight : stackPhotoHeight)
-                let topRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 0)
-                let bottomRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 75)
+                let topRadius: CGFloat = isExtended ? PodDetailMetrics.thumbnailRadius : (showsCard ? PodDetailMetrics.cardRadius : 0)
+                let bottomRadius: CGFloat = isExtended ? PodDetailMetrics.thumbnailRadius : (showsCard ? PodDetailMetrics.cardRadius : 75)
                 DetailPhotoPager(
                     slots: photoURLs.map { Optional($0) },
                     pageIndex: $pageIndex,
@@ -182,10 +189,10 @@ struct MinimalPodDetailView: View {
                 .frame(width: boxWidth, height: boxHeight)
                 // In the card the pod keeps its name and altitude, on the flat
                 // scrim every photo tile uses.
-                .overlay(alignment: .bottomLeading) { cardCaption.opacity(showsCard ? 1 : 0) }
+                .overlay(alignment: .bottomLeading) { PodCardCaption(pod: pod).opacity(showsCard ? 1 : 0) }
                 .overlay(alignment: .bottomLeading) {
                     let onStack = !isExtended && !showsCard
-                    stackCaption
+                    PodStackCaption(pod: pod, liveBedsAvailable: liveBedsAvailable)
                         .opacity(onStack ? 1 : 0)
                         .allowsHitTesting(onStack)
                 }
@@ -193,8 +200,8 @@ struct MinimalPodDetailView: View {
                     topLeadingRadius: topRadius, bottomLeadingRadius: bottomRadius,
                     bottomTrailingRadius: bottomRadius, topTrailingRadius: topRadius, style: .continuous
                 ))
-                .padding(.leading, isExtended ? 24 : (showsCard ? Self.cardMargin : 0))
-                .padding(.top, isExtended ? Self.thumbnailTop : (showsCard ? Self.thumbnailTop : 0))
+                .padding(.leading, isExtended ? 24 : (showsCard ? PodDetailMetrics.cardMargin : 0))
+                .padding(.top, isExtended ? PodDetailMetrics.thumbnailTop : (showsCard ? PodDetailMetrics.thumbnailTop : 0))
                 .onTapGesture { if isExtended { toggleExtended() } }
             }
         }
@@ -254,195 +261,13 @@ struct MinimalPodDetailView: View {
         )
     }
 
-    // MARK: - Like
-
-    private var isLiked: Bool { likesStore.isLiked(pod) }
-
-    /// A round pill in the action row, same flat style as back and Book.
-    /// Unliked, a tap opens the folder picker (the frosted folders and the
-    /// photo dropping into one); liked, a tap removes the like.
-    private var likeButton: some View {
-        DetailRoundButton(
-            accessibilityLabel: isLiked ? "Remove from likes" : "Add to likes",
-            action: {
-                if isLiked {
-                    Task { await likesStore.removeLike(pod) }
-                } else {
-                    showFolderPicker = true
-                }
-            }
-        ) {
-            ZStack {
-                if isLiked { HeartIconShape().fill(Color.homeText) }
-                HeartIconShape()
-                    .stroke(Color.homeText.opacity(isLiked ? 1 : 0.45), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-            }
-            .frame(width: 22, height: 22)
-            .keyframeAnimator(initialValue: 1.0, trigger: isLiked) { content, scale in
-                content.scaleEffect(scale)
-            } keyframes: { _ in
-                SpringKeyframe(1.3, duration: 0.15)
-                SpringKeyframe(1.0, spring: .bouncy)
-            }
-        }
-        .likeFolderPicker(for: pod, isPresented: $showFolderPicker)
-    }
-
-    // MARK: - Text
-
-    /// The small caption right under the photo that says where to touch for the
-    /// page (the whole area down to Lenny opens it too).
-    private var seeMore: some View {
-        Button(action: toggleExtended) {
-            HStack(spacing: 5) {
-                T("See more")
-                    .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeSubtitle)
-                    .underline(color: Color.homeSubtitle.opacity(0.5))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundColor(.homeSubtitle)
-            }
-            .padding(.vertical, 4)
-            .captionTapArea(outset: 10)
-        }
-        .buttonStyle(.plain)
-        // In line with the text on the photo above it.
-        .padding(.leading, Self.stackCaptionInset)
-        .padding(.top, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// "120 beds · 18 free now  ·  45 € / night": what a traveler weighs first.
-    /// (Open or closed is the chip above it.)
-    private var keyFactsText: String? {
-        var parts: [String] = []
-        if let total = pod.bedsTotal {
-            var beds = "\(total) \(total == 1 ? "bed" : "beds")"
-            if pod.isBookable, let live = liveBedsAvailable { beds += " · \(live) free now" }
-            parts.append(beds)
-        }
-        if let price = pod.priceText {
-            parts.append(price)
-        } else if !pod.isBookable {
-            parts.append("Price at the hut")
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: "  ·  ")
-    }
-
-    /// The name, the status chips and the key facts, **on the photo** at its bottom left, well inside its edges, over a scrim
-    /// that fades up (the page's one headline), until the page is asked
-    /// something or opens its sections.
-    private var stackCaption: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // One line: a long name is cut with an ellipsis so the altitude stays.
-            DetailTitleLine(name: pod.name, altitude: pod.altitudeM.map { "\($0)m" }, isCentered: false)
-            PodStatusRow(pod: pod, isCentered: false, onPhoto: true)
-            if let facts = keyFactsText {
-                T(facts)
-                    .font(AppFont.regularLabel(14))
-                    .opacity(0.92)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-        }
-        .foregroundColor(.onPhoto)
-        // Inset like the card's caption, in proportion to the corner: the card
-        // has 22 / 20 for a radius of 40, so here (radius 75) 40 / 38 leaves the
-        // same gap between the text's corner and the curve (about a third of the
-        // radius), and the text reads as following the photo's shape.
-        .padding(.horizontal, Self.stackCaptionInset)
-        .padding(.bottom, 38)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .bottom) {
-            LinearGradient(colors: [.clear, .photoScrim.opacity(0.62)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 250)
-                .allowsHitTesting(false)
-        }
-    }
-
-    /// Lenny's word on the hut, or, while booking, the question: the same
-    /// bubble as in Lenny's search (the "See more" caption that opens the page
-    /// is on the photo).
-    @ViewBuilder
-    private var stackLenny: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if isBooking {
-                LennyReply(message: activeBooking.replyMessage, mood: activeBooking.mood)
-            } else if asksHowItWent {
-                StayFeedbackLenny(flow: feedback, podName: pod.name)
-                    .transition(.risesIn(after: 0.3))
-            } else if asksIfBooked {
-                // Back from the hut: the question rises into place a beat after
-                // the photo has settled into its card.
-                VStack(alignment: .leading, spacing: 8) {
-                    LennyReply(message: "Welcome back! Did you book \(pod.name) with the hut?", mood: .happy)
-                    Button { contactTracker.clear() } label: {
-                        HStack(spacing: 5) {
-                            T("Not yet")
-                                .font(AppFont.regularLabel(13))
-                                .foregroundColor(.homeSubtitle)
-                                .underline(color: Color.homeSubtitle.opacity(0.5))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.homeSubtitle)
-                        }
-                        .padding(.vertical, 4)
-                        .captionTapArea(outset: 10)
-                    }
-                    .buttonStyle(.plain)
-                    // Lined up with the bubble's text, past the avatar.
-                    .padding(.leading, 38 + 18)
-                }
-                .transition(.asymmetric(
-                    insertion: AnyTransition.move(edge: .bottom).combined(with: .opacity)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.82).delay(0.3)),
-                    removal: .opacity
-                ))
-            } else {
-                LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true, isPresent: guideReady)
-            }
-        }
-    }
-
-    // MARK: - Extended header
+    // MARK: - State
 
     private var currentPhotoURL: String? {
         photoURLs.indices.contains(pageIndex ?? 0) ? photoURLs[pageIndex ?? 0] : photoURLs.first
     }
 
     private var currentPhotoCredit: String? { currentPhotoURL.flatMap { photoCredits[$0] } }
-
-    /// A small photo, the name and altitude and, for a listed hut, the badge.
-    private static let thumbnailSize: CGFloat = 92
-    private static let thumbnailRadius: CGFloat = 28
-    private static let thumbnailTop: CGFloat = 64
-    /// Back from the hut: the photo is an inset card, 46 from the sides.
-    private static let cardMargin: CGFloat = 46
-    private static let cardRadius: CGFloat = 40
-    /// The text on the stack's photo, and the caption under it, sit this far from
-    /// the left (and the right): the photo's bottom corners are 75 round.
-    private static let stackCaptionInset: CGFloat = 40
-
-    /// The name and altitude on the card's photo, over a scrim at the bottom.
-    private var cardCaption: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(pod.name)
-                .font(AppFont.semiBoldLabel(20))
-                .lineLimit(2)
-            Text([pod.altitudeM.map { "\($0) m" }, pod.region ?? pod.country].compactMap { $0 }.joined(separator: " \u{00B7} "))
-                .font(AppFont.regularLabel(13))
-                .opacity(0.85)
-        }
-        .foregroundColor(.onPhoto)
-        .padding(.horizontal, 22)
-        .padding(.bottom, 20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .bottom) {
-            LinearGradient(colors: [.clear, .photoScrim.opacity(0.55)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 130)
-        }
-    }
 
     /// The prompt's layout, and the booking's, in the app or through the hut: the
     /// photo as a card, nothing else but Lenny, so the whole moment looks the same
@@ -464,32 +289,6 @@ struct MinimalPodDetailView: View {
         removal: .opacity.animation(.easeOut(duration: 0.15))
     )
 
-    /// The name and altitude and, for a listed hut, the badge, beside the
-    /// thumbnail (which is the photo above, in place).
-    private var extendedHeader: some View {
-        HStack(spacing: 18) {
-            Color.clear.frame(width: Self.thumbnailSize, height: Self.thumbnailSize)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(pod.name)
-                    .font(AppFont.semiBoldLabel(20))
-                    .foregroundColor(.homeText)
-                    .lineLimit(2)
-                if let altitude = pod.altitudeM {
-                    T("\(altitude) m")
-                        .font(AppFont.regularLabel(14))
-                        .foregroundColor(.homeSubtitle)
-                }
-                PodStatusRow(pod: pod, isCentered: false)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, Self.thumbnailTop)
-        .contentShape(Rectangle())
-        .onTapGesture { toggleExtended() }
-    }
-
     // MARK: - Actions
 
     @ViewBuilder
@@ -505,7 +304,7 @@ struct MinimalPodDetailView: View {
                     onBack()
                 }
             )
-            .padding(.horizontal, Self.cardMargin)
+            .padding(.horizontal, PodDetailMetrics.cardMargin)
             .padding(.top, 24)
         } else if asksHowItWent {
             // The stay is over: how did it go. Leaving counts as "not now".
@@ -518,7 +317,7 @@ struct MinimalPodDetailView: View {
                     onBack()
                 }
             )
-            .padding(.horizontal, Self.cardMargin)
+            .padding(.horizontal, PodDetailMetrics.cardMargin)
             .padding(.top, 24)
             .transition(.risesIn(after: 0.45))
         } else if asksIfBooked {
@@ -529,7 +328,7 @@ struct MinimalPodDetailView: View {
                 DetailBackButton { contactTracker.clear(); onBack() }
                 DetailTextButton(title: "Yes, I booked it", isHighlighted: true, action: startExternalBooking)
             }
-            .padding(.horizontal, Self.cardMargin)
+            .padding(.horizontal, PodDetailMetrics.cardMargin)
             .padding(.top, 24)
             .transition(.asymmetric(
                 insertion: AnyTransition.move(edge: .bottom).combined(with: .opacity)
@@ -539,7 +338,7 @@ struct MinimalPodDetailView: View {
         } else {
             HStack(spacing: 13) {
                 DetailBackButton(action: onBack)
-                likeButton
+                PodLikeButton(pod: pod)
                 if pod.isBookable {
                     DetailTextButton(title: "Book", isHighlighted: true, action: startBooking)
                 } else {

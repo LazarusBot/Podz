@@ -66,17 +66,7 @@ struct LennyIntroView: View {
 
             // Always in the layout, so nothing moves when it arrives.
             Button(action: onContinue) {
-                HStack(spacing: 5) {
-                    T("Nice to meet you")
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.homeSubtitle)
-                        .underline(color: Color.homeSubtitle.opacity(0.5))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(.homeSubtitle)
-                }
-                .padding(.vertical, 8)
-                .captionTapArea()
+                CaptionLabel("Nice to meet you")
             }
             .buttonStyle(.plain)
             .padding(.leading, 38 + 18)

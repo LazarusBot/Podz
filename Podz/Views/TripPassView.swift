@@ -210,17 +210,7 @@ struct TripPassView: View {
 
                 if matchedPod != nil {
                     Button { showsPod = true } label: {
-                        HStack(spacing: 5) {
-                            T("View hut")
-                                .font(AppFont.regularLabel(13))
-                                .foregroundColor(.homeSubtitle)
-                                .underline(color: Color.homeSubtitle.opacity(0.5))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.homeSubtitle)
-                        }
-                        .padding(.vertical, 6)
-                        .captionTapArea()
+                        CaptionLabel("View hut", vertical: 6)
                     }
                     .buttonStyle(.plain)
                 }
