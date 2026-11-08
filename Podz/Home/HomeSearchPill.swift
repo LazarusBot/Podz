@@ -77,13 +77,16 @@ struct HomeSearchPill: View {
             isLennyMode.toggle()
             isFocused.wrappedValue = true
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: offersAsk ? 10 : 0) {
                 // The face is drawn at the size of a disc.
                 Image("lenny")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .frame(width: faceSize, height: faceSize)
+                    // The eyes sit right in their disc: nudged left, so there
+                    // is air before "Ask Lenny".
+                    .offset(x: offersAsk ? -3 : 0)
                     // One full turn as it slides across: the "roll" (Reduce
                     // Motion: it only slides).
                     .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))
