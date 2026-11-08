@@ -97,6 +97,7 @@ struct MinimalPodDetailView: View {
                                         .padding(.top, 0)
                                 }
                                 // (The facilities are in the sections, "On site".)
+                                if !asksSomething && !isBooking { seeMore }
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -263,6 +264,28 @@ struct MinimalPodDetailView: View {
 
     // MARK: - Text
 
+    /// The small caption right under the photo that says where to touch for the
+    /// page (the whole area down to Lenny opens it too).
+    private var seeMore: some View {
+        Button(action: toggleExtended) {
+            HStack(spacing: 5) {
+                T("See more")
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .underline(color: Color.homeSubtitle.opacity(0.5))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.homeSubtitle)
+            }
+            .padding(.vertical, 4)
+            .captionTapArea(outset: 10)
+        }
+        .buttonStyle(.plain)
+        .padding(.leading, 30)
+        .padding(.top, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     /// "120 beds · 18 free now  ·  45 € / night": what a traveler weighs first.
     /// (Open or closed is the chip above it.)
     private var keyFactsText: String? {
@@ -280,8 +303,7 @@ struct MinimalPodDetailView: View {
         return parts.isEmpty ? nil : parts.joined(separator: "  ·  ")
     }
 
-    /// The name, the status chips, the key facts and the **See more** caption,
-    /// **on the photo** at its bottom left, well inside its edges, over a scrim
+    /// The name, the status chips and the key facts, **on the photo** at its bottom left, well inside its edges, over a scrim
     /// that fades up (the page's one headline), until the page is asked
     /// something or opens its sections.
     private var stackCaption: some View {
@@ -296,21 +318,6 @@ struct MinimalPodDetailView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
-            // Where to touch for the page: the same small caption as everywhere.
-            Button(action: toggleExtended) {
-                HStack(spacing: 5) {
-                    T("See more")
-                        .font(AppFont.regularLabel(13))
-                        .underline(color: Color.onPhoto.opacity(0.5))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                }
-                .opacity(0.85)
-                .padding(.vertical, 4)
-                .captionTapArea(outset: 10)
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 2)
         }
         .foregroundColor(.onPhoto)
         // Well inside the photo's edges and clear of its rounded bottom corners.
