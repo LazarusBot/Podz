@@ -38,7 +38,7 @@ struct HomeSearchPill: View {
                 .padding(inset)
         }
         .frame(height: 60)
-        .background(isLennyMode ? Color.homeText : Color.homePill, in: Capsule())
+        .background { barBackground }
         .contentShape(Capsule())
         .onTapGesture { isFocused.wrappedValue = true }
         .animation(.smooth(duration: 0.4), value: isLennyMode)
@@ -67,42 +67,80 @@ struct HomeSearchPill: View {
         .padding(.trailing, isLennyMode ? 28 : inset + (offersAsk ? askWidth : buttonSize) + 8)
     }
 
+    private var buttonWidth: CGFloat { offersAsk ? askWidth : buttonSize }
+
+    private var buttonAlignment: Alignment { isLennyMode ? .leading : .trailing }
+
+    /// The bar and the round button on it, with **Lenny's eyes cut out of
+    /// both**: the holes show the page behind the pill, whatever the bar's
+    /// color (the bar is `homePill`, or `homeText` in Lenny mode where the button
+    /// melts into it). The button's face is laid out here exactly as in
+    /// `lennyMark`, so the holes follow it as it opens, rolls and slides.
+    private var barBackground: some View {
+        ZStack(alignment: buttonAlignment) {
+            Capsule().fill(isLennyMode ? Color.homeText : Color.homePill)
+            Capsule().fill(Color.homeText)
+                .frame(width: buttonWidth, height: buttonSize)
+                .padding(inset)
+        }
+        .mask {
+            ZStack(alignment: buttonAlignment) {
+                Rectangle()
+                buttonLayout(isCutout: true)
+                    .foregroundColor(.black)
+                    .blendMode(.destinationOut)
+                    .padding(inset)
+            }
+            .compositingGroup()
+        }
+    }
+
+    /// The button's content: the face (a hole in the bar behind) and, once the
+    /// button opens, the words. Drawn twice with the same layout: with
+    /// `isCutout` the face is what is drawn (into the mask), without it the
+    /// words are (on the button).
+    private func buttonLayout(isCutout: Bool) -> some View {
+        HStack(spacing: offersAsk ? 10 : 0) {
+            // The face is drawn at the size of a disc.
+            Image("lenny")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: faceSize, height: faceSize)
+                // The eyes sit right in their disc: nudged left, so there
+                // is air before "Ask Lenny".
+                .offset(x: offersAsk ? -3 : 0)
+                // One full turn as it slides across: the "roll" (Reduce
+                // Motion: it only slides).
+                .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))
+                .opacity(isCutout ? 1 : 0)
+
+            if offersAsk {
+                T("Ask Lenny")
+                    .font(AppFont.semiBoldLabel(13))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .opacity(isCutout ? 0 : 1)
+                    .transition(.opacity)
+            }
+        }
+        .frame(width: buttonWidth, height: buttonSize)
+    }
+
     /// Lenny's button. At rest it is the round mark. When you start searching
     /// in the field it opens into "Ask Lenny" on a solid capsule, an offer
     /// at the moment you're looking for a pod. In Lenny mode it is the round
     /// mark again, rolled to the leading end and melted into the bar so only
-    /// the eyes stay visible.
+    /// the eyes stay visible. The capsule and the eyes' holes are drawn behind
+    /// (`barBackground`); this is the tap target and the words.
     private var lennyMark: some View {
         Button {
             isLennyMode.toggle()
             isFocused.wrappedValue = true
         } label: {
-            HStack(spacing: offersAsk ? 10 : 0) {
-                // The face is drawn at the size of a disc.
-                Image("lenny")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: faceSize, height: faceSize)
-                    // The eyes sit right in their disc: nudged left, so there
-                    // is air before "Ask Lenny".
-                    .offset(x: offersAsk ? -3 : 0)
-                    // One full turn as it slides across: the "roll" (Reduce
-                    // Motion: it only slides).
-                    .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))
-
-                if offersAsk {
-                    T("Ask Lenny")
-                        .font(AppFont.semiBoldLabel(13))
-                        .lineLimit(1)
-                        .fixedSize()
-                        .transition(.opacity)
-                }
-            }
-            .foregroundColor(.homeBackground)
-            .frame(width: offersAsk ? askWidth : buttonSize, height: buttonSize)
-            .background(Color.homeText, in: Capsule())
-            .clipped()
+            buttonLayout(isCutout: false)
+                .foregroundColor(.homeBackground)
+                .contentShape(Capsule())
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(tr("Ask Lenny"))

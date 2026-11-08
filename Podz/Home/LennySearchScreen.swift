@@ -230,9 +230,8 @@ struct LennySearchScreen: View {
     /// Lenny's disc melted into it so only the eyes show.
     private var routePill: some View {
         HStack(spacing: 20) {
-            LennyMark(mood: mood)
-                .foregroundColor(.homeBackground)
-                .frame(width: 40, height: 40)
+            // Where his eyes are: a hole in the bar (see the background).
+            Color.clear.frame(width: 40, height: 40)
 
             if failed {
                 // After an error the route is yours to change: tap, edit,
@@ -262,7 +261,21 @@ struct LennySearchScreen: View {
         .padding(.leading, 9)
         .padding(.trailing, 28)
         .frame(height: 60)
-        .background(Color.homeText, in: Capsule())
+        .background {
+            // Lenny's eyes are cut out of the bar, so they show the page behind.
+            Capsule().fill(Color.homeText)
+                .mask {
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                        LennyMark(mood: mood)
+                            .foregroundColor(.black)
+                            .frame(width: 40, height: 40)
+                            .padding(.leading, 9)
+                            .blendMode(.destinationOut)
+                    }
+                    .compositingGroup()
+                }
+        }
         .contentShape(Capsule())
         .onTapGesture {
             guard failed else { return }
