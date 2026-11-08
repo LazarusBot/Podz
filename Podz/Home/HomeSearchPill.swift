@@ -67,6 +67,65 @@ struct HomeSearchPill: View {
         .padding(.trailing, isLennyMode ? 28 : inset + (offersAsk ? askWidth : buttonSize) + 8)
     }
 
+    private var buttonWidth: CGFloat { offersAsk ? askWidth : buttonSize }
+
+    /// The face and, once the button opens, the words: laid out in a frame the
+    /// size of the button. `showsFace` / `showsText` pick which of the two is
+    /// drawn, so the same layout serves the holes and the painted eyes.
+    private func buttonContent(showsFace: Bool, showsText: Bool) -> some View {
+        HStack(spacing: offersAsk ? 10 : 0) {
+            // The face is drawn at the size of a disc.
+            Image("lenny")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: faceSize, height: faceSize)
+                // The eyes sit right in their disc: nudged left, so there
+                // is air before "Ask Lenny".
+                .offset(x: offersAsk ? -3 : 0)
+                // One full turn as it slides across: the "roll" (Reduce
+                // Motion: it only slides).
+                .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))
+                .opacity(showsFace ? 1 : 0)
+
+            if offersAsk {
+                T("Ask Lenny")
+                    .font(AppFont.semiBoldLabel(13))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .opacity(showsText ? 1 : 0)
+                    .transition(.opacity)
+            }
+        }
+        .frame(width: buttonWidth, height: buttonSize)
+    }
+
+    /// The `homeText` capsule with **Lenny's eyes (and the words) cut out of
+    /// it**, so the bar shows through them. In Lenny mode the button melts into
+    /// the bar, which is the same color, so a hole would vanish: there the eyes
+    /// are painted in the ground color instead (which is what a hole through the
+    /// bar would show), crossfading with the holes as the bar inverts. One
+    /// layout drives the holes and the paint, so they can't drift apart.
+    private var buttonCapsule: some View {
+        Capsule()
+            .fill(Color.homeText)
+            .frame(width: buttonWidth, height: buttonSize)
+            .mask {
+                ZStack {
+                    Rectangle()
+                    buttonContent(showsFace: !isLennyMode, showsText: true)
+                        .foregroundColor(.black)
+                        .blendMode(.destinationOut)
+                }
+                .compositingGroup()
+            }
+            .overlay {
+                buttonContent(showsFace: isLennyMode, showsText: false)
+                    .foregroundColor(.homeBackground)
+            }
+            .contentShape(Capsule())
+    }
+
     /// Lenny's button. At rest it is the round mark. When you start searching
     /// in the field it opens into "Ask Lenny" on a solid capsule, an offer
     /// at the moment you're looking for a pod. In Lenny mode it is the round
@@ -77,32 +136,7 @@ struct HomeSearchPill: View {
             isLennyMode.toggle()
             isFocused.wrappedValue = true
         } label: {
-            HStack(spacing: offersAsk ? 10 : 0) {
-                // The face is drawn at the size of a disc.
-                Image("lenny")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: faceSize, height: faceSize)
-                    // The eyes sit right in their disc: nudged left, so there
-                    // is air before "Ask Lenny".
-                    .offset(x: offersAsk ? -3 : 0)
-                    // One full turn as it slides across: the "roll" (Reduce
-                    // Motion: it only slides).
-                    .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))
-
-                if offersAsk {
-                    T("Ask Lenny")
-                        .font(AppFont.semiBoldLabel(13))
-                        .lineLimit(1)
-                        .fixedSize()
-                        .transition(.opacity)
-                }
-            }
-            .foregroundColor(.homeBackground)
-            .frame(width: offersAsk ? askWidth : buttonSize, height: buttonSize)
-            .background(Color.homeText, in: Capsule())
-            .clipped()
+            buttonCapsule
         }
         .buttonStyle(TapScaleButtonStyle())
         .accessibilityLabel(tr("Ask Lenny"))
