@@ -155,7 +155,9 @@ struct MinimalPodDetailView: View {
                 let thumbScale = Self.thumbnailSize / width
                 let cardWidth = width - 2 * Self.cardMargin
                 let cardHeight = proxy.size.height * cardShare
-                let cardScale = cardHeight / stackPhotoHeight
+                // The pager is scaled to fill the card on both sides: with a taller photo
+                // the height alone would leave it narrower than the card.
+                let cardScale = max(cardHeight / stackPhotoHeight, cardWidth / width)
                 let scale: CGFloat = isExtended ? thumbScale : (showsCard ? cardScale : 1)
                 let boxWidth: CGFloat = isExtended ? width * thumbScale : (showsCard ? cardWidth : width)
                 // The thumbnail is 92 wide and as tall as it was when the stack's photo
