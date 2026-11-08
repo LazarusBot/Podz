@@ -54,6 +54,7 @@ struct MinimalPodDetailView: View {
             let screenHeight = proxy.size.height
 
             let stackPhotoHeight = DetailLayout.podPhotoHeight(screenHeight: screenHeight)
+            let cardShare = DetailLayout.podCardShare(screenHeight: screenHeight)
 
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .bottom) {
@@ -81,24 +82,22 @@ struct MinimalPodDetailView: View {
                             // Room for the photo, which is drawn on top of the
                             // content so it can shrink into the thumbnail (or
                             // sit as a card, which leaves a little less).
-                            Color.clear.frame(height: showsCard ? Self.thumbnailTop + proxy.size.height * Self.cardHeightShare + 20 : stackPhotoHeight)
+                            Color.clear.frame(height: showsCard ? Self.thumbnailTop + proxy.size.height * cardShare + 20 : stackPhotoHeight)
 
                             // Everything between the photo and the buttons is one
                             // tap target: a tap anywhere here opens the sections.
                             VStack(spacing: 0) {
                                 // Back from the hut, the page empties: only the
                                 // pod's photo and Lenny's question remain.
-                                if !asksSomething && !isBooking { titleBlock }
                                 if asksSomething {
                                     EmptyView()
                                 } else if isBooking {
                                     // What's been decided so far, to change on its own.
                                     BookingChips(flow: activeBooking, inset: Self.cardMargin)
                                         .padding(.top, 0)
-                                } else {
-                                    keyFacts
-                                    stackChips
                                 }
+                                // (The facilities are in the sections, "On site".)
+                                if !asksSomething && !isBooking { seeMore }
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -142,11 +141,14 @@ struct MinimalPodDetailView: View {
                 let width = proxy.size.width
                 let thumbScale = Self.thumbnailSize / width
                 let cardWidth = width - 2 * Self.cardMargin
-                let cardHeight = proxy.size.height * Self.cardHeightShare
+                let cardHeight = proxy.size.height * cardShare
                 let cardScale = cardHeight / stackPhotoHeight
                 let scale: CGFloat = isExtended ? thumbScale : (showsCard ? cardScale : 1)
                 let boxWidth: CGFloat = isExtended ? width * thumbScale : (showsCard ? cardWidth : width)
-                let boxHeight: CGFloat = isExtended ? stackPhotoHeight * thumbScale : (showsCard ? cardHeight : stackPhotoHeight)
+                // The thumbnail is 92 wide and as tall as it was when the stack's photo
+                // was 360/852 (84 on this phone), whatever the stack's photo is now.
+                let thumbHeight = screenHeight * (360 / 852) * thumbScale
+                let boxHeight: CGFloat = isExtended ? thumbHeight : (showsCard ? cardHeight : stackPhotoHeight)
                 let topRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 0)
                 let bottomRadius: CGFloat = isExtended ? Self.thumbnailRadius : (showsCard ? Self.cardRadius : 75)
                 DetailPhotoPager(
@@ -157,7 +159,8 @@ struct MinimalPodDetailView: View {
                     coordinate: pod.coordinate,
                     topRadius: 0,
                     bottomRadius: 0,
-                    showsBadge: !isExtended && !showsCard
+                    showsBadge: !isExtended && !showsCard,
+                    dotsAtTop: true
                 )
                 .scrollDisabled(isExtended || showsCard)
                 .scaleEffect(scale, anchor: .center)
@@ -165,6 +168,12 @@ struct MinimalPodDetailView: View {
                 // In the card the pod keeps its name and altitude, on the flat
                 // scrim every photo tile uses.
                 .overlay(alignment: .bottomLeading) { cardCaption.opacity(showsCard ? 1 : 0) }
+                .overlay(alignment: .bottomLeading) {
+                    let onStack = !isExtended && !showsCard
+                    stackCaption
+                        .opacity(onStack ? 1 : 0)
+                        .allowsHitTesting(onStack)
+                }
                 .clipShape(UnevenRoundedRectangle(
                     topLeadingRadius: topRadius, bottomLeadingRadius: bottomRadius,
                     bottomTrailingRadius: bottomRadius, topTrailingRadius: topRadius, style: .continuous
@@ -255,20 +264,32 @@ struct MinimalPodDetailView: View {
 
     // MARK: - Text
 
-    private var titleBlock: some View {
-        VStack(spacing: 10) {
-            // One line: a long name is cut with an ellipsis so the altitude stays.
-            DetailTitleLine(name: pod.name, altitude: pod.altitudeM.map { "\($0)m" })
-                .foregroundColor(.homeText)
-            PodStatusRow(pod: pod)
+    /// The small caption right under the photo that says where to touch for the
+    /// page (the whole area down to Lenny opens it too).
+    private var seeMore: some View {
+        Button(action: toggleExtended) {
+            HStack(spacing: 5) {
+                T("See more")
+                    .font(AppFont.regularLabel(13))
+                    .foregroundColor(.homeSubtitle)
+                    .underline(color: Color.homeSubtitle.opacity(0.5))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.homeSubtitle)
+            }
+            .padding(.vertical, 4)
+            .captionTapArea(outset: 10)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 30)
+        .buttonStyle(.plain)
+        // In line with the text on the photo above it.
+        .padding(.leading, Self.stackCaptionInset)
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// "120 beds · 18 free now  ·  45 € / night": what a traveler weighs first,
-    /// under the name. (Open or closed is the chip above.)
-    private var keyFacts: some View {
+    /// "120 beds · 18 free now  ·  45 € / night": what a traveler weighs first.
+    /// (Open or closed is the chip above it.)
+    private var keyFactsText: String? {
         var parts: [String] = []
         if let total = pod.bedsTotal {
             var beds = "\(total) \(total == 1 ? "bed" : "beds")"
@@ -280,32 +301,43 @@ struct MinimalPodDetailView: View {
         } else if !pod.isBookable {
             parts.append("Price at the hut")
         }
-        return Group {
-            if !parts.isEmpty {
-                T(parts.joined(separator: "  ·  "))
-                    .font(AppFont.regularLabel(14))
-                    .foregroundColor(.homeText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .padding(.top, 10)
-                    .padding(.horizontal, 24)
-            }
-        }
+        return parts.isEmpty ? nil : parts.joined(separator: "  ·  ")
     }
 
-    /// One line of facilities, as many as fit; the rest are in the sections.
-    @ViewBuilder
-    private var stackChips: some View {
-        if let facilities = pod.facilities, !facilities.isEmpty {
-            FacilityChips(facilities: facilities, maxLines: 1)
-                .padding(.top, 12)
-                .padding(.horizontal, 24)
+    /// The name, the status chips and the key facts, **on the photo** at its bottom left, well inside its edges, over a scrim
+    /// that fades up (the page's one headline), until the page is asked
+    /// something or opens its sections.
+    private var stackCaption: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // One line: a long name is cut with an ellipsis so the altitude stays.
+            DetailTitleLine(name: pod.name, altitude: pod.altitudeM.map { "\($0)m" }, isCentered: false)
+            PodStatusRow(pod: pod, isCentered: false, onPhoto: true)
+            if let facts = keyFactsText {
+                T(facts)
+                    .font(AppFont.regularLabel(14))
+                    .opacity(0.92)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+        .foregroundColor(.onPhoto)
+        // Inset like the card's caption, in proportion to the corner: the card
+        // has 22 / 20 for a radius of 40, so here (radius 75) 40 / 38 leaves the
+        // same gap between the text's corner and the curve (about a third of the
+        // radius), and the text reads as following the photo's shape.
+        .padding(.horizontal, Self.stackCaptionInset)
+        .padding(.bottom, 38)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .bottom) {
+            LinearGradient(colors: [.clear, .photoScrim.opacity(0.62)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 250)
+                .allowsHitTesting(false)
         }
     }
 
     /// Lenny's word on the hut, or, while booking, the question: the same
-    /// bubble as in Lenny's search, and under it the small caption that says
-    /// the page opens.
+    /// bubble as in Lenny's search (the "See more" caption that opens the page
+    /// is on the photo).
     @ViewBuilder
     private var stackLenny: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -343,23 +375,6 @@ struct MinimalPodDetailView: View {
                 ))
             } else {
                 LennyHutGuide(pod: pod, liveBedsAvailable: liveBedsAvailable, inStack: true)
-
-                Button(action: toggleExtended) {
-                    HStack(spacing: 5) {
-                        T("Details")
-                            .font(AppFont.regularLabel(13))
-                            .foregroundColor(.homeSubtitle)
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.homeSubtitle)
-                    }
-                    .padding(.vertical, 4)
-                    .captionTapArea(outset: 10)
-                }
-                .buttonStyle(.plain)
-                // Lined up with the bubble's text, past the avatar.
-                .padding(.leading, 38 + 18)
             }
         }
     }
@@ -379,7 +394,9 @@ struct MinimalPodDetailView: View {
     /// Back from the hut: the photo is an inset card, 46 from the sides.
     private static let cardMargin: CGFloat = 46
     private static let cardRadius: CGFloat = 40
-    private static let cardHeightShare: CGFloat = 335 / 852
+    /// The text on the stack's photo, and the caption under it, sit this far from
+    /// the left (and the right): the photo's bottom corners are 75 round.
+    private static let stackCaptionInset: CGFloat = 40
 
     /// The name and altitude on the card's photo, over a scrim at the bottom.
     private var cardCaption: some View {

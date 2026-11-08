@@ -33,8 +33,45 @@ struct FacilityChips: View {
 /// checked it. Tap either for the plain explanation.
 struct TrustBadge: View {
     let isVerified: Bool
+    /// On a photo: **Verified is a solid white pill** (the trust mark is the
+    /// thing that sets a Podz hut apart, so it is the loudest chip there);
+    /// Unverified is a quiet veil with white ink.
+    var onPhoto = false
 
     var body: some View {
+        if onPhoto { photoBody } else { standardBody }
+    }
+
+    private var photoBody: some View {
+        HStack(spacing: 7) {
+            if isVerified {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.onPhoto)
+                    .frame(width: 14, height: 14)
+                    .background(Color.photoScrim, in: Circle())
+            } else {
+                Text("?")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.onPhoto)
+                    .frame(width: 14, height: 14)
+                    .overlay(Circle().strokeBorder(Color.onPhoto, lineWidth: 1.2))
+            }
+            T(isVerified ? "Verified" : "Unverified")
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(isVerified ? .photoScrim : .onPhoto)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(isVerified ? Color.onPhoto : Color.photoScrim.opacity(0.38), in: Capsule())
+        .contentShape(Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(tr(isVerified ? "Verified by Podz" : "Unverified listing"))
+    }
+
+    private var standardBody: some View {
         HStack(spacing: 7) {
             if isVerified {
                 Image(systemName: "checkmark")
@@ -55,9 +92,6 @@ struct TrustBadge: View {
                 .foregroundColor(isVerified ? .homeText : .homeSubtitle)
                 .lineLimit(1)
                 .fixedSize()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundColor(.homeSubtitle)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -75,8 +109,32 @@ struct TrustBadge: View {
 /// can't be mistaken for the trust badge.
 struct OpenStatusChip: View {
     let status: OpeningStatus.Result
+    /// On a photo: open is a quiet veil with white ink; closed stays the loud
+    /// one, a solid `appBadgeRed` pill.
+    var onPhoto = false
 
     var body: some View {
+        if onPhoto { photoBody } else { standardBody }
+    }
+
+    private var photoBody: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(Color.onPhoto)
+                .frame(width: 8, height: 8)
+            T(status.label)
+                .font(AppFont.regularLabel(13))
+                .foregroundColor(.onPhoto)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(status.isOpen ? Color.photoScrim.opacity(0.38) : Color.appBadgeRed, in: Capsule())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var standardBody: some View {
         HStack(spacing: 7) {
             Circle()
                 .fill(status.isOpen ? Color.homeText : Color.alertInk)
@@ -101,6 +159,8 @@ struct OpenStatusChip: View {
 struct PodStatusRow: View {
     let pod: Pod
     var isCentered = true
+    /// The chips as they are on a photo (see `OpenStatusChip`, `TrustBadge`).
+    var onPhoto = false
 
     @State private var explains = false
 
@@ -108,8 +168,8 @@ struct PodStatusRow: View {
 
     @ViewBuilder
     private var chips: some View {
-        if let status { OpenStatusChip(status: status) }
-        Button { explains = true } label: { TrustBadge(isVerified: pod.isBookable) }
+        if let status { OpenStatusChip(status: status, onPhoto: onPhoto) }
+        Button { explains = true } label: { TrustBadge(isVerified: pod.isBookable, onPhoto: onPhoto) }
             .buttonStyle(.plain)
     }
 

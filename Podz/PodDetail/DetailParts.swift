@@ -13,11 +13,20 @@ enum DetailLayout {
     static let stackedPhotoShare: CGFloat = 524 / 852
     static let extendedPhotoShare: CGFloat = 250 / 852
 
-    /// The pod detail's photo is a little shorter than the others, to leave room
-    /// for the key facts under the name.
-    static let podPhotoShare: CGFloat = 360 / 852
+    /// The pod detail's photo is the hero: 55% of a tall phone (the name, status
+    /// and facts sit on it), less on shorter screens so Lenny's bubble and the
+    /// pills keep their room.
+    static func podPhotoShare(screenHeight: CGFloat) -> CGFloat {
+        screenHeight >= 800 ? 0.55 : (screenHeight >= 700 ? 0.50 : 0.48)
+    }
 
-    static func podPhotoHeight(screenHeight: CGFloat) -> CGFloat { screenHeight * podPhotoShare }
+    /// The inset card (a question from Lenny, a booking): 390 of 852, with the
+    /// booking chips and Lenny's bubble under it, so it can't grow as far.
+    static func podCardShare(screenHeight: CGFloat) -> CGFloat {
+        screenHeight >= 800 ? 390 / 852 : (screenHeight >= 700 ? 0.43 : 0.42)
+    }
+
+    static func podPhotoHeight(screenHeight: CGFloat) -> CGFloat { screenHeight * podPhotoShare(screenHeight: screenHeight) }
 
     static func photoHeight(screenHeight: CGFloat, isExtended: Bool) -> CGFloat {
         screenHeight * (isExtended ? extendedPhotoShare : stackedPhotoShare)
@@ -76,6 +85,9 @@ struct DetailPhotoPager: View {
     var bottomRadius: CGFloat = 75
     /// The pager dots; hidden when the photo is a thumbnail.
     var showsBadge = true
+    /// The dots at the top of the photo (under the status bar) instead of the
+    /// bottom, where a caption sits on the photo.
+    var dotsAtTop = false
 
     /// One empty slot when there is nothing yet, so the placeholder shows.
     private var pages: [String?] { slots.isEmpty ? [nil] : slots }
@@ -99,9 +111,9 @@ struct DetailPhotoPager: View {
             topLeadingRadius: topRadius, bottomLeadingRadius: bottomRadius,
             bottomTrailingRadius: bottomRadius, topTrailingRadius: topRadius, style: .continuous
         ))
-        .overlay(alignment: .bottom) {
+        .overlay(alignment: dotsAtTop ? .top : .bottom) {
             PodPhotoDots(photoCount: slots.count, currentIndex: pageIndex ?? 0)
-                .padding(.bottom, 24)
+                .padding(dotsAtTop ? .top : .bottom, dotsAtTop ? ScreenInsets.top + 12 : 24)
                 .opacity(showsBadge ? 1 : 0)
         }
         .zIndex(1)
@@ -200,6 +212,8 @@ func detailTitle(_ name: String, detail: String?) -> Text {
 struct DetailTitleLine: View {
     let name: String
     let altitude: String?
+    /// Centered under a photo, or flush left on one.
+    var isCentered = true
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -215,7 +229,7 @@ struct DetailTitleLine: View {
                     .layoutPriority(1)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(altitude.map { "\(name), \($0)" } ?? name)
     }
