@@ -299,17 +299,7 @@ struct MinimalHomeView: View {
                 // what was typed.
                 if !query.isEmpty {
                     Button(action: handToLenny) {
-                        HStack(spacing: 5) {
-                            T("Ask Lenny to find it")
-                                .font(AppFont.regularLabel(13))
-                                .foregroundColor(.homeSubtitle)
-                                .underline(color: Color.homeSubtitle.opacity(0.5))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.homeSubtitle)
-                        }
-                        .padding(.vertical, 8)
-                        .captionTapArea()
+                        CaptionLabel("Ask Lenny to find it")
                     }
                     .buttonStyle(.plain)
                 }

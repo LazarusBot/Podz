@@ -104,17 +104,7 @@ struct LaunchWaitingView: View {
             // Always in the layout, so nothing moves when the caption arrives
             // (or when there's none).
             Button(action: onContinue) {
-                HStack(spacing: 5) {
-                    T("Go to Home")
-                        .font(AppFont.regularLabel(13))
-                        .foregroundColor(.homeSubtitle)
-                        .underline(color: Color.homeSubtitle.opacity(0.5))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(.homeSubtitle)
-                }
-                .padding(.vertical, 8)
-                .captionTapArea()
+                CaptionLabel("Go to Home")
             }
             .buttonStyle(.plain)
             .padding(.leading, 38 + 18)

@@ -39,16 +39,7 @@ struct LennyEmptyState: View {
 
             if let caption, let action {
                 Button(action: action) {
-                    HStack(spacing: 5) {
-                        T(caption)
-                            .font(AppFont.regularLabel(13))
-                            .underline(color: Color.homeSubtitle.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                    }
-                    .foregroundColor(.homeSubtitle)
-                    .padding(.vertical, 8)
-                    .captionTapArea()
+                    CaptionLabel(caption)
                 }
                 .buttonStyle(.plain)
             }

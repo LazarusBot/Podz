@@ -249,18 +249,7 @@ struct BookingQuickReply: View {
 
     var body: some View {
         Button(action: reply.action) {
-            HStack(spacing: 5) {
-                T(reply.title)
-                    .font(AppFont.regularLabel(13))
-                    .foregroundColor(.homeSubtitle)
-                    .underline(color: Color.homeSubtitle.opacity(0.5))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundColor(.homeSubtitle)
-            }
-            // A comfortable tap area for a small caption.
-            .padding(.vertical, 8)
-            .captionTapArea()
+            CaptionLabel(reply.title)
         }
         .buttonStyle(.plain)
     }
