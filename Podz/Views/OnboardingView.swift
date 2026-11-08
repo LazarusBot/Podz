@@ -30,6 +30,12 @@ struct OnboardingView: View {
     @AppStorage("launchTappedOnDay") private var tappedOnDay = 0.0
     /// This launch is the first of the day: it waits for "Go to Home".
     @State private var asksToContinue = true
+    /// Lenny has introduced himself (once per install), on the launch
+    /// screen's place; `-lennyIntroSeen NO` plays it again.
+    @AppStorage("lennyIntroSeen") private var introSeen = false
+    /// The intro has been tapped through; it's marked as seen once its screen
+    /// is gone, so the launch screen never flashes in under its fade.
+    @State private var introFinished = false
 
     /// Lenny's screen is for a signed-in user, until they tap in.
     private var showsLaunch: Bool {
@@ -37,9 +43,6 @@ struct OnboardingView: View {
     }
 
     private static var today: Double { Calendar.current.startOfDay(for: Date()).timeIntervalSince1970 }
-
-    /// Lenny has said "all good" (the line had its beat, the huts are in).
-    private var launchReady: Bool { showsLaunch && !beat.isHolding && podsLoaded }
 
     /// Home is in place once Lenny's screen is gone (or was never there).
     private var homeSettled: Bool { !showsLaunch }
@@ -79,12 +82,27 @@ struct OnboardingView: View {
                 OnboardingFlow()
             }
 
-            if showsLaunch {
+            if showsLaunch && !introSeen {
+                LennyIntroView(isLeaving: launchLeaving) {
+                    introFinished = true
+                    leaveLaunch()
+                }
+                .transition(.opacity)
+            } else if showsLaunch {
                 LaunchWaitingView(
                     isReady: !beat.isHolding && podsLoaded,
                     isLeaving: launchLeaving,
                     firstName: firstName.isEmpty ? nil : firstName,
                     asksToContinue: asksToContinue,
+                    onAllGood: {
+                        // A later launch of the day: "all good" is read, then
+                        // Home comes through without a tap.
+                        guard !asksToContinue else { return }
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(900))
+                            leaveLaunch(byTap: false)
+                        }
+                    },
                     onContinue: { leaveLaunch() }
                 )
                 .transition(.opacity)
@@ -94,14 +112,15 @@ struct OnboardingView: View {
             // The first word of the name; kept until the next launch.
             if let first = fullName?.split(separator: " ").first { firstName = String(first) }
         }
-        .onChange(of: launchReady) { _, ready in
-            // A later launch of the day: "all good" shows for a moment, then
-            // Home comes through without a tap.
-            guard ready, !asksToContinue else { return }
-            Task {
-                try? await Task.sleep(for: .milliseconds(800))
-                leaveLaunch(byTap: false)
-            }
+        .onChange(of: launchDone) { _, done in
+            if done && introFinished { introSeen = true }
+        }
+        .onChange(of: auth.justRegistered) { was, now in
+            // A new account has just finished its onboarding: Lenny, whom the
+            // onboarding only showed on a photo, says hello properly.
+            guard was, !now, auth.isAuthenticated, !introSeen else { return }
+            launchLeaving = false
+            launchDone = false
         }
         .onChange(of: auth.isAuthenticated) { _, signedIn in
             if !signedIn && !auth.isInitializing { firstName = "" }

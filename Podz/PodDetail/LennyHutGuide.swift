@@ -70,7 +70,6 @@ struct LennyHutGuide: View {
     private var compact: some View {
         HStack(spacing: 10) {
             LennyMark(mood: .idle)
-                .frame(width: 13, height: 13)
                 .foregroundColor(.homeBackground)
                 .frame(width: 26, height: 26)
                 .background(Color.homeText, in: Circle())

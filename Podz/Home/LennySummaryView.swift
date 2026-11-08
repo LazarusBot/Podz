@@ -411,7 +411,6 @@ struct LennySummaryView: View {
                                     .renderingMode(.template)
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: 10, height: 10)
                                     .foregroundColor(.homeBackground)
                                     .frame(width: 18, height: 18)
                                     .background(Color.homeText, in: Circle())

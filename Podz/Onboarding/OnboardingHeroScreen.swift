@@ -93,7 +93,6 @@ struct OnboardingHeroScreen<Bottom: View>: View {
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
-            .frame(width: 24, height: 24)
             .foregroundColor(.onbBackground)
             .frame(width: badgeSize, height: badgeSize)
             .background(Color.onbText, in: Circle())

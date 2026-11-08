@@ -6,7 +6,7 @@ import SwiftUI
 ///   the cards. Nothing moves.
 /// - **Lenny** (tapping the round mark; Paper "Home2" frames): the bar
 ///   inverts, Lenny rolls from the trailing end to the leading end and its
-///   disc melts into the bar so only the eyes and mouth stay visible, and
+///   disc melts into the bar so only the eyes stay visible, and
 ///   the field asks for a route. Leaving the field rolls it back.
 struct HomeSearchPill: View {
     /// What the field currently edits — the screen swaps this between the
@@ -68,18 +68,19 @@ struct HomeSearchPill: View {
     /// in the field it opens into "Ask Lenny" on a solid capsule, an offer
     /// at the moment you're looking for a pod. In Lenny mode it is the round
     /// mark again, rolled to the leading end and melted into the bar so only
-    /// the eyes and the mouth stay visible.
+    /// the eyes stay visible.
     private var lennyMark: some View {
         Button {
             isLennyMode.toggle()
             isFocused.wrappedValue = true
         } label: {
-            HStack(spacing: 7) {
+            HStack(spacing: 0) {
+                // The face is drawn at the size of the disc: it fills the button.
                 Image("lenny")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 20, height: 20)
+                    .frame(width: buttonSize, height: buttonSize)
                     // One full turn as it slides across: the "roll" (Reduce
                     // Motion: it only slides).
                     .rotationEffect(.degrees(isLennyMode && !reduceMotion ? 360 : 0))

@@ -227,11 +227,10 @@ struct LennySearchScreen: View {
     }
 
     /// The route as the Home pill leaves it in Lenny mode: inverted bar,
-    /// Lenny's disc melted into it so only the eyes and mouth show.
+    /// Lenny's disc melted into it so only the eyes show.
     private var routePill: some View {
         HStack(spacing: 20) {
             LennyMark(mood: mood)
-                .frame(width: 20, height: 20)
                 .foregroundColor(.homeBackground)
                 .frame(width: 40, height: 40)
 

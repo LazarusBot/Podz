@@ -31,38 +31,70 @@ final class LennyBeat: ObservableObject {
 /// "all good" and lets Home through by itself (`asksToContinue` off: no
 /// caption). Only for a signed-in user: a signed-out one goes straight to the
 /// onboarding.
+///
+/// It arrives and speaks without anything moving: the first bubble rises in a
+/// beat after the ground, every bubble is its full size from the start (the
+/// words type inside it), the second has its place held under the first, so
+/// the first never shifts, and the caption only appears once "all good" has
+/// been said.
 struct LaunchWaitingView: View {
     /// The session is known and the first line has had its moment.
     let isReady: Bool
-    /// Lenny uses it in the first line, when it's known.
     /// The bubbles are on their way out: they fade and drift down.
     var isLeaving = false
+    /// Lenny uses it in the first line, when it's known.
     var firstName: String? = nil
     /// The caption that goes in. Off for a later launch of the day: nothing to
     /// tap, Lenny's line is the whole screen.
     var asksToContinue = true
+    /// "All good" has been said in full (a later launch lets Home through a
+    /// beat after).
+    var onAllGood: () -> Void = {}
     var onContinue: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The name as it was when the screen appeared: a profile that arrives
+    /// later never rewrites the line as it's being typed.
+    @State private var lockedName: String?
+    /// The ground has settled: the first bubble may arrive.
+    @State private var started = false
+    @State private var firstTyped = false
+    @State private var allGoodTyped = false
 
     private var waitingLine: String {
-        guard let firstName else { return "One moment, I'm getting things ready." }
-        return "One moment, \(firstName). I'm getting things ready."
+        guard let lockedName else { return "One moment, I'm getting things ready." }
+        return "One moment, \(lockedName). I'm getting things ready."
     }
+
+    /// Lenny has said the first line and the session is in.
+    private var showsAllGood: Bool { isReady && firstTyped }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LennyReply(message: waitingLine, mood: isReady ? .happy : .working)
+            LennyReply(
+                message: waitingLine,
+                mood: showsAllGood ? .happy : .working,
+                isPresent: started,
+                onTyped: { firstTyped = true }
+            )
 
-            if isReady {
-                LennyReply(message: "All good, you're all set.", mood: .idle, showsAvatar: false)
-                    // Lined up with the first bubble's text, past the avatar.
-                    .padding(.leading, 38)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
+            // Its place is held from the start, so the first bubble stays put.
+            LennyReply(
+                message: "All good, you're all set.",
+                mood: .idle,
+                showsAvatar: false,
+                isPresent: showsAllGood,
+                onTyped: {
+                    guard !allGoodTyped else { return }
+                    allGoodTyped = true
+                    onAllGood()
+                }
+            )
+            // Lined up with the first bubble's text, past the avatar.
+            .padding(.leading, 38)
 
-            // Always in the layout, so the first bubble doesn't move when the
-            // caption arrives (and doesn't jump when there's none).
+            // Always in the layout, so nothing moves when the caption arrives
+            // (or when there's none).
             Button(action: onContinue) {
                 HStack(spacing: 5) {
                     T("Go to Home")
@@ -78,9 +110,10 @@ struct LaunchWaitingView: View {
             }
             .buttonStyle(.plain)
             .padding(.leading, 38 + 18)
-            .opacity(isReady && asksToContinue ? 1 : 0)
-            .disabled(!isReady || !asksToContinue)
-            .accessibilityHidden(!isReady || !asksToContinue)
+            .opacity(allGoodTyped && asksToContinue ? 1 : 0)
+            .animation(.smooth(duration: 0.4), value: allGoodTyped)
+            .disabled(!allGoodTyped || !asksToContinue)
+            .accessibilityHidden(!allGoodTyped || !asksToContinue)
         }
         .opacity(isLeaving ? 0 : 1)
         .offset(y: isLeaving && !reduceMotion ? 14 : 0)
@@ -90,6 +123,11 @@ struct LaunchWaitingView: View {
         .padding(.bottom, 40 + 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .background(Color.homeBackground.ignoresSafeArea())
-        .animation(.smooth(duration: 0.35), value: isReady)
+        .onAppear { lockedName = firstName }
+        .task {
+            // A beat of plain ground, then Lenny arrives.
+            try? await Task.sleep(for: .milliseconds(reduceMotion ? 0 : 350))
+            started = true
+        }
     }
 }

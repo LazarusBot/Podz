@@ -12,7 +12,7 @@ enum LennyMood: Equatable {
     case idle
 }
 
-/// Lenny's mark (the eyes and the mouth) with its moves. Size and color are
+/// Lenny's face (two eyes, drawn at the size of his disc: size it like the disc) with its moves. Size and color are
 /// the caller's; the mood only moves it. Moves play once when the mood
 /// changes; with Reduce Motion it stays still.
 struct LennyMark: View {

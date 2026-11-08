@@ -149,7 +149,6 @@ struct LennyPlanView: View {
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 11, height: 11)
                     .foregroundColor(.homeBackground)
                     .frame(width: 20, height: 20)
                     .background(Color.homeText, in: Circle())
