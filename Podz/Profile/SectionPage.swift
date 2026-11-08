@@ -19,6 +19,12 @@ enum ScreenInsets {
             .first ?? 852
     }
 
+    static var top: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?.safeAreaInsets.top ?? 0
+    }
+
     static var bottom: CGFloat {
         UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.keyWindow }
