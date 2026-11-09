@@ -120,7 +120,8 @@ struct MyReservationsView: View {
             ),
             question: cancellationQuestion,
             confirm: pendingCancellation.count > 1 ? "Cancel trip" : (pendingCancellation.first?.isExternal == true ? "Remove" : "Cancel reservation"),
-            keep: "Keep it"
+            keep: "Keep it",
+            accessory: .bellhopCap
         ) {
             let stays = pendingCancellation
             pendingCancellation = []
@@ -158,7 +159,7 @@ struct MyReservationsView: View {
 
     // MARK: - Lenny's tips
 
-    private var tips: [String] {
+    private var tips: [LennyTripTips.Tip] {
         guard let next = upcoming.first else { return [] }
         return LennyTripTips.tips(for: next, pods: podsStore.pods)
     }
@@ -168,9 +169,11 @@ struct MyReservationsView: View {
     @ViewBuilder
     private var lennyTips: some View {
         if !tips.isEmpty {
-            let message = tips[tipIndex % tips.count]
+            let tip = tips[tipIndex % tips.count]
             VStack(alignment: .leading, spacing: 4) {
-                LennyReply(message: message, mood: .idle)
+                // In Reservations, the hospitality side of the stay, Lenny wears the
+                // bellhop cap on every line.
+                LennyReply(message: tip.text, mood: .idle, accessory: .bellhopCap)
                     .padding(.horizontal, 24)
 
                 if tips.count > 1 {
@@ -194,7 +197,8 @@ struct MyReservationsView: View {
     private var emptyState: some View {
         LennyEmptyState(
             title: "No trips yet",
-            line: "Tell Lenny where you'd like to go, and for how long. He finds the huts and plans the stays for you."
+            line: "Tell Lenny where you'd like to go, and for how long. He finds the huts and plans the stays for you.",
+            accessory: .bellhopCap
         )
     }
 

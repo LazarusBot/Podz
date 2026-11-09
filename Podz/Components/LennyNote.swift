@@ -80,6 +80,7 @@ private struct LennyAsksModifier: ViewModifier {
     var abovePills: Bool
     var respectsSafeArea: Bool
     var bottom: CGFloat?
+    var accessory: LennyAccessory?
     let onConfirm: () -> Void
     var onKeep: (() -> Void)?
 
@@ -94,7 +95,7 @@ private struct LennyAsksModifier: ViewModifier {
                             .onTapGesture { keepThings() }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            LennyReply(message: question, mood: .idle)
+                            LennyReply(message: question, mood: .idle, accessory: accessory)
                             HStack(spacing: 22) {
                                 caption(confirm, color: isDestructive ? .appBadgeRed : .homeText) {
                                     // Act first: dismissing clears what callers keep as
@@ -161,13 +162,14 @@ extension View {
         abovePills: Bool = true,
         respectsSafeArea: Bool = false,
         bottom: CGFloat? = nil,
+        accessory: LennyAccessory? = nil,
         onKeep: (() -> Void)? = nil,
         onConfirm: @escaping () -> Void
     ) -> some View {
         modifier(LennyAsksModifier(
             isPresented: isPresented, question: question, confirm: confirm, keep: keep,
             isDestructive: isDestructive, abovePills: abovePills, respectsSafeArea: respectsSafeArea,
-            bottom: bottom, onConfirm: onConfirm, onKeep: onKeep
+            bottom: bottom, accessory: accessory, onConfirm: onConfirm, onKeep: onKeep
         ))
     }
 }

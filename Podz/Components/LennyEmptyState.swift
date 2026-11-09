@@ -4,9 +4,10 @@ import SwiftUI
 /// bubble.
 struct LennyAvatar: View {
     var size: CGFloat = 30
+    var accessory: LennyAccessory? = nil
 
     var body: some View {
-        LennyDisc()
+        LennyDisc(accessory: accessory)
             .frame(width: size, height: size)
     }
 }
@@ -23,10 +24,12 @@ struct LennyEmptyState: View {
     /// already acts (Plan with Lenny, Add friend).
     var caption: String? = nil
     var action: (() -> Void)? = nil
+    /// What Lenny wears on this page (see `LennyAccessory`).
+    var accessory: LennyAccessory? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            LennyAvatar(size: 40)
+            LennyAvatar(size: 40, accessory: accessory)
                 .accessibilityHidden(true)
             T(title)
                 .font(AppFont.semiBoldLabel(20))

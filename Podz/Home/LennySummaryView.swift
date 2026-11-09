@@ -183,7 +183,7 @@ struct LennySummaryView: View {
     private var lennyLine: some View {
         // Lenny's line, and under it, when there's one, a quick reply.
         VStack(alignment: .leading, spacing: 8) {
-            LennyReply(message: flow.replyMessage, mood: flow.mood)
+            LennyReply(message: flow.replyMessage, mood: flow.mood, accessory: flow.status == .booked ? .bellhopCap : nil)
             if let reply = flow.quickReply {
                 BookingQuickReply(reply: reply)
                     // Lined up with the bubble's text, past the avatar.
