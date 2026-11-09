@@ -4,13 +4,9 @@ import Foundation
 /// where you're sleeping (how high, which season, how many of you). All from
 /// the reservations and the pods, on the device.
 enum LennyTripTips {
-    /// A tip and who says it: Lenny with his own advice, or the hut with what it
-    /// published about itself (its hours, its phone), told by Lenny in the
-    /// bellhop cap so the traveler knows the difference.
+    /// One tip, as Lenny says it.
     struct Tip: Equatable {
-        enum Speaker { case lenny, hut }
         let text: String
-        var speaker: Speaker = .lenny
     }
 
     static func tips(for trip: ReservationTrip, pods: [Pod], today: Date = Date()) -> [Tip] {
@@ -32,8 +28,8 @@ enum LennyTripTips {
             tips.append(Tip(text: "Your trip starts in \(days) days: \(stays) \(stays == 1 ? "stay" : "stays"), \(trip.nights) \(trip.nights == 1 ? "night" : "nights")\(first.map { ", beginning at \($0)" } ?? "")."))
         }
 
-        // 1b - What the first hut says about itself (its hours, its phone), in the
-        // hut's voice: only what it published, never anything Lenny made up.
+        // 1b - What the first hut says about itself (its hours, its phone): only
+        // what it published, never anything Lenny made up.
         if let pod = stayPods.first, let hutTip = hutTip(for: pod) { tips.append(hutTip) }
 
         // 2 - How high you'll sleep.
@@ -74,6 +70,6 @@ enum LennyTripTips {
             parts.append("If you'll be late, call \(phone).")
         }
         guard !parts.isEmpty else { return nil }
-        return Tip(text: "\(pod.name): " + parts.joined(separator: " "), speaker: .hut)
+        return Tip(text: "\(pod.name): " + parts.joined(separator: " "))
     }
 }
