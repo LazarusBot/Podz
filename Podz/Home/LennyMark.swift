@@ -125,9 +125,10 @@ struct LennyDisc: View {
 /// of the disc and hang out of it, so use them from about 30 up (the details
 /// are small below that). Fixed colors (not template): they read on both grounds.
 enum LennyAccessory: Equatable {
-    /// The hut speaking (its own hours, its own instructions): a red bellhop cap.
+    /// Hospitality, the hut's side of the stay: a red bellhop cap. Worn when the
+    /// hut speaks (its own hours, its phone) and when a booking is confirmed.
     case bellhopCap
-    /// A formal moment (a booking confirmed): a bow tie.
+    /// A formal moment: a bow tie (drawn, not used yet).
     case bowTie
 
     fileprivate var asset: String {
