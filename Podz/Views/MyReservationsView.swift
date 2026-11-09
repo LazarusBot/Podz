@@ -158,7 +158,7 @@ struct MyReservationsView: View {
 
     // MARK: - Lenny's tips
 
-    private var tips: [String] {
+    private var tips: [LennyTripTips.Tip] {
         guard let next = upcoming.first else { return [] }
         return LennyTripTips.tips(for: next, pods: podsStore.pods)
     }
@@ -168,9 +168,10 @@ struct MyReservationsView: View {
     @ViewBuilder
     private var lennyTips: some View {
         if !tips.isEmpty {
-            let message = tips[tipIndex % tips.count]
+            let tip = tips[tipIndex % tips.count]
             VStack(alignment: .leading, spacing: 4) {
-                LennyReply(message: message, mood: .idle)
+                // A tip from the hut itself is told in the bellhop cap.
+                LennyReply(message: tip.text, mood: .idle, accessory: tip.speaker == .hut ? .bellhopCap : nil)
                     .padding(.horizontal, 24)
 
                 if tips.count > 1 {

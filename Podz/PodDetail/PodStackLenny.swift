@@ -20,7 +20,7 @@ struct PodStackLenny: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if isBooking {
-                LennyReply(message: booking.replyMessage, mood: booking.mood)
+                LennyReply(message: booking.replyMessage, mood: booking.mood, accessory: booking.status == .booked ? .bowTie : nil)
             } else if asksHowItWent {
                 StayFeedbackLenny(flow: feedback, podName: pod.name)
                     .transition(.risesIn(after: 0.3))

@@ -95,6 +95,7 @@ struct LennyDisc: View {
     /// 1 = open; a blink squashes it (never to a line).
     var eyesHeight: CGFloat = 1
     var eyesOpacity: Double = 1
+    var accessory: LennyAccessory? = nil
 
     /// The middle of the eyes in the disc (see `Lenny.svg`).
     private let eyeCenter = UnitPoint(x: 0.5, y: 0.57)
@@ -114,5 +115,64 @@ struct LennyDisc: View {
                 }
                 .compositingGroup()
             }
+            .lennyAccessory(accessory)
+    }
+}
+
+/// What Lenny wears when he speaks for a role (Figma "Host Lenny"). A hat or a
+/// tie says **who is speaking or what kind of moment it is**, so each one means
+/// one thing and appears rarely: the face never changes. They are drawn on top
+/// of the disc and hang out of it, so use them from about 30 up (the details
+/// are small below that). Fixed colors (not template): they read on both grounds.
+enum LennyAccessory: Equatable {
+    /// The hut speaking (its own hours, its own instructions): a red bellhop cap.
+    case bellhopCap
+    /// A formal moment (a booking confirmed): a bow tie.
+    case bowTie
+
+    fileprivate var asset: String {
+        switch self {
+        case .bellhopCap: "lennyCap"
+        case .bowTie: "lennyTie"
+        }
+    }
+
+    /// Size and the center's place, in hundredths of the disc, measured from the
+    /// Figma frame (disc 100): the cap sits on top, the tie below the chin.
+    fileprivate var geometry: (width: CGFloat, height: CGFloat, dx: CGFloat, dy: CGFloat) {
+        switch self {
+        case .bellhopCap: (74, 49, -3.6, -38.8)
+        case .bowTie: (69, 67.8, 9.4, 79.6)
+        }
+    }
+}
+
+private struct LennyAccessoryView: View {
+    let accessory: LennyAccessory
+
+    var body: some View {
+        GeometryReader { proxy in
+            let d = min(proxy.size.width, proxy.size.height)
+            let g = accessory.geometry
+            Image(accessory.asset)
+                .renderingMode(.original)
+                .resizable()
+                .frame(width: g.width / 100 * d, height: g.height / 100 * d)
+                .position(x: d / 2 + g.dx / 100 * d, y: d / 2 + g.dy / 100 * d)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    /// Puts an accessory on a Lenny disc (sized like the disc).
+    @ViewBuilder
+    func lennyAccessory(_ accessory: LennyAccessory?) -> some View {
+        if let accessory {
+            overlay { LennyAccessoryView(accessory: accessory) }
+        } else {
+            self
+        }
     }
 }
