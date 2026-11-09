@@ -138,12 +138,13 @@ enum LennyAccessory: Equatable {
         }
     }
 
-    /// Size and the center's place, in hundredths of the disc, measured from the
-    /// Figma frame (disc 100): the cap sits on top, the tie below the chin.
-    fileprivate var geometry: (width: CGFloat, height: CGFloat, dx: CGFloat, dy: CGFloat) {
+    /// Size, the center's place (hundredths of the disc) and the tilt in degrees,
+    /// read from the Figma frame (disc 100): the cap sits on top, tilted 3.5° to
+    /// the left; the tie hangs below the chin, tilted 3.2°.
+    fileprivate var geometry: (width: CGFloat, height: CGFloat, dx: CGFloat, dy: CGFloat, tilt: Double) {
         switch self {
-        case .bellhopCap: (74, 49, -3.6, -38.8)
-        case .bowTie: (69, 67.8, 9.4, 79.6)
+        case .bellhopCap: (74, 49, -3.57, -43.3, -3.5)
+        case .bowTie: (69.014, 67.791, 9.35, 75.72, -3.2)
         }
     }
 }
@@ -159,6 +160,7 @@ private struct LennyAccessoryView: View {
                 .renderingMode(.original)
                 .resizable()
                 .frame(width: g.width / 100 * d, height: g.height / 100 * d)
+                .rotationEffect(.degrees(g.tilt))
                 .position(x: d / 2 + g.dx / 100 * d, y: d / 2 + g.dy / 100 * d)
         }
         .allowsHitTesting(false)
