@@ -52,6 +52,8 @@ struct LennyReply: View {
         .offset(y: isPresent || reduceMotion ? 0 : 12)
         .animation(.spring(response: 0.5, dampingFraction: 0.85), value: isPresent)
         .task(id: TypingKey(message: message, isPresent: isPresent)) { await type() }
+        // As a blob he reacts when his state changes (searching, found, sorry).
+        .onChange(of: mood) { _, _ in burst += 1 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(message.map(tr) ?? tr("Lenny is typing"))
     }
@@ -65,7 +67,7 @@ struct LennyReply: View {
             case .eyes:
                 LennyDisc(mood: mood, color: isError ? .appBadgeRed : .homeText)
             case .blob:
-                LennyBlob(color: isError ? .appBadgeRed : .homeText, isMorphing: mood == .working, burst: burst)
+                LennyBlob(color: isError ? .appBadgeRed : .homeText, burst: burst)
                     .contentShape(Circle())
                     .onTapGesture { burst += 1 }
             }

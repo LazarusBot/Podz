@@ -232,9 +232,9 @@ struct LennySearchScreen: View {
     /// Lenny's disc melted into it so only the eyes show.
     private var routePill: some View {
         HStack(spacing: 20) {
-            // Lenny in the bar: no eyes, his body in the ground's color, reshaping
-            // while he searches (and when tapped).
-            LennyBlob(color: .homeBackground, isMorphing: mood == .working, burst: blobBurst)
+            // Lenny in the bar: no eyes, his body in the ground's color, a circle
+            // that reshapes when he reacts (a tap, a letter, the search's state).
+            LennyBlob(color: .homeBackground, burst: blobBurst)
                 .frame(width: HomeSearchPill.blobSize, height: HomeSearchPill.blobSize)
                 .frame(width: 40, height: 40)
                 .contentShape(Circle())
@@ -269,6 +269,9 @@ struct LennySearchScreen: View {
         .padding(.trailing, 28)
         .frame(height: 60)
         .background(Color.homeText, in: Capsule())
+        // He reacts as the search starts, finds or fails, and as the route is edited.
+        .onChange(of: mood) { _, _ in blobBurst += 1 }
+        .onChange(of: draft) { _, _ in blobBurst += 1 }
         .contentShape(Capsule())
         .onTapGesture {
             guard failed else { return }

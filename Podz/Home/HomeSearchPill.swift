@@ -46,6 +46,8 @@ struct HomeSearchPill: View {
         .background(isLennyMode ? Color.homeText : Color.homePill, in: Capsule())
         .contentShape(Capsule())
         .onTapGesture { isFocused.wrappedValue = true }
+        // Each letter typed to Lenny makes his body react.
+        .onChange(of: text) { _, _ in if isLennyMode { blobBurst += 1 } }
         .animation(.smooth(duration: 0.4), value: isLennyMode)
         .animation(.smooth(duration: 0.35), value: isFocused.wrappedValue)
     }
@@ -124,8 +126,8 @@ struct HomeSearchPill: View {
             }
             .overlay {
                 // In Lenny mode the button melts into the bar and Lenny has no eyes:
-                // his body, in the ground's color, reshapes while you type.
-                LennyBlob(color: .homeBackground, isMorphing: isFocused.wrappedValue, burst: blobBurst)
+                // his body, a circle in the ground's color, reshapes as you type.
+                LennyBlob(color: .homeBackground, burst: blobBurst)
                     .frame(width: Self.blobSize, height: Self.blobSize)
                     .opacity(isLennyMode ? 1 : 0)
             }
