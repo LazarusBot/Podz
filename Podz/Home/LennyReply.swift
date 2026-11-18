@@ -20,6 +20,10 @@ struct LennyReply: View {
     var mood: LennyMood = .working
     /// Off when Lenny's mark is already on screen and the bubble speaks from it.
     var showsAvatar = true
+    /// His eyes, or (in Lenny's search) just his body, a blob that reshapes
+    /// while he works and when you tap him.
+    var face: Face = .eyes
+    enum Face { case eyes, blob }
     /// Where the bubble sits in the row: flush left, or centered.
     var alignment: Alignment = .leading
 
@@ -30,6 +34,7 @@ struct LennyReply: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var typed = ""
+    @State private var burst = 0
 
     private struct TypingKey: Equatable {
         let message: String?
@@ -55,8 +60,17 @@ struct LennyReply: View {
     private var isError: Bool { mood == .sorry }
 
     private var avatar: some View {
-        LennyDisc(mood: mood, color: isError ? .appBadgeRed : .homeText)
-            .frame(width: 30, height: 30)
+        Group {
+            switch face {
+            case .eyes:
+                LennyDisc(mood: mood, color: isError ? .appBadgeRed : .homeText)
+            case .blob:
+                LennyBlob(color: isError ? .appBadgeRed : .homeText, isMorphing: mood == .working, burst: burst)
+                    .contentShape(Circle())
+                    .onTapGesture { burst += 1 }
+            }
+        }
+        .frame(width: 30, height: 30)
             .animation(.smooth(duration: 0.3), value: isError)
     }
 

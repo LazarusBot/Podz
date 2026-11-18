@@ -19,6 +19,11 @@ struct HomeSearchPill: View {
     var onSubmit: () -> Void = {}
 
     private let buttonSize: CGFloat = 40
+    /// Lenny's body in Lenny mode (no eyes), inside that 40: the Lenny screen's
+    /// bar uses the same size so the hand-over is seamless.
+    static let blobSize: CGFloat = 28
+    /// A tap on the button: his body wobbles.
+    @State private var blobBurst = 0
     /// Lenny's face fills the round button; while the button opens into "Ask
     /// Lenny" it steps down so the eyes stay small beside the words.
     private var faceSize: CGFloat { offersAsk ? 22 : buttonSize }
@@ -69,10 +74,10 @@ struct HomeSearchPill: View {
 
     private var buttonWidth: CGFloat { offersAsk ? askWidth : buttonSize }
 
-    /// The face and, once the button opens, the words: laid out in a frame the
-    /// size of the button. `showsFace` / `showsText` pick which of the two is
-    /// drawn, so the same layout serves the holes and the painted eyes.
-    private func buttonContent(showsFace: Bool, showsText: Bool) -> some View {
+    /// The face and, once the button opens, the words, laid out in a frame the
+    /// size of the button: they are what is cut out of the capsule. `showsFace`
+    /// is off in Lenny mode, where Lenny has no eyes (see `buttonCapsule`).
+    private func buttonContent(showsFace: Bool) -> some View {
         HStack(spacing: offersAsk ? 10 : 0) {
             // The face is drawn at the size of a disc.
             Image("lenny")
@@ -93,7 +98,6 @@ struct HomeSearchPill: View {
                     .font(AppFont.semiBoldLabel(13))
                     .lineLimit(1)
                     .fixedSize()
-                    .opacity(showsText ? 1 : 0)
                     .transition(.opacity)
             }
         }
@@ -102,10 +106,9 @@ struct HomeSearchPill: View {
 
     /// The `homeText` capsule with **Lenny's eyes (and the words) cut out of
     /// it**, so the bar shows through them. In Lenny mode the button melts into
-    /// the bar, which is the same color, so a hole would vanish: there the eyes
-    /// are painted in the ground color instead (which is what a hole through the
-    /// bar would show), crossfading with the holes as the bar inverts. One
-    /// layout drives the holes and the paint, so they can't drift apart.
+    /// the bar (the same color) and Lenny **has no eyes**: his body, a blob in the
+    /// ground's color, sits in its place and reshapes while you type and when you
+    /// tap it (`LennyBlob`).
     private var buttonCapsule: some View {
         Capsule()
             .fill(Color.homeText)
@@ -113,15 +116,18 @@ struct HomeSearchPill: View {
             .mask {
                 ZStack {
                     Rectangle()
-                    buttonContent(showsFace: !isLennyMode, showsText: true)
+                    buttonContent(showsFace: !isLennyMode)
                         .foregroundColor(.black)
                         .blendMode(.destinationOut)
                 }
                 .compositingGroup()
             }
             .overlay {
-                buttonContent(showsFace: isLennyMode, showsText: false)
-                    .foregroundColor(.homeBackground)
+                // In Lenny mode the button melts into the bar and Lenny has no eyes:
+                // his body, in the ground's color, reshapes while you type.
+                LennyBlob(color: .homeBackground, isMorphing: isFocused.wrappedValue, burst: blobBurst)
+                    .frame(width: Self.blobSize, height: Self.blobSize)
+                    .opacity(isLennyMode ? 1 : 0)
             }
             .contentShape(Capsule())
     }
@@ -134,6 +140,7 @@ struct HomeSearchPill: View {
     private var lennyMark: some View {
         Button {
             isLennyMode.toggle()
+            blobBurst += 1
             isFocused.wrappedValue = true
         } label: {
             buttonCapsule
