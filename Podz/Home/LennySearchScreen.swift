@@ -21,6 +21,8 @@ struct LennySearchScreen: View {
     @State private var isEditingRoute = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedPod: Pod?
+    /// A tap on Lenny in the bar: his body wobbles.
+    @State private var blobBurst = 0
     @Namespace private var zoomNamespace
 
     /// Ready once the search is done and found something to plan with.
@@ -58,7 +60,7 @@ struct LennySearchScreen: View {
                 // Lenny's answer to the route: typing, then the result.
                 if !isEditingRoute {
                     VStack(alignment: .leading, spacing: 4) {
-                        LennyReply(message: replyMessage, mood: mood)
+                        LennyReply(message: replyMessage, mood: mood, face: .blob)
                         if lenny.phase == .results, lenny.canRefine, !failed {
                             refinementCaptions
                                 // Lined up with the bubble's text, past the avatar.
@@ -230,8 +232,13 @@ struct LennySearchScreen: View {
     /// Lenny's disc melted into it so only the eyes show.
     private var routePill: some View {
         HStack(spacing: 20) {
-            // Where his eyes are: a hole in the bar (see the background).
-            Color.clear.frame(width: 40, height: 40)
+            // Lenny in the bar: no eyes, his body in the ground's color, a circle
+            // that reshapes when he reacts (a tap, a letter, the search's state).
+            LennyBlob(color: .homeBackground, burst: blobBurst)
+                .frame(width: HomeSearchPill.blobSize, height: HomeSearchPill.blobSize)
+                .frame(width: 40, height: 40)
+                .contentShape(Circle())
+                .onTapGesture { blobBurst += 1 }
 
             if failed {
                 // After an error the route is yours to change: tap, edit,
@@ -261,21 +268,10 @@ struct LennySearchScreen: View {
         .padding(.leading, 9)
         .padding(.trailing, 28)
         .frame(height: 60)
-        .background {
-            // Lenny's eyes are cut out of the bar, so they show the page behind.
-            Capsule().fill(Color.homeText)
-                .mask {
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                        LennyMark(mood: mood)
-                            .foregroundColor(.black)
-                            .frame(width: 40, height: 40)
-                            .padding(.leading, 9)
-                            .blendMode(.destinationOut)
-                    }
-                    .compositingGroup()
-                }
-        }
+        .background(Color.homeText, in: Capsule())
+        // He reacts as the search starts, finds or fails, and as the route is edited.
+        .onChange(of: mood) { _, _ in blobBurst += 1 }
+        .onChange(of: draft) { _, _ in blobBurst += 1 }
         .contentShape(Capsule())
         .onTapGesture {
             guard failed else { return }
