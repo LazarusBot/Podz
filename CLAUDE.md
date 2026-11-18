@@ -39,3 +39,23 @@ that's grown into several unrelated things.
   every commit/push, and update it in the same change if you add a token,
   a button style or a pattern.
 - Never hard-code a color: use the tokens in `design.md`.
+
+## The team
+
+Four bots live in `.claude/agents/` (the same names as on the portfolio). Call them by name (`@root`, `@holly`, `@foaly`, `@butler`, or "ask Root to…").
+
+| Bot | Role | Edits files? |
+|---|---|---|
+| **Root** | Product lead: flows, what to cut, edge cases, onboarding, Lenny search, empty/error states, the booking path | No |
+| **Holly** | Visual designer: screens against `design.md` (tokens, pills, control stack, type, light and dark, Paper frames) | Only when asked |
+| **Foaly** | SwiftUI engineer: views, components, motion (Reduce Motion), gestures, accessibility | Yes |
+| **Butler** | Software engineer: build and Xcode project, Supabase and `SQL/`, stores, performance, tools, tests, TestFlight | Yes |
+
+Bots can't call each other, so the main session runs the chain:
+
+1. Pick the bots the chore needs, in this order unless the request says otherwise: **Root → Holly → Foaly → Butler** (think, then look, then build, then ship).
+2. Run the first bot. Each bot ends its report with a **Hand-off** section (Next, Task, Done when) or "Hand-off: none".
+3. Pass each hand-off to the bot it names, with the previous reports' relevant findings, until a bot writes "Hand-off: none".
+4. Skip bots that have nothing to do. A single-bot request ("ask Holly to check the Likes folder") runs only that bot.
+5. Butler commits and pushes only if the request asked to ship; otherwise stop before committing and say what's ready.
+6. Report to Maxence in one summary: what each bot found or changed, what was checked, and what still needs his decision.
