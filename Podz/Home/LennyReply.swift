@@ -20,6 +20,8 @@ struct LennyReply: View {
     var mood: LennyMood = .working
     /// Off when Lenny's mark is already on screen and the bubble speaks from it.
     var showsAvatar = true
+    /// What he wears while he says this (a role, a moment): see `LennyAccessory`.
+    var accessory: LennyAccessory? = nil
     /// Where the bubble sits in the row: flush left, or centered.
     var alignment: Alignment = .leading
 
@@ -55,7 +57,7 @@ struct LennyReply: View {
     private var isError: Bool { mood == .sorry }
 
     private var avatar: some View {
-        LennyDisc(mood: mood, color: isError ? .appBadgeRed : .homeText)
+        LennyDisc(mood: mood, color: isError ? .appBadgeRed : .homeText, accessory: accessory)
             .frame(width: 30, height: 30)
             .animation(.smooth(duration: 0.3), value: isError)
     }
